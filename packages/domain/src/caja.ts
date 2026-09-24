@@ -48,16 +48,29 @@ export function calcularEfectivoEsperado(
   return esperado;
 }
 
+function comentarioOpcional(comentario: string | null | undefined): string | null {
+  const limpio = comentario?.trim() ?? "";
+  return limpio === "" ? null : limpio;
+}
+
 /**
  * Cierre normal con arqueo ciego (RN-34, RF-28): recibe el efectivo contado por el cajero,
- * que se pide antes de mostrarle el esperado. La diferencia no impide cerrar (escenario 31.4).
+ * que se pide antes de mostrarle el esperado. Una diferencia no impide cerrar (escenario 31.4),
+ * pero si el contado no coincide con el esperado se exige un comentario (decisión 15 de contracts).
  */
 export function cerrarTurno(
   turno: Turno,
-  datos: { efectivoContado: Centimos; efectivoEsperado: CentimosConSigno; ahora: FechaISO },
+  datos: {
+    efectivoContado: Centimos;
+    efectivoEsperado: CentimosConSigno;
+    comentario: string | null;
+    ahora: FechaISO;
+  },
 ): Turno {
   asegurarTurnoAbierto(turno);
   asegurarCentimos(datos.efectivoContado, "efectivoContado");
+  const diferencia = datos.efectivoContado - datos.efectivoEsperado;
+  const comentarioCierre = diferencia === 0 ? comentarioOpcional(datos.comentario) : motivoRequerido(datos.comentario);
   return TurnoSchema.parse({
     ...turno,
     estado: "CERRADO",
@@ -66,17 +79,19 @@ export function cerrarTurno(
     cierreForzado: false,
     efectivoContado: datos.efectivoContado,
     efectivoEsperado: datos.efectivoEsperado,
-    diferencia: datos.efectivoContado - datos.efectivoEsperado,
+    diferencia,
+    comentarioCierre,
   });
 }
 
-/** Cierre forzado por un Administrador de un turno ajeno (CU-20, RF-43). El conteo es opcional. */
+/** Cierre forzado por un Administrador de un turno ajeno (CU-20, RF-43). El conteo y el comentario son opcionales. */
 export function forzarCierreTurno(
   turno: Turno,
   datos: {
     cerradoPorId: Id;
     efectivoContado: Centimos | null;
     efectivoEsperado: CentimosConSigno;
+    comentario: string | null;
     ahora: FechaISO;
   },
 ): Turno {
@@ -92,6 +107,7 @@ export function forzarCierreTurno(
     efectivoContado: datos.efectivoContado,
     efectivoEsperado: datos.efectivoEsperado,
     diferencia: datos.efectivoContado === null ? null : datos.efectivoContado - datos.efectivoEsperado,
+    comentarioCierre: comentarioOpcional(datos.comentario),
   });
 }
 

@@ -120,6 +120,7 @@ const ticket = resultado.data;
 | `auditoria.ts` | `RegistroAuditoria`, `AccionAuditoria`, `CodigoAutorizacion` | RN-42, RN-46, §23 |
 | `comprobantes.ts` | `TrabajoImpresion` | RN-38, RN-39, §20.5 |
 | `configuracion.ts` | `ConfiguracionGlobal` | RN-43, §26 |
+| `api.ts` | `RUTAS`, cuerpos de entrada y respuesta de la API local, `CABECERA_IDEMPOTENCIA`, `RespuestaError`. Cubre autenticación, turnos y alquileres. La venta (`RegistrarVentaEntrada`, con `esHuesped` explícito) ya está definida, pero todavía no tiene ruta | Planos §11, RF-59, RN-22 |
 
 ### Estados
 
@@ -157,7 +158,7 @@ if (rango.nombre === "Administrador") { … }
   esperado. Esos cálculos viven en `packages/domain` como funciones puras con la tabla de pruebas
   §16.10 (Planos §3.3). Este paquete define la forma de los datos, no cómo se calculan. Ninguna
   interfaz calcula precio ni tiempo (§28.1).
-- **Rutas y cuerpos de la API:** se definirán aquí en una tarea posterior, sobre estos tipos.
+- **Rutas de tienda, reportes y administración:** se agregan a `api.ts` cuando se construyan esos endpoints.
 - **Credenciales de usuario:** nunca salen del backend.
 - **Resumen sincronizado (espejo en la nube):** el SRS aún no define sus campos.
 
@@ -217,10 +218,13 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     valida un objeto a la vez y no puede ver los demás productos. Nota para el esquema de Prisma: declarar
     `codigoBarras String? @unique`. `UNIQUE` admite varios `NULL`, así que varios productos pueden no tener
     código. El tipo en el contrato sigue siendo `string | null`.
+15. **Cierre con diferencia de arqueo exige comentario** (resuelve PEND-05). Si el cajero cierra su turno
+    y el efectivo contado no coincide con el esperado (`diferencia ≠ 0`), debe escribir
+    `comentarioCierre`, sin importar el monto: no hay umbral. No requiere código de autorización. Sin
+    diferencia, el comentario es opcional. En un cierre forzado (CU-20), el comentario es opcional.
 
 ## Decisiones pendientes que afectan el contrato
 
 | ID | Tema | Estado en el contrato |
 |---|---|---|
-| PEND-05 | Nota obligatoria ante una diferencia de arqueo | Sin campo de nota ni umbral en `Turno` / `ConfiguracionGlobal` |
 | — | Vigencia por defecto del código de autorización (RF-65: "algunos minutos") | Configurable (`minutosVigenciaCodigoAutorizacion`), sin valor inicial definido |

@@ -61,7 +61,7 @@ try {
 |---|---|
 | `tiempo.ts` | `calcularSalidaInicial`, `calcularEstadoTemporal`, `calcularHoraAdicional` |
 | `precios.ts` | `resolverPrecioHabitacion`, `cotizarIngreso`, `cotizarHoraAdicional`, `aplicarAjustePuntual`, `precioProducto`, `cotizarVenta` |
-| `alquileres.ts` | `iniciarAlquiler`, `registrarHoraAdicional`, `registrarSalida`, `registrarSalidaSinPago`, `aplicarAnulacionIngreso` |
+| `alquileres.ts` | `iniciarAlquiler`, `registrarHoraAdicional`, `registrarSalida`, `registrarSalidaSinPago`, `aplicarAnulacionHoraAdicional`, `aplicarAnulacionIngreso` |
 | `habitaciones.ts` | `ocuparHabitacion`, `liberarPorSalida`, `marcarHabitacionLista`, `reportarMantenimiento`, `bloquearPorMantenimiento`, `reactivarHabitacion`, `liberarPorAnulacion` |
 | `caja.ts` | `asegurarTurnoAbierto`, `calcularEfectivoEsperado`, `cerrarTurno`, `forzarCierreTurno`, `prepararMovimientoCaja` |
 | `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `revertirVentaEnInventario` |
@@ -125,20 +125,43 @@ Las pruebas se nombran con la regla que verifican (`describe("RN-xx · …")`). 
 
 ## Lo que queda para el backend
 
+Implementado en `apps/server` (ver su README):
+
 - **Concurrencia (RN-27, RF-58):** `ocuparHabitacion` rechaza una habitación que no está libre, pero
   dos cajeros pueden leerla libre al mismo tiempo. La garantía final es el índice único parcial
-  `UNIQUE(roomId) WHERE estado = 'ABIERTO'` (Planos §9.4) y la transacción.
-- **Idempotencia (RF-59):** el `Idempotency-Key` de cada cobro.
+  `UNIQUE(habitacionId) WHERE estado = 'ABIERTO'` (Planos §9.4) y la transacción.
+- **Idempotencia (RF-59):** la cabecera `idempotency-key` de cada cobro, guardada en el ticket.
 - **Permisos:** el backend comprueba `puede(permisos, operacion)` antes de llamar a cada función.
   Excepción: en `anularTicket`, la vía del código de autorización es lógica de negocio y va dentro.
-- **Huésped o público (RN-22):** `esHuesped` es true si la venta se asocia a una habitación con un
-  alquiler abierto. Lo verifica el backend, porque la tienda no conoce alquileres (RES-02).
-- **Código de autorización:** el valor lo genera el backend con una fuente aleatoria criptográfica.
+- **Huésped o público (RN-22):** `esHuesped` lo indica el cajero de forma explícita en la venta;
+  ni el dominio ni el backend lo infieren, porque la tienda no conoce alquileres (RES-02).
+- **Código de autorización:** el valor lo genera el backend con una fuente aleatoria criptográfica
+  (pendiente: la anulación aún no tiene ruta).
 - **Auditoría (RN-42):** cada operación exitosa se registra en la misma transacción.
 
-## Pendientes
+## Decisiones del proyecto
 
-| Tema | Estado |
-|---|---|
-| Anular el ticket de una **hora adicional**: ¿la salida programada vuelve a la anterior? (§32: "sujeto a definición de diseño posterior") | No implementado. `anularTicket` emite el compensatorio, pero no cambia la salida del alquiler. |
-| PEND-05: nota obligatoria ante una diferencia de arqueo | No implementado: `cerrarTurno` siempre permite cerrar |
+Resuelven puntos que el SRS dejaba abiertos.
+
+### Anular una hora adicional (§32)
+
+Al anular el ticket de una hora adicional, `aplicarAnulacionHoraAdicional` recalcula la salida programada
+desde la **salida base** (ingreso + horas base + horas pagadas al ingreso) con **solo las horas adicionales
+que siguen vigentes**. La hora anulada deja de contar: el cliente no conserva ese tiempo.
+
+Las horas vigentes se aplican en orden cronológico, cada una con su regla:
+- **Extensión anticipada:** suma 1 h a la salida acumulada. Si todas son anticipadas, la salida es la base
+  más la suma de las horas vigentes.
+- **Liquidación de sobretiempo:** fija la salida en su momento de pago + 1 h (RN-06), porque así se pactó.
+  Si se sumara como una hora más sobre la base, el cliente perdería tiempo que sí pagó.
+
+`cortesiaConsumida` no cambia, porque entrar en cortesía es un hecho que ya ocurrió. Un alquiler cerrado no
+se modifica, porque su salida ya es historia. Anular el ingreso sigue exigiendo anular antes sus horas
+vigentes (escenario 31.5).
+
+### Arqueo con diferencia (PEND-05)
+
+Si el efectivo contado no coincide con el esperado, `cerrarTurno` exige un comentario (`REASON_REQUIRED`)
+para cualquier diferencia, sin umbral y sin código de autorización. Sin diferencia, el comentario es
+opcional. En el cierre forzado (CU-20) el comentario es opcional. El comentario se guarda en
+`Turno.comentarioCierre` (decisión 15 de contracts).

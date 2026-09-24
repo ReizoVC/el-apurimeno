@@ -93,30 +93,57 @@ describe("RN-35 · los pagos digitales no afectan el efectivo", () => {
 
 describe("RN-34 · arqueo ciego", () => {
   it("con el contado y el esperado registra la diferencia de −S/ 5.00 (escenario 31.4)", () => {
-    const cerrado = cerrarTurno(turno, { efectivoContado: 33500, efectivoEsperado: 34000, ahora: en("20:00") });
+    const cerrado = cerrarTurno(turno, { efectivoContado: 33500, efectivoEsperado: 34000, comentario: "faltó cambio", ahora: en("20:00") });
     expect(cerrado).toMatchObject({ estado: "CERRADO", efectivoContado: 33500, efectivoEsperado: 34000, diferencia: -500 });
   });
 
-  it("una diferencia no impide cerrar, pero el contado no puede ser negativo", () => {
-    expect(() => cerrarTurno(turno, { efectivoContado: -1, efectivoEsperado: 0, ahora: en("20:00") })).toThrow(RangeError);
+  it("el contado no puede ser negativo", () => {
+    expect(() => cerrarTurno(turno, { efectivoContado: -1, efectivoEsperado: 0, comentario: "x", ahora: en("20:00") })).toThrow(RangeError);
   });
 
   it("un turno cerrado no se vuelve a cerrar", () => {
-    expect(() => cerrarTurno(turnoCerrado, { efectivoContado: 0, efectivoEsperado: 0, ahora: en("21:00") })).toThrow(
+    expect(() => cerrarTurno(turnoCerrado, { efectivoContado: 0, efectivoEsperado: 0, comentario: null, ahora: en("21:00") })).toThrow(
       codigo("SHIFT_NOT_OPEN"),
     );
   });
 });
 
+describe("PEND-05 · un cierre con diferencia exige comentario (decisión 15 de contracts)", () => {
+  it("sin comentario, cualquier diferencia se rechaza con REASON_REQUIRED, aun de un céntimo", () => {
+    expect(() => cerrarTurno(turno, { efectivoContado: 33999, efectivoEsperado: 34000, comentario: null, ahora: en("20:00") })).toThrow(
+      codigo("REASON_REQUIRED"),
+    );
+    expect(() => cerrarTurno(turno, { efectivoContado: 34100, efectivoEsperado: 34000, comentario: "  ", ahora: en("20:00") })).toThrow(
+      codigo("REASON_REQUIRED"),
+    );
+  });
+
+  it("con comentario cierra y lo guarda", () => {
+    const cerrado = cerrarTurno(turno, { efectivoContado: 34100, efectivoEsperado: 34000, comentario: " sobró una moneda ", ahora: en("20:00") });
+    expect(cerrado.comentarioCierre).toBe("sobró una moneda");
+  });
+
+  it("sin diferencia el comentario es opcional", () => {
+    const cerrado = cerrarTurno(turno, { efectivoContado: 34000, efectivoEsperado: 34000, comentario: null, ahora: en("20:00") });
+    expect(cerrado).toMatchObject({ diferencia: 0, comentarioCierre: null });
+  });
+});
+
 describe("Cierre forzado (CU-20, RF-43)", () => {
-  it("un Administrador cierra el turno de otro, con o sin conteo", () => {
-    const cerrado = forzarCierreTurno(turno, { cerradoPorId: "admin-1", efectivoContado: null, efectivoEsperado: 10000, ahora: en("23:00") });
-    expect(cerrado).toMatchObject({ cierreForzado: true, cerradoPorId: "admin-1", diferencia: null });
+  it("un Administrador cierra el turno de otro, con o sin conteo ni comentario", () => {
+    const cerrado = forzarCierreTurno(turno, {
+      cerradoPorId: "admin-1",
+      efectivoContado: 9000,
+      efectivoEsperado: 10000,
+      comentario: null,
+      ahora: en("23:00"),
+    });
+    expect(cerrado).toMatchObject({ cierreForzado: true, cerradoPorId: "admin-1", diferencia: -1000, comentarioCierre: null });
   });
 
   it("no se fuerza el cierre del propio turno", () => {
     expect(() =>
-      forzarCierreTurno(turno, { cerradoPorId: "cajero-1", efectivoContado: null, efectivoEsperado: 0, ahora: en("23:00") }),
+      forzarCierreTurno(turno, { cerradoPorId: "cajero-1", efectivoContado: null, efectivoEsperado: 0, comentario: null, ahora: en("23:00") }),
     ).toThrow(codigo("INVALID_STATE_TRANSITION"));
   });
 });

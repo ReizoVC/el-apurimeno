@@ -10,6 +10,8 @@ import {
   PARAMETROS_TIEMPO_PRECIO_INICIALES,
   ProductoSchema,
   RANGOS_INICIALES,
+  RegistrarIngresoEntradaSchema,
+  RegistrarVentaEntradaSchema,
   RegistroAuditoriaSchema,
   TRANSICIONES_HABITACION,
   TicketSchema,
@@ -237,6 +239,7 @@ describe("Turno y caja", () => {
     efectivoContado: 33500,
     efectivoEsperado: 34000,
     diferencia: -500,
+    comentarioCierre: "faltó cambio de una venta",
   };
 
   it("registra una diferencia de −S/ 5.00 (escenario 31.4)", () => {
@@ -244,8 +247,14 @@ describe("Turno y caja", () => {
     expect(TurnoSchema.safeParse({ ...cerrado, diferencia: 500 }).success).toBe(false);
   });
 
+  it("un cierre con diferencia exige comentario; sin diferencia es opcional (decisión 15)", () => {
+    expect(TurnoSchema.safeParse({ ...cerrado, comentarioCierre: null }).success).toBe(false);
+    const cuadrado = { ...cerrado, efectivoContado: 34000, diferencia: 0, comentarioCierre: null };
+    expect(TurnoSchema.safeParse(cuadrado).success).toBe(true);
+  });
+
   it("no expone el efectivo esperado con el turno abierto (RN-34)", () => {
-    const abierto = { ...cerrado, estado: "ABIERTO", cerradoEn: null, cerradoPorId: null, efectivoContado: null, diferencia: null };
+    const abierto = { ...cerrado, estado: "ABIERTO", cerradoEn: null, cerradoPorId: null, efectivoContado: null, diferencia: null, comentarioCierre: null };
     expect(TurnoSchema.safeParse(abierto).success).toBe(false);
     expect(TurnoSchema.safeParse({ ...abierto, efectivoEsperado: null }).success).toBe(true);
   });
@@ -346,5 +355,27 @@ describe("Auditoría y configuración", () => {
     const conSerie = configuracion();
     conSerie.comprobante.datosAdicionales = "B001-00000123";
     expect(ConfiguracionGlobalSchema.safeParse(conSerie).success).toBe(false);
+  });
+});
+
+describe("API", () => {
+  it("una venta a público no se asocia a una habitación (RN-22, RN-24)", () => {
+    const venta = {
+      items: [{ productoId: "prod-1", cantidad: 2 }],
+      esHuesped: false,
+      habitacionReferenciaId: null,
+      ajuste: null,
+      pagos: [{ metodoPagoId: "efectivo", monto: 700, montoRecibido: 1000, referencia: null }],
+    };
+    expect(RegistrarVentaEntradaSchema.safeParse(venta).success).toBe(true);
+    expect(RegistrarVentaEntradaSchema.safeParse({ ...venta, habitacionReferenciaId: "hab-107" }).success).toBe(false);
+    expect(RegistrarVentaEntradaSchema.safeParse({ ...venta, esHuesped: true, habitacionReferenciaId: "hab-107" }).success).toBe(true);
+  });
+
+  it("un ingreso exige al menos un pago y montos en céntimos", () => {
+    const ingreso = { habitacionId: "hab-205", clienteId: null, horasAdicionalesAlIngreso: 0, ajuste: null, pagos: [] };
+    expect(RegistrarIngresoEntradaSchema.safeParse(ingreso).success).toBe(false);
+    const pago = { metodoPagoId: "efectivo", monto: 30.5, montoRecibido: null, referencia: null };
+    expect(RegistrarIngresoEntradaSchema.safeParse({ ...ingreso, pagos: [pago] }).success).toBe(false);
   });
 });

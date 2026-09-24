@@ -1,15 +1,23 @@
 import { z } from "zod";
 import { AlquilerSchema, HoraAdicionalSchema } from "./alquileres.js";
 import { TurnoSchema } from "./caja.js";
-import { CentimosSchema, FechaISOSchema, IdSchema, TextoRequeridoSchema } from "./comun.js";
+import {
+  CentimosConSignoSchema,
+  CentimosSchema,
+  FechaISOSchema,
+  IdSchema,
+  TextoRequeridoSchema,
+} from "./comun.js";
 import { CodigoErrorNegocioSchema } from "./errores.js";
 import {
   EstadoTemporalAlquilerSchema,
   OrigenPrecioAlquilerSchema,
+  OrigenTicketSchema,
   TipoHoraAdicionalSchema,
 } from "./estados.js";
 import { HabitacionSchema } from "./habitaciones.js";
 import { PermisoSchema } from "./permisos.js";
+import { MovimientoInventarioSchema, ProductoSchema } from "./tienda.js";
 import { AjustePuntualSchema, LineaTicketSchema, TicketSchema } from "./tickets.js";
 import { UsuarioSchema } from "./usuarios.js";
 
@@ -28,6 +36,16 @@ export const RUTAS = {
   registrarHoraAdicional: "/alquileres/:id/horas-adicionales",
   registrarSalida: "/alquileres/:id/salida",
   registrarSalidaSinPago: "/alquileres/:id/salida-sin-pago",
+  categoriasProducto: "/categorias-producto",
+  productos: "/productos",
+  producto: "/productos/:id",
+  reponerProducto: "/productos/:id/reposicion",
+  registrarVenta: "/ventas",
+  generarCodigoAutorizacion: "/codigos-autorizacion",
+  anularTicket: "/tickets/:id/anulacion",
+  reporteVentas: "/reportes/ventas",
+  reporteArqueos: "/reportes/arqueos",
+  reporteOcupacion: "/reportes/ocupacion",
   salud: "/health",
 } as const;
 
@@ -162,7 +180,37 @@ export type SalidaSinPagoEntrada = z.infer<typeof SalidaSinPagoEntradaSchema>;
 export const SalidaRespuestaSchema = z.object({ alquiler: AlquilerSchema, habitacion: HabitacionSchema }).strict();
 export type SalidaRespuesta = z.infer<typeof SalidaRespuestaSchema>;
 
-// --- Tienda (definida, todavía sin ruta HTTP) ---
+// --- Tienda ---
+
+export const CategoriaProductoEntradaSchema = z.object({ nombre: TextoRequeridoSchema }).strict();
+export type CategoriaProductoEntrada = z.infer<typeof CategoriaProductoEntradaSchema>;
+
+/** Alta o edición de un producto (RF-53). El stock no se edita aquí: solo cambia con ventas, reposiciones y anulaciones. */
+export const ProductoEntradaSchema = z
+  .object({
+    categoriaId: IdSchema,
+    nombre: TextoRequeridoSchema,
+    codigoBarras: TextoRequeridoSchema.nullable(),
+    precioHuesped: CentimosSchema,
+    precioPublico: CentimosSchema,
+    controlaStock: z.boolean(),
+    activo: z.boolean(),
+  })
+  .strict();
+export type ProductoEntrada = z.infer<typeof ProductoEntradaSchema>;
+
+/** Filtro del catálogo: `codigoBarras` es lo que lee el scanner USB. */
+export const ProductosConsultaSchema = z.object({ codigoBarras: TextoRequeridoSchema.optional() }).strict();
+export type ProductosConsulta = z.infer<typeof ProductosConsultaSchema>;
+
+/** Ingreso de mercadería (RN-25, RF-35). */
+export const ReposicionEntradaSchema = z.object({ cantidad: z.number().int().positive() }).strict();
+export type ReposicionEntrada = z.infer<typeof ReposicionEntradaSchema>;
+
+export const ReposicionRespuestaSchema = z
+  .object({ producto: ProductoSchema, movimiento: MovimientoInventarioSchema })
+  .strict();
+export type ReposicionRespuesta = z.infer<typeof ReposicionRespuestaSchema>;
 
 export const ItemVentaEntradaSchema = z
   .object({ productoId: IdSchema, cantidad: z.number().int().positive() })
@@ -186,3 +234,94 @@ export const RegistrarVentaEntradaSchema = z
     message: "Solo una venta a huésped se asocia a una habitación.",
   });
 export type RegistrarVentaEntrada = z.infer<typeof RegistrarVentaEntradaSchema>;
+
+export const RegistrarVentaRespuestaSchema = TicketSchema;
+
+// --- Anulación (CU-21, RN-36, RN-46) ---
+
+/**
+ * Código de autorización recién generado. Es la única vez que se muestra en claro: el servidor solo
+ * guarda su hash y no lo vuelve a listar.
+ */
+export const GenerarCodigoAutorizacionRespuestaSchema = z
+  .object({ id: IdSchema, codigo: TextoRequeridoSchema, expiraEn: FechaISOSchema })
+  .strict();
+export type GenerarCodigoAutorizacionRespuesta = z.infer<typeof GenerarCodigoAutorizacionRespuestaSchema>;
+
+/** `codigoAutorizacion` es obligatorio para quien no tiene `tickets.void` (RN-46). */
+export const AnularTicketEntradaSchema = z
+  .object({ motivo: z.string(), codigoAutorizacion: z.string().nullable() })
+  .strict();
+export type AnularTicketEntrada = z.infer<typeof AnularTicketEntradaSchema>;
+
+export const AnularTicketRespuestaSchema = z
+  .object({ original: TicketSchema, compensatorio: TicketSchema })
+  .strict();
+export type AnularTicketRespuesta = z.infer<typeof AnularTicketRespuestaSchema>;
+
+// --- Reportes (§25, RF-47, RF-48) ---
+
+/** Periodo [desde, hasta) en UTC. */
+export const PeriodoConsultaSchema = z
+  .object({ desde: FechaISOSchema, hasta: FechaISOSchema })
+  .strict()
+  .refine((p) => Date.parse(p.desde) < Date.parse(p.hasta), {
+    path: ["hasta"],
+    message: "hasta debe ser posterior a desde.",
+  });
+export type PeriodoConsulta = z.infer<typeof PeriodoConsultaSchema>;
+
+/**
+ * Ventas del periodo (RF-47). Solo cuentan los tickets vigentes: cobros no anulados. Todos los desgloses
+ * suman el total, salvo `porProducto`, que solo cubre las líneas de producto.
+ */
+export const ReporteVentasSchema = z
+  .object({
+    total: CentimosSchema,
+    cantidadTickets: z.number().int().nonnegative(),
+    porOrigen: z.array(z.object({ origen: OrigenTicketSchema, total: CentimosSchema }).strict()),
+    porMetodoPago: z.array(z.object({ metodoPagoId: IdSchema, total: CentimosSchema }).strict()),
+    /** Día calendario en la hora de Lima, "AAAA-MM-DD". */
+    porDia: z.array(z.object({ dia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), total: CentimosSchema }).strict()),
+    porTurno: z.array(z.object({ turnoId: IdSchema, total: CentimosSchema }).strict()),
+    porProducto: z.array(
+      z
+        .object({
+          productoId: IdSchema,
+          descripcion: z.string(),
+          cantidad: z.number().int().nonnegative(),
+          total: CentimosSchema,
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type ReporteVentas = z.infer<typeof ReporteVentasSchema>;
+
+/** Arqueos de los turnos cerrados en el periodo (§25). */
+export const ReporteArqueosSchema = z
+  .object({
+    turnos: z.array(TurnoSchema),
+    diferenciaTotal: CentimosConSignoSchema,
+    turnosConDiferencia: z.number().int().nonnegative(),
+  })
+  .strict();
+export type ReporteArqueos = z.infer<typeof ReporteArqueosSchema>;
+
+/** Ocupación por habitación de los alquileres ingresados en el periodo (RF-48). No cuenta alquileres anulados. */
+export const ReporteOcupacionSchema = z
+  .object({
+    habitaciones: z.array(
+      z
+        .object({
+          habitacionId: IdSchema,
+          numero: z.string(),
+          alquileres: z.number().int().nonnegative(),
+          horasVendidas: z.number().int().nonnegative(),
+          ingresos: CentimosSchema,
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type ReporteOcupacion = z.infer<typeof ReporteOcupacionSchema>;

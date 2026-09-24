@@ -40,6 +40,8 @@ export const PERMISO_POR_OPERACION = {
   MARCAR_HABITACION_LISTA: "cleaning.mark_ready",
   REPORTAR_MANTENIMIENTO: "cleaning.mark_ready",
   ANULAR_TICKET: "tickets.void",
+  /** Vía del Cajero (RN-46): entra desde el POS y `anularTicket` le exige un código de autorización válido. */
+  ANULAR_TICKET_CON_CODIGO: "pos.access",
   GENERAR_CODIGO_AUTORIZACION: "tickets.void",
   REIMPRIMIR_COMPROBANTE: "tickets.reprint",
   GESTIONAR_USUARIOS: "users.manage",

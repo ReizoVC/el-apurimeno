@@ -68,6 +68,7 @@ try {
 | `tickets.ts` | `pagoEnEfectivo`, `pagoSinVuelto`, `armarTicketCobro`, `validarInvariantesTicket` |
 | `anulacion.ts` | `crearCodigoAutorizacion`, `validarCodigoAutorizacion`, `anularTicket` |
 | `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual` |
+| `reportes.ts` | `esTicketVigente`, `diaLocal`, `resumirVentas`, `resumirArqueos`, `resumirOcupacion` |
 
 ## Trazabilidad RN-01 a RN-46
 
@@ -135,8 +136,8 @@ Implementado en `apps/server` (ver su README):
   Excepción: en `anularTicket`, la vía del código de autorización es lógica de negocio y va dentro.
 - **Huésped o público (RN-22):** `esHuesped` lo indica el cajero de forma explícita en la venta;
   ni el dominio ni el backend lo infieren, porque la tienda no conoce alquileres (RES-02).
-- **Código de autorización:** el valor lo genera el backend con una fuente aleatoria criptográfica
-  (pendiente: la anulación aún no tiene ruta).
+- **Código de autorización:** el valor lo genera el backend con una fuente aleatoria criptográfica y
+  guarda solo su HMAC; a `validarCodigoAutorizacion` le pasa el HMAC guardado y el del valor ingresado.
 - **Auditoría (RN-42):** cada operación exitosa se registra en la misma transacción.
 
 ## Decisiones del proyecto

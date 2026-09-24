@@ -84,6 +84,7 @@ describe("Matriz §22 con los rangos iniciales", () => {
     ["MARCAR_HABITACION_LISTA", false, true],
     ["REPORTAR_MANTENIMIENTO", false, true],
     ["ANULAR_TICKET", false, false],
+    ["ANULAR_TICKET_CON_CODIGO", true, false],
     ["REIMPRIMIR_COMPROBANTE", true, false],
     ["GESTIONAR_USUARIOS", false, false],
     ["GESTIONAR_RANGOS", false, false],

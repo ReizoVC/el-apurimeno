@@ -24,6 +24,8 @@ export const ProductoSchema = z
     id: IdSchema,
     categoriaId: IdSchema,
     nombre: TextoRequeridoSchema,
+    /** Código leído por un scanner USB (se comporta como teclado). null si el producto no tiene código. */
+    codigoBarras: TextoRequeridoSchema.nullable(),
     precioHuesped: CentimosSchema,
     precioPublico: CentimosSchema,
     /** false para artículos sin control de stock (§32). */

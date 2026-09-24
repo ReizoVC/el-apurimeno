@@ -3,6 +3,7 @@ import { z } from "zod";
 /**
  * Códigos de error de negocio que el SRS declara estables (§24.2).
  * Se conservan en inglés, textuales, tal como los nombra la sección 16.
+ * Los tres últimos los definió el proyecto: el SRS exige esas reglas pero no les asigna código.
  */
 export const CodigoErrorNegocioSchema = z.enum([
   "ROOM_NOT_AVAILABLE",
@@ -14,6 +15,12 @@ export const CodigoErrorNegocioSchema = z.enum([
   "INSUFFICIENT_STOCK",
   "TICKET_ALREADY_VOIDED",
   "AUTH_CODE_INVALID",
+  // RN-32: ningún cobro sin turno de caja abierto.
+  "SHIFT_NOT_OPEN",
+  // CU-05, CU-06: la operación exige un alquiler en estado ABIERTO.
+  "RENTAL_NOT_OPEN",
+  // §20, §32: el cambio de estado no está permitido desde el estado actual.
+  "INVALID_STATE_TRANSITION",
 ]);
 export type CodigoErrorNegocio = z.infer<typeof CodigoErrorNegocioSchema>;
 export const CodigoErrorNegocio = CodigoErrorNegocioSchema.enum;
@@ -32,4 +39,7 @@ export const MENSAJE_ERROR_NEGOCIO: Readonly<Record<CodigoErrorNegocio, string>>
   INSUFFICIENT_STOCK: "No hay stock suficiente del producto.",
   TICKET_ALREADY_VOIDED: "Este ticket ya fue anulado.",
   AUTH_CODE_INVALID: "El código de autorización es incorrecto, venció o ya fue utilizado.",
+  SHIFT_NOT_OPEN: "No hay un turno de caja abierto.",
+  RENTAL_NOT_OPEN: "El alquiler ya no está abierto.",
+  INVALID_STATE_TRANSITION: "Esta operación no está permitida en el estado actual.",
 };

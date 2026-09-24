@@ -187,6 +187,22 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@20.17.6)(jiti@1.21.7)(yaml@2.7.0)
 
+  packages/domain:
+    dependencies:
+      '@apurimeno/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@apurimeno/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@20.17.6)(jiti@1.21.7)(yaml@2.7.0)
+
   packages/eslint-config:
     devDependencies:
       '@eslint/js':
@@ -5274,7 +5290,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.3.7
+      debug: 4.4.3
       fs-extra: 11.2.0
     transitivePeerDependencies:
       - supports-color

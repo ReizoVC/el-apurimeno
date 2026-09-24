@@ -194,15 +194,29 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
 11. **`permitirStockNegativo` es una configuración global** (RN-26 no dice si es global o por producto).
 12. **Cliente:** el documento es texto libre, sin tipo de documento (§21). Se exige documento o nombre.
     No se incluye el teléfono (Planos §9.2 lo menciona, pero el SRS no).
-13. **Hora adicional pedida en cortesía** (RF-08 solo define "aún no venció" y "ya pasó la cortesía";
-    esta regla la definió el proyecto). El tipo depende del estado temporal al momento del pago:
-    - **`EN_CORTESIA`:** se registra como `EXTENSION_ANTICIPADA`. La nueva salida es la salida vigente
-      más 1 h, no el momento del pago más 1 h. `cortesiaConsumida` no cambia, así que la cortesía queda
-      disponible de nuevo para la nueva salida.
-    - **`EN_SOBRETIEMPO`:** se registra como `LIQUIDACION_SOBRETIEMPO`, como ya estaba definido. La
-      nueva salida es el momento del pago más 1 h, y la cortesía queda consumida y no vuelve (RN-06, RN-07).
+13. **Consumo de la cortesía y hora adicional pedida en cortesía** (RF-08 solo define "aún no venció"
+    y "ya pasó la cortesía"; esta regla la definió el proyecto y precisa RN-04 y RN-07).
+    - **La cortesía se consume la primera vez que el alquiler entra en `EN_CORTESIA`**, pague o no el
+      cliente durante esa ventana. Desde ahí `cortesiaConsumida` queda en `true` para el resto del
+      alquiler y no se vuelve a otorgar, aunque se pacte una nueva hora de salida.
+    - **Pagar una hora adicional mientras el alquiler está en `A_TIEMPO` o `POR_VENCER`** (antes de
+      vencer) no consume la cortesía, porque el alquiler nunca entró en `EN_CORTESIA`. Se registra como
+      `EXTENSION_ANTICIPADA`: la nueva salida es la salida vigente más 1 h.
+    - **Pagar estando en `EN_CORTESIA`:** se registra como `EXTENSION_ANTICIPADA`, y la nueva salida es la
+      salida vigente más 1 h (no el momento del pago más 1 h). La cortesía ya quedó consumida al entrar en
+      esa ventana: si el cliente vuelve a pasarse de la nueva salida, pasa directo a `EN_SOBRETIEMPO`.
+    - **Pagar estando en `EN_SOBRETIEMPO`:** se registra como `LIQUIDACION_SOBRETIEMPO`, como ya estaba
+      definido. La nueva salida es el momento del pago más 1 h, sin nueva cortesía (RN-06, RN-07).
 
-    El contrato ya admite ambos casos. La regla se implementa en `packages/domain`.
+    El estado temporal no se guarda (RN-11), así que nadie escribe `cortesiaConsumida` en el instante en
+    que empieza la ventana. Se persiste en la siguiente operación que cambia la salida: al registrar una
+    hora adicional pagada en `EN_CORTESIA` o en `EN_SOBRETIEMPO`, `cortesiaConsumida` pasa a `true`.
+    Hasta entonces, el cálculo del estado temporal usa la salida vigente, que no cambió, así que no hace
+    falta ningún proceso en segundo plano. La regla se implementa en `packages/domain`.
+14. **`Producto.codigoBarras` es único, pero lo garantiza la base de datos**, no el contrato: el contrato
+    valida un objeto a la vez y no puede ver los demás productos. Nota para el esquema de Prisma: declarar
+    `codigoBarras String? @unique`. `UNIQUE` admite varios `NULL`, así que varios productos pueden no tener
+    código. El tipo en el contrato sigue siendo `string | null`.
 
 ## Decisiones pendientes que afectan el contrato
 

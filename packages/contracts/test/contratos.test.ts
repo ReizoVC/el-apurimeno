@@ -211,6 +211,12 @@ describe("HoraAdicional (RF-10)", () => {
     expect(HoraAdicionalSchema.safeParse(h).success).toBe(true);
   });
 
+  it("pagada en cortesía (16:10): es extensión anticipada, 16:00 → 17:00 (README, decisión 13)", () => {
+    const h = { ...base, tipo: "EXTENSION_ANTICIPADA", creadoEn: "2026-09-23T21:10:00.000Z", salidaNueva: "2026-09-23T22:00:00.000Z" };
+    expect(HoraAdicionalSchema.safeParse(h).success).toBe(true);
+    expect(HoraAdicionalSchema.safeParse({ ...h, salidaNueva: "2026-09-23T22:10:00.000Z" }).success).toBe(false);
+  });
+
   it("liquidación de sobretiempo: pago 16:20 → salida 17:20, no 17:00", () => {
     const h = { ...base, tipo: "LIQUIDACION_SOBRETIEMPO", creadoEn: "2026-09-23T21:20:00.000Z", salidaNueva: "2026-09-23T22:20:00.000Z" };
     expect(HoraAdicionalSchema.safeParse(h).success).toBe(true);

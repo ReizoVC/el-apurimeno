@@ -21,8 +21,11 @@ export interface UsuarioAutenticado {
 
 declare module "fastify" {
   interface FastifyContextConfig {
-    /** Operación de `PERMISO_POR_OPERACION` que la ruta exige. Toda ruta declara esto o `publica`. */
-    operacion?: Operacion;
+    /**
+     * Operación de `PERMISO_POR_OPERACION` que la ruta exige; con una lista, basta cualquiera de ellas.
+     * Toda ruta declara esto o `publica`.
+     */
+    operacion?: Operacion | readonly Operacion[];
     publica?: boolean;
   }
   interface FastifyRequest {
@@ -63,7 +66,7 @@ export function registrarAutenticacion(app: FastifyInstance, prisma: PrismaClien
   app.decorateRequest("usuario", null);
 
   app.addHook("onRoute", (ruta) => {
-    const config = ruta.config as { operacion?: Operacion; publica?: boolean } | undefined;
+    const config = ruta.config as { operacion?: Operacion | readonly Operacion[]; publica?: boolean } | undefined;
     if (config?.publica !== true && config?.operacion === undefined) {
       throw new Error(`La ruta ${ruta.method} ${ruta.url} no declara operacion ni publica.`);
     }
@@ -84,7 +87,8 @@ export function registrarAutenticacion(app: FastifyInstance, prisma: PrismaClien
 
     const permisos = permisosEfectivos(aUsuario(fila), aRangos(fila));
     request.usuario = { id: fila.id, nombreUsuario: fila.nombreUsuario, permisos };
-    if (!puede(permisos, operacion)) {
+    const alternativas: readonly Operacion[] = typeof operacion === "string" ? [operacion] : operacion;
+    if (!alternativas.some((o) => puede(permisos, o))) {
       await auditar(
         prisma,
         {
@@ -96,7 +100,7 @@ export function registrarAutenticacion(app: FastifyInstance, prisma: PrismaClien
         },
         ahora(),
       );
-      throw new ErrorApi("PERMISO_DENEGADO", `No tiene permiso para ${operacion}.`);
+      throw new ErrorApi("PERMISO_DENEGADO", `No tiene permiso para ${alternativas.join(" ni ")}.`);
     }
   });
 

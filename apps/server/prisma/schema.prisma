@@ -5,7 +5,8 @@
 // - Listas del contrato (Ticket.lineas, Ticket.pagos, Usuario.rangoIds, Rango.permisos): tablas relacionadas.
 // - Permiso es texto (validado con PermisoSchema): sus valores llevan punto ("pos.access") y un enum de Prisma no lo admite.
 // - Columnas solo de base de datos, nunca expuestas: Usuario.contrasenaHash, Ticket.claveIdempotencia,
-//   LineaTicket.posicion y Pago.posicion (conservan el orden del arreglo del contrato).
+//   LineaTicket.posicion y Pago.posicion (conservan el orden del arreglo del contrato), y
+//   CodigoAutorizacion.codigoHash en lugar de `codigo`: el código en claro nunca se guarda.
 // - Índices únicos parciales (preview "partialIndexes"): un alquiler ABIERTO por habitación y un turno
 //   ABIERTO por usuario.
 
@@ -456,7 +457,9 @@ model RegistroAuditoria {
 
 model CodigoAutorizacion {
   id            String               @id
-  codigo        String
+  /// Solo base de datos: HMAC-SHA256 del código con un secreto del servidor. El código en claro solo se
+  /// muestra una vez, al generarlo (el campo `codigo` del contrato).
+  codigoHash    String
   operacion     OperacionAutorizable
   generadoPorId String
   generadoEn    DateTime
@@ -468,6 +471,8 @@ model CodigoAutorizacion {
   generadoPor Usuario  @relation("CodigoGeneradoPor", fields: [generadoPorId], references: [id])
   usadoPor    Usuario? @relation("CodigoUsadoPor", fields: [usadoPorId], references: [id])
   ticket      Ticket?  @relation(fields: [ticketId], references: [id])
+
+  @@index([codigoHash])
 }
 
 model TrabajoImpresion {

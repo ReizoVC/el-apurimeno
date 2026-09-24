@@ -8,3 +8,4 @@ export * from "./inventario.js";
 export * from "./tickets.js";
 export * from "./anulacion.js";
 export * from "./permisos.js";
+export * from "./reportes.js";

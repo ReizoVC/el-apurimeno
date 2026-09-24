@@ -1,8 +1,11 @@
 import {
   AlquilerSchema,
+  CategoriaProductoSchema,
+  CodigoAutorizacionSchema,
   HabitacionSchema,
   HoraAdicionalSchema,
   MetodoPagoSchema,
+  MovimientoInventarioSchema,
   ParametrosTiempoPrecioSchema,
   PermisoSchema,
   ProductoSchema,
@@ -11,9 +14,12 @@ import {
   TurnoSchema,
   UsuarioSchema,
   type Alquiler,
+  type CategoriaProducto,
+  type CodigoAutorizacion,
   type Habitacion,
   type HoraAdicional,
   type MetodoPago,
+  type MovimientoInventario,
   type ParametrosTiempoPrecio,
   type Producto,
   type Rango,
@@ -241,4 +247,39 @@ export function aRangos(fila: FilaUsuario): Rango[] {
       permisos: r.rango.permisos.map((p) => PermisoSchema.parse(p.permiso)),
     }),
   );
+}
+
+export function aCategoria(fila: Db.CategoriaProducto): CategoriaProducto {
+  return CategoriaProductoSchema.parse({ id: fila.id, nombre: fila.nombre });
+}
+
+export function aMovimientoInventario(fila: Db.MovimientoInventario): MovimientoInventario {
+  return MovimientoInventarioSchema.parse({
+    id: fila.id,
+    productoId: fila.productoId,
+    tipo: fila.tipo,
+    cantidad: fila.cantidad,
+    ticketId: fila.ticketId,
+    creadoPorId: fila.creadoPorId,
+    creadoEn: iso(fila.creadoEn),
+  });
+}
+
+/**
+ * Dentro del servidor, `codigo` lleva el HMAC guardado, no el código en claro: `validarCodigoAutorizacion`
+ * del dominio compara por igualdad, así que se le pasa también el HMAC de lo que ingresó el cajero.
+ * Este objeto nunca sale en una respuesta.
+ */
+export function aCodigoAutorizacion(fila: Db.CodigoAutorizacion): CodigoAutorizacion {
+  return CodigoAutorizacionSchema.parse({
+    id: fila.id,
+    codigo: fila.codigoHash,
+    operacion: fila.operacion,
+    generadoPorId: fila.generadoPorId,
+    generadoEn: iso(fila.generadoEn),
+    expiraEn: iso(fila.expiraEn),
+    usadoEn: isoONulo(fila.usadoEn),
+    usadoPorId: fila.usadoPorId,
+    ticketId: fila.ticketId,
+  });
 }

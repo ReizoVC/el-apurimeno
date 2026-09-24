@@ -120,7 +120,7 @@ const ticket = resultado.data;
 | `auditoria.ts` | `RegistroAuditoria`, `AccionAuditoria`, `CodigoAutorizacion` | RN-42, RN-46, §23 |
 | `comprobantes.ts` | `TrabajoImpresion` | RN-38, RN-39, §20.5 |
 | `configuracion.ts` | `ConfiguracionGlobal` | RN-43, §26 |
-| `api.ts` | `RUTAS`, cuerpos de entrada y respuesta de la API local, `CABECERA_IDEMPOTENCIA`, `RespuestaError`. Cubre autenticación, turnos y alquileres. La venta (`RegistrarVentaEntrada`, con `esHuesped` explícito) ya está definida, pero todavía no tiene ruta | Planos §11, RF-59, RN-22 |
+| `api.ts` | `RUTAS`, cuerpos de entrada y respuesta de la API local, `CABECERA_IDEMPOTENCIA`, `RespuestaError`: autenticación, turnos, alquileres, tienda, anulación y reportes | Planos §11, RF-59, §25 |
 
 ### Estados
 
@@ -158,7 +158,7 @@ if (rango.nombre === "Administrador") { … }
   esperado. Esos cálculos viven en `packages/domain` como funciones puras con la tabla de pruebas
   §16.10 (Planos §3.3). Este paquete define la forma de los datos, no cómo se calculan. Ninguna
   interfaz calcula precio ni tiempo (§28.1).
-- **Rutas de tienda, reportes y administración:** se agregan a `api.ts` cuando se construyan esos endpoints.
+- **Rutas de limpieza, administración y caja manual:** se agregan a `api.ts` cuando se construyan esos endpoints.
 - **Credenciales de usuario:** nunca salen del backend.
 - **Resumen sincronizado (espejo en la nube):** el SRS aún no define sus campos.
 

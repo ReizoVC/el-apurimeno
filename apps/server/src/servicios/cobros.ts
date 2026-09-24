@@ -3,6 +3,7 @@ import {
   ClaveIdempotenciaSchema,
   type OrigenTicket,
   type PagoEntrada,
+  type TipoTicket,
 } from "@apurimeno/contracts";
 import { pagoEnEfectivo, pagoSinVuelto, type BorradorPago } from "@apurimeno/domain";
 import type { FastifyRequest } from "fastify";
@@ -26,16 +27,16 @@ export function claveIdempotencia(request: FastifyRequest): string {
 export async function unaSolaVez<T>(
   prisma: PrismaClient,
   clave: string,
-  origen: OrigenTicket,
+  operacion: { tipo: TipoTicket; origen: OrigenTicket },
   reproducir: (ticketId: string) => Promise<T>,
   ejecutar: () => Promise<T>,
 ): Promise<{ resultado: T; repetido: boolean }> {
   const buscar = async () => {
     const existente = await prisma.ticket.findUnique({
       where: { claveIdempotencia: clave },
-      select: { id: true, origen: true },
+      select: { id: true, tipo: true, origen: true },
     });
-    if (existente !== null && existente.origen !== origen) {
+    if (existente !== null && (existente.tipo !== operacion.tipo || existente.origen !== operacion.origen)) {
       throw new ErrorApi("CLAVE_IDEMPOTENCIA_REUTILIZADA", "La clave de idempotencia ya se usó en otra operación.");
     }
     return existente;

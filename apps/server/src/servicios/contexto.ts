@@ -23,5 +23,9 @@ export function noEncontrado(entidad: string): ErrorApi {
 export async function parametrosVigentes(tx: Transaccion) {
   const config = await tx.configuracionGlobal.findUnique({ where: { id: 1 } });
   if (config === null) throw new Error("Falta la configuración global: ejecute la semilla.");
-  return { parametros: aParametros(config.parametrosAlquiler), permitirStockNegativo: config.permitirStockNegativo };
+  return {
+    parametros: aParametros(config.parametrosAlquiler),
+    permitirStockNegativo: config.permitirStockNegativo,
+    minutosVigenciaCodigoAutorizacion: config.minutosVigenciaCodigoAutorizacion,
+  };
 }

@@ -8,6 +8,9 @@ import {
   MovimientoInventarioSchema,
   PERMISOS,
   PARAMETROS_TIEMPO_PRECIO_INICIALES,
+  PeriodoConsultaSchema,
+  ProductoEntradaSchema,
+  ReposicionEntradaSchema,
   ProductoSchema,
   RANGOS_INICIALES,
   RegistrarIngresoEntradaSchema,
@@ -377,5 +380,19 @@ describe("API", () => {
     expect(RegistrarIngresoEntradaSchema.safeParse(ingreso).success).toBe(false);
     const pago = { metodoPagoId: "efectivo", monto: 30.5, montoRecibido: null, referencia: null };
     expect(RegistrarIngresoEntradaSchema.safeParse({ ...ingreso, pagos: [pago] }).success).toBe(false);
+  });
+});
+
+describe("API · tienda, anulación y reportes", () => {
+  it("un periodo de reporte exige desde < hasta", () => {
+    expect(PeriodoConsultaSchema.safeParse({ desde: "2026-09-23T00:00:00.000Z", hasta: "2026-09-24T00:00:00.000Z" }).success).toBe(true);
+    expect(PeriodoConsultaSchema.safeParse({ desde: "2026-09-24T00:00:00.000Z", hasta: "2026-09-23T00:00:00.000Z" }).success).toBe(false);
+  });
+
+  it("una reposición exige cantidad positiva y un producto no fija su stock", () => {
+    expect(ReposicionEntradaSchema.safeParse({ cantidad: 0 }).success).toBe(false);
+    const producto = { categoriaId: "c", nombre: "Agua", codigoBarras: null, precioHuesped: 150, precioPublico: 200, controlaStock: true, activo: true };
+    expect(ProductoEntradaSchema.safeParse(producto).success).toBe(true);
+    expect(ProductoEntradaSchema.safeParse({ ...producto, stock: 99 }).success).toBe(false);
   });
 });

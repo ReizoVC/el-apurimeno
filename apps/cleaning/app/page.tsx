@@ -49,9 +49,9 @@ export default function CleaningPage() {
             <Card key={habitacion.id} className="flex flex-col justify-between">
               <CardHeader>
                 <CardTitle>Habitación {habitacion.numero}</CardTitle>
-                <CardDescription>
-                  Piso {habitacion.numero.charAt(0)}
-                </CardDescription>
+                {habitacion.descripcion !== null && (
+                  <CardDescription>{habitacion.descripcion}</CardDescription>
+                )}
               </CardHeader>
               <CardFooter className="flex flex-col gap-2">
                 <Button

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AlquilerSchema, HoraAdicionalSchema } from "./alquileres.js";
-import { TurnoSchema } from "./caja.js";
+import { MovimientoCajaSchema, TurnoSchema } from "./caja.js";
+import { ClienteSchema, PrecioEspecialClienteSchema } from "./clientes.js";
 import {
   CentimosConSignoSchema,
   CentimosSchema,
@@ -14,12 +15,13 @@ import {
   OrigenPrecioAlquilerSchema,
   OrigenTicketSchema,
   TipoHoraAdicionalSchema,
+  TipoMovimientoCajaSchema,
 } from "./estados.js";
 import { HabitacionSchema } from "./habitaciones.js";
 import { PermisoSchema } from "./permisos.js";
 import { MovimientoInventarioSchema, ProductoSchema } from "./tienda.js";
 import { AjustePuntualSchema, LineaTicketSchema, TicketSchema } from "./tickets.js";
-import { UsuarioSchema } from "./usuarios.js";
+import { RangoSchema, UsuarioSchema } from "./usuarios.js";
 
 // Cuerpos de entrada y salida de la API local (Planos §11). El servidor valida con estos esquemas
 // y los clientes los usan para sus tipos: ninguno define su propia versión (Planos §16.1).
@@ -46,6 +48,27 @@ export const RUTAS = {
   reporteVentas: "/reportes/ventas",
   reporteArqueos: "/reportes/arqueos",
   reporteOcupacion: "/reportes/ocupacion",
+  // Limpieza (CU-15 a CU-17): lo que consume apps/cleaning.
+  habitacionesPendientesLimpieza: "/habitaciones/pendientes-limpieza",
+  marcarHabitacionLista: "/habitaciones/:id/lista",
+  reportarMantenimiento: "/habitaciones/:id/reporte-mantenimiento",
+  // Administración de habitaciones (CU-13, CU-14).
+  habitaciones: "/habitaciones",
+  habitacion: "/habitaciones/:id",
+  bloquearHabitacion: "/habitaciones/:id/bloqueo",
+  reactivarHabitacion: "/habitaciones/:id/reactivacion",
+  // Clientes y precios especiales (CU-08, CU-09).
+  clientes: "/clientes",
+  cliente: "/clientes/:id",
+  preciosEspecialesCliente: "/clientes/:id/precios-especiales",
+  precioEspecialCliente: "/clientes/:id/precios-especiales/:habitacionId",
+  // Usuarios (CU-23).
+  usuarios: "/usuarios",
+  usuario: "/usuarios/:id",
+  contrasenaUsuario: "/usuarios/:id/contrasena",
+  rangos: "/rangos",
+  // Movimientos manuales de caja (CU-18).
+  movimientosCaja: "/turnos/actual/movimientos",
   salud: "/health",
 } as const;
 
@@ -123,6 +146,17 @@ export const CerrarTurnoEntradaSchema = z
 export type CerrarTurnoEntrada = z.infer<typeof CerrarTurnoEntradaSchema>;
 
 export const TurnoRespuestaSchema = TurnoSchema;
+
+/**
+ * Ingreso o retiro manual de efectivo en el turno propio (RF-42). Lleva `idempotency-key`: un reintento
+ * no debe duplicar un retiro, porque desvirtuaría el arqueo. El motivo lo valida el dominio (REASON_REQUIRED).
+ */
+export const MovimientoCajaEntradaSchema = z
+  .object({ tipo: TipoMovimientoCajaSchema, monto: CentimosSchema.positive(), motivo: z.string() })
+  .strict();
+export type MovimientoCajaEntrada = z.infer<typeof MovimientoCajaEntradaSchema>;
+
+export const MovimientoCajaRespuestaSchema = MovimientoCajaSchema;
 
 // --- Alquileres ---
 
@@ -325,3 +359,79 @@ export const ReporteOcupacionSchema = z
   })
   .strict();
 export type ReporteOcupacion = z.infer<typeof ReporteOcupacionSchema>;
+
+// --- Habitaciones y limpieza (CU-13 a CU-17) ---
+
+/**
+ * Reporte de daño desde limpieza (CU-17). El motivo es recomendado, no obligatorio (RF-41): el cuerpo puede
+ * omitirse, y entonces vale como `{ motivo: null }`.
+ */
+export const ReportarMantenimientoEntradaSchema = z.object({ motivo: TextoRequeridoSchema.nullable() }).strict();
+export type ReportarMantenimientoEntrada = z.infer<typeof ReportarMantenimientoEntradaSchema>;
+
+/** Bloqueo administrativo (RF-38): el motivo es obligatorio y lo valida el dominio (REASON_REQUIRED). */
+export const BloquearHabitacionEntradaSchema = z.object({ motivo: z.string() }).strict();
+export type BloquearHabitacionEntrada = z.infer<typeof BloquearHabitacionEntradaSchema>;
+
+/** Alta o edición de una habitación (RF-36, RF-37). El estado no se edita: solo cambia con sus transiciones. */
+export const HabitacionEntradaSchema = z
+  .object({ numero: TextoRequeridoSchema, descripcion: TextoRequeridoSchema.nullable(), precioBase: CentimosSchema })
+  .strict();
+export type HabitacionEntrada = z.infer<typeof HabitacionEntradaSchema>;
+
+// --- Clientes y precios especiales (CU-08, CU-09) ---
+
+/** Búsqueda parcial por documento o nombre (RF-34). */
+export const ClientesConsultaSchema = z.object({ q: TextoRequeridoSchema.optional() }).strict();
+export type ClientesConsulta = z.infer<typeof ClientesConsultaSchema>;
+
+/** Alta o edición de un cliente: documento, nombre o ambos. */
+export const ClienteEntradaSchema = ClienteSchema.innerType()
+  .omit({ id: true })
+  .strict()
+  .refine((c) => c.documento !== null || c.nombre !== null, {
+    path: ["documento"],
+    message: "Un cliente necesita documento o nombre.",
+  });
+export type ClienteEntrada = z.infer<typeof ClienteEntradaSchema>;
+
+/** Alta de precio especial (RF-16). Si la combinación ya existe responde CLIENT_ROOM_PRICE_ALREADY_EXISTS. */
+export const CrearPrecioEspecialEntradaSchema = z
+  .object({ habitacionId: IdSchema, precio: CentimosSchema })
+  .strict();
+export type CrearPrecioEspecialEntrada = z.infer<typeof CrearPrecioEspecialEntradaSchema>;
+
+/** Edición del monto (RF-18). */
+export const EditarPrecioEspecialEntradaSchema = z.object({ precio: CentimosSchema }).strict();
+export type EditarPrecioEspecialEntrada = z.infer<typeof EditarPrecioEspecialEntradaSchema>;
+
+export const PrecioEspecialRespuestaSchema = PrecioEspecialClienteSchema;
+
+// --- Usuarios (CU-23) ---
+
+/** Longitud mínima de contraseña: decisión del proyecto, el SRS no fija una (README decisión 16). */
+export const CONTRASENA_MINIMA = 8;
+export const ContrasenaSchema = z.string().min(CONTRASENA_MINIMA).max(128);
+
+const rangoIdsUnicos = (ids: readonly string[]) => new Set(ids).size === ids.length;
+
+/** Alta de una cuenta individual (RN-40). La contraseña nunca vuelve en una respuesta. */
+export const CrearUsuarioEntradaSchema = z
+  .object({ nombreUsuario: TextoRequeridoSchema, contrasena: ContrasenaSchema, rangoIds: z.array(IdSchema).min(1) })
+  .strict()
+  .refine((u) => rangoIdsUnicos(u.rangoIds), { path: ["rangoIds"], message: "Un rango no se asigna dos veces." });
+export type CrearUsuarioEntrada = z.infer<typeof CrearUsuarioEntradaSchema>;
+
+/** Edición, desactivación y asignación de rangos (RF-45). Desactivar reemplaza a eliminar. */
+export const EditarUsuarioEntradaSchema = z
+  .object({ nombreUsuario: TextoRequeridoSchema, activo: z.boolean(), rangoIds: z.array(IdSchema).min(1) })
+  .strict()
+  .refine((u) => rangoIdsUnicos(u.rangoIds), { path: ["rangoIds"], message: "Un rango no se asigna dos veces." });
+export type EditarUsuarioEntrada = z.infer<typeof EditarUsuarioEntradaSchema>;
+
+/** Nueva contraseña fijada por el Administrador. */
+export const CambiarContrasenaEntradaSchema = z.object({ contrasena: ContrasenaSchema }).strict();
+export type CambiarContrasenaEntrada = z.infer<typeof CambiarContrasenaEntradaSchema>;
+
+export const UsuarioRespuestaSchema = UsuarioSchema;
+export const RangoRespuestaSchema = RangoSchema;

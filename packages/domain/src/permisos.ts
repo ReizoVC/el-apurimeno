@@ -25,6 +25,8 @@ export const PERMISO_POR_OPERACION = {
   CONSULTAR_TABLERO: "pos.access",
   REGISTRAR_INGRESO: "rentals.checkin",
   BUSCAR_CLIENTE: "rentals.checkin",
+  /** El cajero registra al cliente nuevo al tomar sus datos en el ingreso (CU-04 paso 3); el Administrador, en CU-08. */
+  REGISTRAR_CLIENTE: "rentals.checkin",
   COBRAR_HORA_ADICIONAL: "rentals.extra_hour",
   REGISTRAR_SALIDA: "rentals.checkout",
   REGISTRAR_SALIDA_SIN_PAGO: "rentals.checkout",

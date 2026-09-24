@@ -1,11 +1,14 @@
 import {
+  HabitacionSchema,
   TRANSICIONES_HABITACION,
   esTransicionValida,
+  type Centimos,
   type EstadoHabitacion,
   type Habitacion,
 } from "@apurimeno/contracts";
 import { ErrorNegocio } from "./errores.js";
-import { motivoRequerido } from "./interno.js";
+import { asegurarCentimos, motivoRequerido } from "./interno.js";
+import type { Contexto } from "./tickets.js";
 
 function transicionar(
   habitacion: Habitacion,
@@ -16,6 +19,27 @@ function transicionar(
     throw new ErrorNegocio("INVALID_STATE_TRANSITION");
   }
   return { ...habitacion, estado: hacia };
+}
+
+export interface DatosHabitacion {
+  numero: string;
+  descripcion: string | null;
+  precioBase: Centimos;
+}
+
+/** Alta de habitación (RF-36): queda LIBRE, disponible en el tablero de inmediato. El número único lo garantiza la base. */
+export function crearHabitacion(datos: DatosHabitacion, ctx: Contexto): Habitacion {
+  asegurarCentimos(datos.precioBase, "precioBase");
+  return HabitacionSchema.parse({ id: ctx.generarId(), ...datos, estado: "LIBRE" });
+}
+
+/**
+ * Edición de número, descripción y precio de lista (RF-37). El estado no se edita aquí: solo cambia con sus
+ * transiciones. Los alquileres ya iniciados conservan su propia copia del precio (RN-44).
+ */
+export function editarHabitacion(habitacion: Habitacion, datos: DatosHabitacion): Habitacion {
+  asegurarCentimos(datos.precioBase, "precioBase");
+  return HabitacionSchema.parse({ ...habitacion, ...datos });
 }
 
 /**

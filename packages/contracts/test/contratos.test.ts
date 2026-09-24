@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   AlquilerSchema,
+  ClienteEntradaSchema,
   ClienteSchema,
+  CrearUsuarioEntradaSchema,
+  EditarUsuarioEntradaSchema,
+  HabitacionEntradaSchema,
+  MovimientoCajaEntradaSchema,
+  ReportarMantenimientoEntradaSchema,
   ConfiguracionGlobalSchema,
   HoraAdicionalSchema,
   MovimientoCajaSchema,
@@ -394,5 +400,37 @@ describe("API · tienda, anulación y reportes", () => {
     const producto = { categoriaId: "c", nombre: "Agua", codigoBarras: null, precioHuesped: 150, precioPublico: 200, controlaStock: true, activo: true };
     expect(ProductoEntradaSchema.safeParse(producto).success).toBe(true);
     expect(ProductoEntradaSchema.safeParse({ ...producto, stock: 99 }).success).toBe(false);
+  });
+});
+
+describe("API · limpieza, administración y caja", () => {
+  it("un cliente nuevo necesita documento o nombre, y no trae id", () => {
+    expect(ClienteEntradaSchema.safeParse({ documento: "12345678", nombre: null }).success).toBe(true);
+    expect(ClienteEntradaSchema.safeParse({ documento: null, nombre: null }).success).toBe(false);
+    expect(ClienteEntradaSchema.safeParse({ id: "x", documento: "1", nombre: null }).success).toBe(false);
+  });
+
+  it("el reporte de mantenimiento admite motivo nulo (RF-41: recomendado)", () => {
+    expect(ReportarMantenimientoEntradaSchema.safeParse({ motivo: null }).success).toBe(true);
+    expect(ReportarMantenimientoEntradaSchema.safeParse({ motivo: "  " }).success).toBe(false);
+  });
+
+  it("una habitación no fija su estado al crearse ni al editarse", () => {
+    const h = { numero: "401", descripcion: null, precioBase: 3500 };
+    expect(HabitacionEntradaSchema.safeParse(h).success).toBe(true);
+    expect(HabitacionEntradaSchema.safeParse({ ...h, estado: "LIBRE" }).success).toBe(false);
+  });
+
+  it("usuario: contraseña mínima, al menos un rango y sin repetidos", () => {
+    const u = { nombreUsuario: "maria", contrasena: "12345678", rangoIds: ["rango-cajero"] };
+    expect(CrearUsuarioEntradaSchema.safeParse(u).success).toBe(true);
+    expect(CrearUsuarioEntradaSchema.safeParse({ ...u, contrasena: "1234567" }).success).toBe(false);
+    expect(CrearUsuarioEntradaSchema.safeParse({ ...u, rangoIds: [] }).success).toBe(false);
+    expect(EditarUsuarioEntradaSchema.safeParse({ nombreUsuario: "maria", activo: false, rangoIds: ["a", "a"] }).success).toBe(false);
+  });
+
+  it("un movimiento de caja exige monto positivo (RF-42)", () => {
+    expect(MovimientoCajaEntradaSchema.safeParse({ tipo: "RETIRO", monto: 5000, motivo: "pago de agua" }).success).toBe(true);
+    expect(MovimientoCajaEntradaSchema.safeParse({ tipo: "RETIRO", monto: 0, motivo: "x" }).success).toBe(false);
   });
 });

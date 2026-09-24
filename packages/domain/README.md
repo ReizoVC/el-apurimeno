@@ -62,7 +62,8 @@ try {
 | `tiempo.ts` | `calcularSalidaInicial`, `calcularEstadoTemporal`, `calcularHoraAdicional` |
 | `precios.ts` | `resolverPrecioHabitacion`, `cotizarIngreso`, `cotizarHoraAdicional`, `aplicarAjustePuntual`, `precioProducto`, `cotizarVenta` |
 | `alquileres.ts` | `iniciarAlquiler`, `registrarHoraAdicional`, `registrarSalida`, `registrarSalidaSinPago`, `aplicarAnulacionHoraAdicional`, `aplicarAnulacionIngreso` |
-| `habitaciones.ts` | `ocuparHabitacion`, `liberarPorSalida`, `marcarHabitacionLista`, `reportarMantenimiento`, `bloquearPorMantenimiento`, `reactivarHabitacion`, `liberarPorAnulacion` |
+| `clientes.ts` | `crearPrecioEspecial`, `editarPrecioEspecial` |
+| `habitaciones.ts` | `crearHabitacion`, `editarHabitacion`, `ocuparHabitacion`, `liberarPorSalida`, `marcarHabitacionLista`, `reportarMantenimiento`, `bloquearPorMantenimiento`, `reactivarHabitacion`, `liberarPorAnulacion` |
 | `caja.ts` | `asegurarTurnoAbierto`, `calcularEfectivoEsperado`, `cerrarTurno`, `forzarCierreTurno`, `prepararMovimientoCaja` |
 | `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `revertirVentaEnInventario` |
 | `tickets.ts` | `pagoEnEfectivo`, `pagoSinVuelto`, `armarTicketCobro`, `validarInvariantesTicket` |
@@ -91,7 +92,7 @@ Las pruebas se nombran con la regla que verifican (`describe("RN-xx · …")`). 
 | RN-12 | No cerrar en sobretiempo sin resolver | `registrarSalida`, `registrarSalidaSinPago` | alquileres |
 | RN-13 | Precio individual por habitación | `resolverPrecioHabitacion` | precios |
 | RN-14 | El precio especial reemplaza al de lista | `resolverPrecioHabitacion` | precios |
-| RN-15 | El precio especial solo en su habitación | `resolverPrecioHabitacion` | precios |
+| RN-15 | El precio especial solo en su habitación, uno por cliente + habitación (RF-16: `CLIENT_ROOM_PRICE_ALREADY_EXISTS`) | `resolverPrecioHabitacion`, `crearPrecioEspecial`, `editarPrecioEspecial` | precios, clientes |
 | RN-16 | Solo `client_pricing.manage` | `puede` | permisos |
 | RN-17 | Ajuste puntual con motivo | `aplicarAjustePuntual`, `permisoAjustePuntual` | precios, permisos |
 | RN-18 | El ajuste nunca a la baja | `aplicarAjustePuntual` | precios |

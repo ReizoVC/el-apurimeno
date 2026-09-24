@@ -75,6 +75,7 @@ describe("Matriz §22 con los rangos iniciales", () => {
     ["AJUSTAR_PRECIO_TIENDA", true, false],
     ["GESTIONAR_PRECIO_ESPECIAL", false, false],
     ["BUSCAR_CLIENTE", true, false],
+    ["REGISTRAR_CLIENTE", true, false],
     ["VENDER", true, false],
     ["REPONER_INVENTARIO", false, false],
     ["GESTIONAR_PRODUCTOS", false, false],

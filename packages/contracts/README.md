@@ -222,6 +222,17 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     y el efectivo contado no coincide con el esperado (`diferencia ≠ 0`), debe escribir
     `comentarioCierre`, sin importar el monto: no hay umbral. No requiere código de autorización. Sin
     diferencia, el comentario es opcional. En un cierre forzado (CU-20), el comentario es opcional.
+16. **Contraseña de al menos 8 caracteres** (`CONTRASENA_MINIMA`). El SRS no fija una longitud; la decidió
+    el proyecto. Se aplica al crear un usuario y al cambiar su contraseña, no al iniciar sesión.
+17. **`Cliente.documento` es único cuando existe**, y lo garantiza la base de datos (igual que la decisión
+    14). El documento es la clave preferida (§32): dos clientes con el mismo documento repartirían sus
+    precios especiales entre ambos y el cajero no sabría cuál elegir. Varios clientes pueden no tener
+    documento. El nombre no es único.
+18. **Los cambios de estado de una habitación no llevan `idempotency-key`** (Planos §11.1 lo pide para
+    "operaciones que cambian una habitación"). La máquina de estados ya evita el doble efecto: repetir
+    "marcar lista" sobre una habitación que ya está `LIBRE` responde `INVALID_STATE_TRANSITION` y no
+    cambia nada. Así las rutas de limpieza coinciden con lo que `apps/cleaning` envía hoy (solo el id).
+    Los movimientos manuales de caja sí la llevan: repetirlos duplicaría el efectivo.
 
 ## Decisiones pendientes que afectan el contrato
 

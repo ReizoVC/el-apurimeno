@@ -108,8 +108,8 @@ const ticket = resultado.data;
 |---|---|---|
 | `comun.ts` | `Id`, `Centimos`, `CentimosConSigno`, `FechaISO`, `TextoRequerido` | RN-37, §21 |
 | `estados.ts` | Todos los enums de estado y tipo, y las tablas de transición | §19.2, §20 |
-| `permisos.ts` | `Permiso` (catálogo fijo de 23) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
-| `errores.ts` | `CodigoErrorNegocio` y sus mensajes | §24.2, §16 |
+| `permisos.ts` | `Permiso` (catálogo fijo de 24) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
+| `errores.ts` | `CodigoErrorNegocio` y sus mensajes. Los 9 códigos del SRS más `SHIFT_NOT_OPEN`, `RENTAL_NOT_OPEN` e `INVALID_STATE_TRANSITION`, definidos por el proyecto para reglas que el SRS exige sin código | §24.2, §16, RN-32, §20 |
 | `habitaciones.ts` | `Habitacion` | RN-13, §20.1 |
 | `clientes.ts` | `Cliente`, `PrecioEspecialCliente` | RN-14 a RN-16 |
 | `alquileres.ts` | `Alquiler`, `HoraAdicional`, `ParametrosTiempoPrecio`, `MINUTOS_HORA_ADICIONAL` | RN-01 a RN-12, RF-64 |
@@ -185,18 +185,42 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
    referencia. Si ese campo existe, se aplicó el precio de huésped (RF-22).
 8. **Limpieza reporta mantenimiento con `cleaning.mark_ready`** (CU-17). `rooms.maintenance` queda
    para el bloqueo y la reactivación administrativos (CU-14).
-9. **Ajustes en ventas:** el catálogo no tiene un permiso de ajuste para la tienda, así que se usa
-   `rentals.manual_adjustment` (CU-10 menciona "el equivalente de tienda" sin nombrarlo).
+9. **Ajustes en ventas usan `store.manual_adjustment`.** Es el "equivalente de tienda" que CU-10
+   menciona sin nombrar; no está en §41.3 y lo agregó el proyecto. Tiene las mismas reglas que el ajuste
+   de habitación: nunca por debajo del precio calculado y con motivo obligatorio (RN-17, RN-18).
+   `rentals.manual_adjustment` queda exclusivo para ingresos y horas adicionales. El Cajero tiene ambos.
 10. **`OCUPADA → LIBRE` es válido** solo al anular el ingreso (RF-30, escenario 31.5). El diagrama
     §20.1 no lo muestra.
 11. **`permitirStockNegativo` es una configuración global** (RN-26 no dice si es global o por producto).
 12. **Cliente:** el documento es texto libre, sin tipo de documento (§21). Se exige documento o nombre.
     No se incluye el teléfono (Planos §9.2 lo menciona, pero el SRS no).
+13. **Consumo de la cortesía y hora adicional pedida en cortesía** (RF-08 solo define "aún no venció"
+    y "ya pasó la cortesía"; esta regla la definió el proyecto y precisa RN-04 y RN-07).
+    - **La cortesía se consume la primera vez que el alquiler entra en `EN_CORTESIA`**, pague o no el
+      cliente durante esa ventana. Desde ahí `cortesiaConsumida` queda en `true` para el resto del
+      alquiler y no se vuelve a otorgar, aunque se pacte una nueva hora de salida.
+    - **Pagar una hora adicional mientras el alquiler está en `A_TIEMPO` o `POR_VENCER`** (antes de
+      vencer) no consume la cortesía, porque el alquiler nunca entró en `EN_CORTESIA`. Se registra como
+      `EXTENSION_ANTICIPADA`: la nueva salida es la salida vigente más 1 h.
+    - **Pagar estando en `EN_CORTESIA`:** se registra como `EXTENSION_ANTICIPADA`, y la nueva salida es la
+      salida vigente más 1 h (no el momento del pago más 1 h). La cortesía ya quedó consumida al entrar en
+      esa ventana: si el cliente vuelve a pasarse de la nueva salida, pasa directo a `EN_SOBRETIEMPO`.
+    - **Pagar estando en `EN_SOBRETIEMPO`:** se registra como `LIQUIDACION_SOBRETIEMPO`, como ya estaba
+      definido. La nueva salida es el momento del pago más 1 h, sin nueva cortesía (RN-06, RN-07).
+
+    El estado temporal no se guarda (RN-11), así que nadie escribe `cortesiaConsumida` en el instante en
+    que empieza la ventana. Se persiste en la siguiente operación que cambia la salida: al registrar una
+    hora adicional pagada en `EN_CORTESIA` o en `EN_SOBRETIEMPO`, `cortesiaConsumida` pasa a `true`.
+    Hasta entonces, el cálculo del estado temporal usa la salida vigente, que no cambió, así que no hace
+    falta ningún proceso en segundo plano. La regla se implementa en `packages/domain`.
+14. **`Producto.codigoBarras` es único, pero lo garantiza la base de datos**, no el contrato: el contrato
+    valida un objeto a la vez y no puede ver los demás productos. Nota para el esquema de Prisma: declarar
+    `codigoBarras String? @unique`. `UNIQUE` admite varios `NULL`, así que varios productos pueden no tener
+    código. El tipo en el contrato sigue siendo `string | null`.
 
 ## Decisiones pendientes que afectan el contrato
 
 | ID | Tema | Estado en el contrato |
 |---|---|---|
 | PEND-05 | Nota obligatoria ante una diferencia de arqueo | Sin campo de nota ni umbral en `Turno` / `ConfiguracionGlobal` |
-| — | Hora adicional pedida **en cortesía** (ni "no vencido" ni "sobretiempo" según RF-08) | El contrato no restringe cuándo ocurre una extensión anticipada; lo decide `packages/domain` |
 | — | Vigencia por defecto del código de autorización (RF-65: "algunos minutos") | Configurable (`minutosVigenciaCodigoAutorizacion`), sin valor inicial definido |

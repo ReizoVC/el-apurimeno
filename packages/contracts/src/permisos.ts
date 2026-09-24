@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-/** Catálogo fijo de permisos (RN-41, anexo §41.3). Agregar uno requiere que exista una verificación real en el backend. */
+/**
+ * Catálogo fijo de permisos (RN-41, anexo §41.3). Agregar uno requiere que exista una verificación real en el backend.
+ * `store.manual_adjustment` no está en §41.3: es el "equivalente de tienda" de CU-10, definido por el proyecto.
+ * `rentals.manual_adjustment` aplica solo a ingresos y horas adicionales; `store.manual_adjustment` solo a ventas.
+ */
 export const PermisoSchema = z.enum([
   "pos.access",
   "dashboard.access",
@@ -17,6 +21,7 @@ export const PermisoSchema = z.enum([
   "rooms.maintenance",
   "client_pricing.manage",
   "sales.sell",
+  "store.manual_adjustment",
   "inventory.manage",
   "cleaning.mark_ready",
   "tickets.void",
@@ -58,6 +63,7 @@ export const RANGOS_INICIALES = {
       "rentals.checkout",
       "rentals.manual_adjustment",
       "sales.sell",
+      "store.manual_adjustment",
       "tickets.reprint",
     ],
   },

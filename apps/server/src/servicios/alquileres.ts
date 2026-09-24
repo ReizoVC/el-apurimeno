@@ -121,7 +121,7 @@ export async function registrarIngresoServicio(
   return unaSolaVez(
     ctx.prisma,
     clave,
-    "INGRESO_ALQUILER",
+    { tipo: "COBRO", origen: "INGRESO_ALQUILER" },
     (ticketId) => reproducirIngreso(ctx, ticketId),
     async () => {
       try {
@@ -248,7 +248,7 @@ export async function registrarHoraAdicionalServicio(
   return unaSolaVez(
     ctx.prisma,
     clave,
-    "HORA_ADICIONAL",
+    { tipo: "COBRO", origen: "HORA_ADICIONAL" },
     (ticketId) => reproducirHoraAdicional(ctx, alquilerId, ticketId),
     () =>
       ctx.prisma.$transaction(async (tx) => {

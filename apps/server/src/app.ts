@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import fastifyJwt from "@fastify/jwt";
 import Fastify, { type FastifyInstance } from "fastify";
 import { registrarAutenticacion } from "./auth.js";
@@ -23,7 +24,9 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   await app.register(fastifyJwt, { secret: opciones.jwtSecret, sign: { expiresIn: "12h" } });
   app.setErrorHandler(manejarError);
   registrarAutenticacion(app, opciones.prisma, ahora);
-  registrarRutas(app, opciones.prisma, ahora);
+  // Secreto de los códigos de autorización, derivado del de JWT para no exigir otra variable de entorno.
+  const secretoCodigos = createHmac("sha256", opciones.jwtSecret).update("codigos-autorizacion").digest();
+  registrarRutas(app, opciones.prisma, ahora, secretoCodigos);
   await app.ready();
   return app;
 }

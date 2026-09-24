@@ -41,9 +41,48 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /alquileres/:id/horas-adicionales` | `COBRAR_HORA_ADICIONAL` | Sí |
 | `POST /alquileres/:id/salida` | `REGISTRAR_SALIDA` | — |
 | `POST /alquileres/:id/salida-sin-pago` | `REGISTRAR_SALIDA_SIN_PAGO` | — |
+| `GET /categorias-producto` | `VENDER` o `GESTIONAR_PRODUCTOS` | — |
+| `POST /categorias-producto` | `GESTIONAR_PRODUCTOS` | — |
+| `GET /productos?codigoBarras=` | `VENDER` o `GESTIONAR_PRODUCTOS` | — |
+| `POST /productos`, `PUT /productos/:id` | `GESTIONAR_PRODUCTOS` | — |
+| `POST /productos/:id/reposicion` | `REPONER_INVENTARIO` | — |
+| `POST /ventas` | `VENDER` | Sí |
+| `POST /codigos-autorizacion` | `GENERAR_CODIGO_AUTORIZACION` | — |
+| `POST /tickets/:id/anulacion` | `ANULAR_TICKET` o `ANULAR_TICKET_CON_CODIGO` | Sí |
+| `GET /reportes/ventas?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
+| `GET /reportes/arqueos?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
+| `GET /reportes/ocupacion?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
 
-La tienda y los reportes todavía no tienen ruta. El servicio de venta (`src/servicios/tienda.ts`) ya
-existe y está probado.
+Todavía faltan las rutas de limpieza (marcar lista y reportar mantenimiento), la administración de
+habitaciones, clientes, precios especiales y usuarios, y los movimientos manuales de caja.
+
+### Anulación y códigos de autorización (CU-21, RN-46)
+
+- Quien tiene `tickets.void` anula directamente. Un Cajero entra con `pos.access` (operación
+  `ANULAR_TICKET_CON_CODIGO`) y debe enviar un código generado por un Administrador; Limpieza no puede
+  entrar ni con código.
+- El compensatorio se emite en el **turno abierto de quien anula**: la devolución sale de ese cajón.
+  Un Administrador que anula también necesita su turno abierto.
+- Efectos: anular un ingreso deja el alquiler `ANULADO` y la habitación `LIBRE` (exige anular antes las
+  horas vigentes); anular una hora adicional recalcula la salida; anular una venta restituye el stock.
+  El ingreso de un alquiler ya **cerrado** no se puede anular (`RENTAL_NOT_OPEN`): el cierre es
+  definitivo (§20.2).
+- El código tiene 6 dígitos de una fuente criptográfica y vence a los minutos configurados. Se guarda
+  **solo su HMAC-SHA256** (`codigoHash`), con un secreto derivado de `JWT_SECRET`; el código en claro
+  se muestra una única vez, al generarlo, y nunca se audita. En desarrollo, sin `JWT_SECRET` fijo, los
+  códigos dejan de servir al reiniciar.
+- Contra la fuerza bruta: tras **5 códigos incorrectos en 15 minutos**, el usuario queda bloqueado
+  para anular con código hasta que pase la ventana. Cada intento fallido queda auditado.
+
+### Reportes (§25)
+
+El periodo es `[desde, hasta)` en UTC. La agregación es de `@apurimeno/domain` (`resumirVentas`,
+`resumirArqueos`, `resumirOcupacion`); los días se cuentan en hora de Lima.
+- **Ventas:** tickets emitidos en el periodo que siguen vigentes (cobros no anulados), por origen,
+  método de pago, día, turno y producto.
+- **Arqueos:** turnos cerrados en el periodo, con la suma de diferencias.
+- **Ocupación:** alquileres ingresados en el periodo que no fueron anulados; horas vendidas e ingresos
+  por habitación.
 
 ### Respuestas de error
 
@@ -74,8 +113,8 @@ Siempre `{ codigo, mensaje }` (`RespuestaError` en contracts):
    `puede(permisos, operacion)` de `@apurimeno/domain`. Toda ruta declara `config.operacion` o
    `config.publica`; si falta, el servidor no arranca. Los permisos condicionales (el ajuste puntual)
    se comprueban dentro de la ruta con `exigir()`.
-4. **Huésped o público.** `RegistrarVentaEntrada.esHuesped` llega explícito desde el cajero; el
-   servidor no lo infiere de los alquileres (RES-02).
+4. **Huésped o público.** `RegistrarVentaEntrada.esHuesped` llega explícito desde el cajero en
+   `POST /ventas`; el servidor no lo infiere de los alquileres (RES-02).
 
 Además:
 - **Auditoría (RN-42):** cada operación escribe su `RegistroAuditoria` en la misma transacción.
@@ -110,3 +149,6 @@ simular el paso del tiempo.
 - `autorizacion`: login, bcrypt, 401 y 403 con auditoría, cambio de rango en caliente, y rutas sin
   operación declarada.
 - `tienda`: el servicio de venta con `esHuesped` explícito.
+- `tienda-y-reportes`: catálogo, reposición, venta por HTTP y los tres reportes.
+- `anulacion`: anulación de ingreso, hora adicional y venta; códigos de autorización (un solo uso,
+  vencimiento, hash, límite de intentos).

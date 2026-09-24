@@ -34,7 +34,7 @@ export interface Entorno {
   crearUsuario(nombreUsuario: string, rangoIds: string[], activo?: boolean): Promise<void>;
   crearRango(id: string, permisos: z.infer<typeof RangoSchema>["permisos"]): Promise<void>;
   login(nombreUsuario: string): Promise<string>;
-  llamar(metodo: "GET" | "POST", url: string, token: string | null, cuerpo?: unknown, clave?: string): Promise<LightMyRequestResponse>;
+  llamar(metodo: "GET" | "POST" | "PUT", url: string, token: string | null, cuerpo?: unknown, clave?: string): Promise<LightMyRequestResponse>;
   cerrar(): Promise<void>;
 }
 

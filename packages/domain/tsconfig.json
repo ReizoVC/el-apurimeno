@@ -1,0 +1,10 @@
+{
+  "extends": "@apurimeno/typescript-config/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src", "test"],
+  "exclude": ["node_modules"]
+}

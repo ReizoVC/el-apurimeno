@@ -1,0 +1,491 @@
+// Refleja los tipos de @apurimeno/contracts: mismos nombres de modelo, de campo y de enum.
+// Diferencias inevitables, todas del lado de la base de datos:
+// - Fechas: DateTime aquí, texto ISO-8601 UTC en el contrato. src/mapeo.ts convierte.
+// - Objetos anidados del contrato (parametrosAplicados, ajustePuntual, anulacion, etc.): columnas Json.
+// - Listas del contrato (Ticket.lineas, Ticket.pagos, Usuario.rangoIds, Rango.permisos): tablas relacionadas.
+// - Permiso es texto (validado con PermisoSchema): sus valores llevan punto ("pos.access") y un enum de Prisma no lo admite.
+// - Columnas solo de base de datos, nunca expuestas: Usuario.contrasenaHash, Ticket.claveIdempotencia,
+//   LineaTicket.posicion y Pago.posicion (conservan el orden del arreglo del contrato).
+// - Índices únicos parciales (preview "partialIndexes"): un alquiler ABIERTO por habitación y un turno
+//   ABIERTO por usuario.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures     = ["partialIndexes"]
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum EstadoHabitacion {
+  LIBRE
+  OCUPADA
+  PENDIENTE_LIMPIEZA
+  MANTENIMIENTO
+}
+
+enum EstadoAlquiler {
+  ABIERTO
+  CERRADO
+  ANULADO
+}
+
+enum TipoHoraAdicional {
+  EXTENSION_ANTICIPADA
+  LIQUIDACION_SOBRETIEMPO
+}
+
+enum OrigenPrecioAlquiler {
+  LISTA
+  PRECIO_ESPECIAL
+}
+
+enum EstadoTicket {
+  EMITIDO
+  ANULADO
+}
+
+enum TipoTicket {
+  COBRO
+  COMPENSATORIO
+}
+
+enum OrigenTicket {
+  INGRESO_ALQUILER
+  HORA_ADICIONAL
+  VENTA_TIENDA
+}
+
+enum TipoLineaTicket {
+  BASE_HABITACION
+  HORA_ADICIONAL
+  PRODUCTO
+  AJUSTE_PUNTUAL
+}
+
+enum EstadoTurno {
+  ABIERTO
+  CERRADO
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  RETIRO
+}
+
+enum TipoMovimientoInventario {
+  REPOSICION
+  VENTA
+  ANULACION_VENTA
+}
+
+enum EstadoTrabajoImpresion {
+  PENDIENTE
+  IMPRESO
+  ERROR
+}
+
+enum OperacionAutorizable {
+  ANULAR_TICKET
+}
+
+enum AccionAuditoria {
+  SESION_INICIADA
+  SESION_CERRADA
+  SESION_FALLIDA
+  ACCESO_DENEGADO
+  TURNO_ABIERTO
+  TURNO_CERRADO
+  TURNO_CIERRE_FORZADO
+  MOVIMIENTO_CAJA_REGISTRADO
+  INGRESO_REGISTRADO
+  HORA_ADICIONAL_COBRADA
+  SALIDA_REGISTRADA
+  SALIDA_SIN_PAGO_REGISTRADA
+  PRECIO_ESPECIAL_CREADO
+  PRECIO_ESPECIAL_EDITADO
+  PRECIO_ESPECIAL_ELIMINADO
+  AJUSTE_PUNTUAL_APLICADO
+  VENTA_REGISTRADA
+  MERCADERIA_INGRESADA
+  HABITACION_CREADA
+  HABITACION_EDITADA
+  HABITACION_ESTADO_CAMBIADO
+  PRODUCTO_CREADO
+  PRODUCTO_EDITADO
+  TICKET_ANULADO
+  CODIGO_AUTORIZACION_GENERADO
+  COMPROBANTE_REIMPRESO
+  USUARIO_CREADO
+  USUARIO_EDITADO
+  USUARIO_DESACTIVADO
+  USUARIO_RANGOS_ASIGNADOS
+  RANGO_CREADO
+  RANGO_EDITADO
+  CONFIGURACION_CAMBIADA
+}
+
+enum TipoEntidadAuditada {
+  SESION
+  HABITACION
+  CLIENTE
+  PRECIO_ESPECIAL_CLIENTE
+  ALQUILER
+  HORA_ADICIONAL
+  TICKET
+  TURNO
+  MOVIMIENTO_CAJA
+  PRODUCTO
+  MOVIMIENTO_INVENTARIO
+  USUARIO
+  RANGO
+  CONFIGURACION
+  METODO_PAGO
+  CODIGO_AUTORIZACION
+  TRABAJO_IMPRESION
+}
+
+model Habitacion {
+  id          String           @id
+  numero      String           @unique
+  descripcion String?
+  precioBase  Int
+  estado      EstadoHabitacion
+
+  alquileres            Alquiler[]
+  preciosEspeciales     PrecioEspecialCliente[]
+  ticketsDeReferencia   Ticket[]
+}
+
+model Cliente {
+  id        String  @id
+  documento String?
+  nombre    String?
+
+  alquileres        Alquiler[]
+  preciosEspeciales PrecioEspecialCliente[]
+
+  @@index([documento])
+  @@index([nombre])
+}
+
+model PrecioEspecialCliente {
+  id           String   @id
+  clienteId    String
+  habitacionId String
+  precio       Int
+  creadoPorId  String
+  creadoEn     DateTime
+
+  cliente    Cliente    @relation(fields: [clienteId], references: [id])
+  habitacion Habitacion @relation(fields: [habitacionId], references: [id])
+  creadoPor  Usuario    @relation("PrecioEspecialCreadoPor", fields: [creadoPorId], references: [id])
+
+  @@unique([clienteId, habitacionId])
+}
+
+model Alquiler {
+  id                        String               @id
+  habitacionId              String
+  clienteId                 String?
+  turnoId                   String
+  estado                    EstadoAlquiler
+  ingresoEn                 DateTime
+  salidaProgramadaEn        DateTime
+  cortesiaConsumida         Boolean
+  origenPrecio              OrigenPrecioAlquiler
+  precioHabitacionAplicado  Int
+  horasAdicionalesAlIngreso Int
+  parametrosAplicados       Json
+  cerradoEn                 DateTime?
+  cerradoPorId              String?
+  salidaSinPago             Boolean
+  motivoSalidaSinPago       String?
+
+  habitacion     Habitacion      @relation(fields: [habitacionId], references: [id])
+  cliente        Cliente?        @relation(fields: [clienteId], references: [id])
+  turno          Turno           @relation(fields: [turnoId], references: [id])
+  cerradoPor     Usuario?        @relation("AlquilerCerradoPor", fields: [cerradoPorId], references: [id])
+  horasAdicionales HoraAdicional[]
+  tickets        Ticket[]
+
+  // Un solo alquiler ABIERTO por habitación, garantizado por la base de datos (RN-27, RF-58, T-15).
+  @@unique([habitacionId], map: "Alquiler_habitacionId_abierto_key", where: { estado: "ABIERTO" })
+  @@index([habitacionId, estado])
+}
+
+model HoraAdicional {
+  id             String            @id
+  alquilerId     String
+  ticketId       String            @unique
+  tipo           TipoHoraAdicional
+  salidaAnterior DateTime
+  salidaNueva    DateTime
+  creadoPorId    String
+  creadoEn       DateTime
+
+  alquiler  Alquiler @relation(fields: [alquilerId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  creadoPor Usuario  @relation("HoraAdicionalCreadaPor", fields: [creadoPorId], references: [id])
+}
+
+model Ticket {
+  id                     String       @id
+  numero                 Int          @unique
+  tipo                   TipoTicket
+  origen                 OrigenTicket
+  estado                 EstadoTicket
+  turnoId                String
+  alquilerId             String?
+  habitacionReferenciaId String?
+  ticketOriginalId       String?      @unique
+  total                  Int
+  ajustePuntual          Json?
+  anulacion              Json?
+  creadoPorId            String
+  creadoEn               DateTime
+  /// Solo base de datos: clave de idempotencia del cobro (RF-59).
+  claveIdempotencia      String?      @unique
+
+  turno                Turno        @relation(fields: [turnoId], references: [id])
+  alquiler             Alquiler?    @relation(fields: [alquilerId], references: [id])
+  habitacionReferencia Habitacion?  @relation(fields: [habitacionReferenciaId], references: [id])
+  ticketOriginal       Ticket?      @relation("Compensatorio", fields: [ticketOriginalId], references: [id])
+  compensatorio        Ticket?      @relation("Compensatorio")
+  creadoPor            Usuario      @relation("TicketCreadoPor", fields: [creadoPorId], references: [id])
+  lineas               LineaTicket[]
+  pagos                Pago[]
+  horaAdicional        HoraAdicional?
+  movimientosInventario MovimientoInventario[]
+  codigoAutorizacion   CodigoAutorizacion?
+  trabajosImpresion    TrabajoImpresion[]
+
+  @@index([turnoId])
+}
+
+model LineaTicket {
+  id             String          @id
+  ticketId       String
+  /// Solo base de datos: orden de la línea en el ticket.
+  posicion       Int
+  tipo           TipoLineaTicket
+  descripcion    String
+  cantidad       Int
+  precioUnitario Int
+  importe        Int
+  productoId     String?
+
+  ticket   Ticket    @relation(fields: [ticketId], references: [id])
+  producto Producto? @relation(fields: [productoId], references: [id])
+
+  @@unique([ticketId, posicion])
+}
+
+model Pago {
+  id            String  @id
+  ticketId      String
+  /// Solo base de datos: orden del pago en el ticket.
+  posicion      Int
+  metodoPagoId  String
+  monto         Int
+  referencia    String?
+  montoRecibido Int?
+  vuelto        Int?
+
+  ticket     Ticket     @relation(fields: [ticketId], references: [id])
+  metodoPago MetodoPago @relation(fields: [metodoPagoId], references: [id])
+
+  @@unique([ticketId, posicion])
+}
+
+model MetodoPago {
+  id                 String  @id
+  nombre             String  @unique
+  afectaCaja         Boolean
+  requiereReferencia Boolean
+  activo             Boolean
+
+  pagos Pago[]
+}
+
+model Turno {
+  id               String      @id
+  usuarioId        String
+  estado           EstadoTurno
+  abiertoEn        DateTime
+  efectivoInicial  Int
+  cerradoEn        DateTime?
+  cerradoPorId     String?
+  cierreForzado    Boolean
+  efectivoContado  Int?
+  efectivoEsperado Int?
+  diferencia       Int?
+  comentarioCierre String?
+
+  usuario     Usuario         @relation("TurnoDe", fields: [usuarioId], references: [id])
+  cerradoPor  Usuario?        @relation("TurnoCerradoPor", fields: [cerradoPorId], references: [id])
+  alquileres  Alquiler[]
+  tickets     Ticket[]
+  movimientos MovimientoCaja[]
+
+  // Un solo turno ABIERTO por usuario (RF-32, Planos §9.4).
+  @@unique([usuarioId], map: "Turno_usuarioId_abierto_key", where: { estado: "ABIERTO" })
+  @@index([usuarioId, estado])
+}
+
+model MovimientoCaja {
+  id          String             @id
+  turnoId     String
+  tipo        TipoMovimientoCaja
+  monto       Int
+  motivo      String
+  creadoPorId String
+  creadoEn    DateTime
+
+  turno     Turno   @relation(fields: [turnoId], references: [id])
+  creadoPor Usuario @relation("MovimientoCajaCreadoPor", fields: [creadoPorId], references: [id])
+}
+
+model CategoriaProducto {
+  id     String @id
+  nombre String @unique
+
+  productos Producto[]
+}
+
+model Producto {
+  id            String  @id
+  categoriaId   String
+  nombre        String
+  codigoBarras  String? @unique
+  precioHuesped Int
+  precioPublico Int
+  controlaStock Boolean
+  stock         Int
+  activo        Boolean
+
+  categoria   CategoriaProducto      @relation(fields: [categoriaId], references: [id])
+  lineas      LineaTicket[]
+  movimientos MovimientoInventario[]
+}
+
+model MovimientoInventario {
+  id          String                   @id
+  productoId  String
+  tipo        TipoMovimientoInventario
+  cantidad    Int
+  ticketId    String?
+  creadoPorId String
+  creadoEn    DateTime
+
+  producto  Producto @relation(fields: [productoId], references: [id])
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
+  creadoPor Usuario  @relation("MovimientoInventarioCreadoPor", fields: [creadoPorId], references: [id])
+}
+
+model Usuario {
+  id             String  @id
+  nombreUsuario  String  @unique
+  activo         Boolean
+  /// Solo base de datos: hash bcrypt. Nunca sale del backend.
+  contrasenaHash String
+
+  rangos UsuarioRango[]
+
+  turnos                    Turno[]                 @relation("TurnoDe")
+  turnosCerrados            Turno[]                 @relation("TurnoCerradoPor")
+  alquileresCerrados        Alquiler[]              @relation("AlquilerCerradoPor")
+  horasAdicionales          HoraAdicional[]         @relation("HoraAdicionalCreadaPor")
+  tickets                   Ticket[]                @relation("TicketCreadoPor")
+  movimientosCaja           MovimientoCaja[]        @relation("MovimientoCajaCreadoPor")
+  movimientosInventario     MovimientoInventario[]  @relation("MovimientoInventarioCreadoPor")
+  preciosEspeciales         PrecioEspecialCliente[] @relation("PrecioEspecialCreadoPor")
+  registrosAuditoria        RegistroAuditoria[]
+  codigosGenerados          CodigoAutorizacion[]    @relation("CodigoGeneradoPor")
+  codigosUsados             CodigoAutorizacion[]    @relation("CodigoUsadoPor")
+}
+
+model UsuarioRango {
+  usuarioId String
+  rangoId   String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  rango   Rango   @relation(fields: [rangoId], references: [id])
+
+  @@id([usuarioId, rangoId])
+}
+
+model Rango {
+  id     String @id
+  nombre String @unique
+
+  permisos RangoPermiso[]
+  usuarios UsuarioRango[]
+}
+
+model RangoPermiso {
+  rangoId String
+  /// Un valor de Permiso ("pos.access"...). Texto porque los enums de Prisma no admiten puntos.
+  permiso String
+
+  rango Rango @relation(fields: [rangoId], references: [id])
+
+  @@id([rangoId, permiso])
+}
+
+model RegistroAuditoria {
+  id          String              @id
+  ocurridoEn  DateTime
+  usuarioId   String?
+  accion      AccionAuditoria
+  tipoEntidad TipoEntidadAuditada
+  entidadId   String?
+  valorPrevio Json?
+  valorNuevo  Json?
+  motivo      String?
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([ocurridoEn])
+}
+
+model CodigoAutorizacion {
+  id            String               @id
+  codigo        String
+  operacion     OperacionAutorizable
+  generadoPorId String
+  generadoEn    DateTime
+  expiraEn      DateTime
+  usadoEn       DateTime?
+  usadoPorId    String?
+  ticketId      String?              @unique
+
+  generadoPor Usuario  @relation("CodigoGeneradoPor", fields: [generadoPorId], references: [id])
+  usadoPor    Usuario? @relation("CodigoUsadoPor", fields: [usadoPorId], references: [id])
+  ticket      Ticket?  @relation(fields: [ticketId], references: [id])
+}
+
+model TrabajoImpresion {
+  id       String                 @id
+  ticketId String
+  estado   EstadoTrabajoImpresion
+  esCopia  Boolean
+  creadoEn DateTime
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+}
+
+/// Una sola fila (id = 1).
+model ConfiguracionGlobal {
+  id                                Int     @id @default(1)
+  parametrosAlquiler                Json
+  comprobante                       Json
+  impresora                         Json
+  permitirStockNegativo             Boolean
+  minutosVigenciaCodigoAutorizacion Int
+}

@@ -1,5 +1,7 @@
+import type { HoraAdicional } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  aplicarAnulacionHoraAdicional,
   aplicarAnulacionIngreso,
   calcularEstadoTemporal,
   iniciarAlquiler,
@@ -135,6 +137,51 @@ describe("RN-29 · la salida manda la habitación a limpieza", () => {
     expect(registrarSalida(alquiler(), ocupada, { usuarioId: "cajero-1", ahora: en("20:00") }).habitacion.estado).toBe(
       "PENDIENTE_LIMPIEZA",
     );
+  });
+});
+
+describe("Anulación de una hora adicional (§32, decisión de domain)", () => {
+  function hora(id: string, tipo: HoraAdicional["tipo"], pagadaEn: string, salidaAnterior: string, salidaNueva: string): HoraAdicional {
+    return { id, alquilerId: "alq-1", ticketId: `t-${id}`, tipo, salidaAnterior, salidaNueva, creadoPorId: "cajero-1", creadoEn: pagadaEn };
+  }
+  // Base 22:00. Dos extensiones anticipadas: 22:00 → 23:00 → 00:00.
+  const primera = hora("h1", "EXTENSION_ANTICIPADA", en("20:00"), en("22:00"), en("23:00"));
+  const segunda = hora("h2", "EXTENSION_ANTICIPADA", en("20:30"), en("23:00"), en("00:00", 24));
+  const extendido = alquiler({ salidaProgramadaEn: en("00:00", 24) });
+
+  it("anular la segunda deja la salida base + la hora vigente: 23:00, sin el tiempo de la anulada", () => {
+    expect(aplicarAnulacionHoraAdicional(extendido, [primera]).salidaProgramadaEn).toBe(en("23:00"));
+  });
+
+  it("el orden no importa: anular la primera también deja 23:00", () => {
+    expect(aplicarAnulacionHoraAdicional(extendido, [segunda]).salidaProgramadaEn).toBe(en("23:00"));
+  });
+
+  it("sin horas vigentes vuelve a la salida base", () => {
+    expect(aplicarAnulacionHoraAdicional(extendido, []).salidaProgramadaEn).toBe(en("22:00"));
+  });
+
+  it("la salida base incluye las horas pagadas al ingreso", () => {
+    const conHoras = alquiler({ horasAdicionalesAlIngreso: 2, salidaProgramadaEn: en("01:00", 24) });
+    expect(aplicarAnulacionHoraAdicional(conHoras, []).salidaProgramadaEn).toBe(en("00:00", 24));
+  });
+
+  it("una liquidación vigente conserva su salida desde el pago (RN-06)", () => {
+    // Liquidación pagada 22:30 → 23:30; anticipada 23:00 → 00:30. Se anula la anticipada.
+    const liquidacion = hora("h3", "LIQUIDACION_SOBRETIEMPO", en("22:30"), en("22:00"), en("23:30"));
+    const conLiquidacion = alquiler({ salidaProgramadaEn: en("00:30", 24), cortesiaConsumida: true });
+    const r = aplicarAnulacionHoraAdicional(conLiquidacion, [liquidacion]);
+    expect(r.salidaProgramadaEn).toBe(en("23:30"));
+    expect(r.cortesiaConsumida).toBe(true);
+  });
+
+  it("un alquiler cerrado no se modifica", () => {
+    const cerrado = alquiler({ estado: "CERRADO", salidaProgramadaEn: en("23:00"), cerradoEn: en("22:30"), cerradoPorId: "cajero-1" });
+    expect(aplicarAnulacionHoraAdicional(cerrado, [])).toBe(cerrado);
+  });
+
+  it("rechaza horas de otro alquiler", () => {
+    expect(() => aplicarAnulacionHoraAdicional(extendido, [{ ...primera, alquilerId: "otro" }])).toThrow(RangeError);
   });
 });
 

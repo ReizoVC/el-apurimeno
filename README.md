@@ -5,14 +5,17 @@ Sistema de gestión para hospedaje por horas — **en construcción**.
 Esqueleto base importado de [Arbarwings/tauri-v2-nextjs-monorepo](https://github.com/Arbarwings/tauri-v2-nextjs-monorepo)
 (Tauri v2 + Next.js + Turborepo + pnpm workspaces, con un paquete de UI compartido).
 
-Todavía no hay lógica de negocio del hospedaje implementada; por ahora es solo
-el esqueleto del monorepo corriendo, listo para construir los contratos
-compartidos y las funcionalidades del dominio.
+Estado actual: los contratos compartidos, las reglas de negocio y un backend local que cubre el flujo
+de ingreso (turno de caja, ingreso, hora adicional y salida). Todavía no hay interfaces de usuario
+conectadas, ni tienda expuesta, ni reportes. La especificación completa está en `docs/`.
 
 ## Estructura
 
+- `apps/server` — backend local (Fastify + Prisma + SQLite)
 - `apps/web` — aplicación web (Next.js)
 - `apps/native` — aplicación de escritorio (Tauri v2)
+- `packages/contracts` — tipos y esquemas Zod compartidos (`@apurimeno/contracts`)
+- `packages/domain` — reglas de negocio como funciones puras (`@apurimeno/domain`)
 - `packages/ui` — componentes de UI compartidos (`@apurimeno/ui`)
 - `packages/eslint-config`, `packages/typescript-config` — configuración compartida
 

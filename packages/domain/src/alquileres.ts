@@ -1,15 +1,17 @@
 import {
   AlquilerSchema,
+  MINUTOS_HORA_ADICIONAL,
   type Alquiler,
   type FechaISO,
   type Habitacion,
+  type HoraAdicional,
   type Id,
   type Turno,
 } from "@apurimeno/contracts";
 import { asegurarTurnoAbierto } from "./caja.js";
 import { ErrorNegocio } from "./errores.js";
 import { liberarPorAnulacion, liberarPorSalida, ocuparHabitacion } from "./habitaciones.js";
-import { motivoRequerido } from "./interno.js";
+import { MS_POR_MINUTO, iso, motivoRequerido, ms } from "./interno.js";
 import {
   cotizarHoraAdicional,
   cotizarIngreso,
@@ -147,6 +149,38 @@ export function registrarSalidaSinPago(
     }),
     habitacion: liberarPorSalida(habitacion),
   };
+}
+
+/**
+ * Efecto de anular el ticket de una hora adicional (§32; README de domain, decisión sobre horas anuladas).
+ * La salida programada se recalcula desde la salida base (ingreso + horas base + horas pagadas al ingreso)
+ * aplicando, en orden cronológico, solo las horas adicionales que siguen vigentes:
+ * - una extensión anticipada suma 1 h a la salida acumulada;
+ * - una liquidación de sobretiempo fija la salida en su momento de pago + 1 h (RN-06).
+ * Si todas son anticipadas, el resultado es la salida base más la suma de las horas vigentes.
+ * La hora anulada deja de contar. `cortesiaConsumida` no cambia: entrar en cortesía es un hecho que ya ocurrió.
+ * Un alquiler que ya no está abierto no se modifica: su salida es historia (RN-36).
+ */
+export function aplicarAnulacionHoraAdicional(
+  alquiler: Alquiler,
+  horasAdicionalesVigentes: readonly HoraAdicional[],
+): Alquiler {
+  for (const hora of horasAdicionalesVigentes) {
+    if (hora.alquilerId !== alquiler.id) {
+      throw new RangeError(`La hora adicional ${hora.id} no pertenece al alquiler ${alquiler.id}.`);
+    }
+  }
+  if (alquiler.estado !== "ABIERTO") return alquiler;
+
+  const bloque = MINUTOS_HORA_ADICIONAL * MS_POR_MINUTO;
+  let salida = ms(
+    calcularSalidaInicial(alquiler.ingresoEn, alquiler.parametrosAplicados, alquiler.horasAdicionalesAlIngreso),
+  );
+  const enOrden = [...horasAdicionalesVigentes].sort((a, b) => ms(a.creadoEn) - ms(b.creadoEn));
+  for (const hora of enOrden) {
+    salida = hora.tipo === "EXTENSION_ANTICIPADA" ? salida + bloque : ms(hora.creadoEn) + bloque;
+  }
+  return AlquilerSchema.parse({ ...alquiler, salidaProgramadaEn: iso(salida) });
 }
 
 /**

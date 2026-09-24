@@ -76,7 +76,7 @@ export interface ResultadoAnulacion {
  * Quien tiene `tickets.void` anula directo; los demás necesitan un código de autorización válido,
  * que queda consumido.
  * Los efectos sobre el alquiler, la habitación o el stock se aplican aparte
- * (`aplicarAnulacionIngreso`, `revertirVentaEnInventario`).
+ * (`aplicarAnulacionIngreso`, `aplicarAnulacionHoraAdicional`, `revertirVentaEnInventario`).
  */
 export function anularTicket(datos: DatosAnulacion, ctx: Contexto): ResultadoAnulacion {
   const { ticket, usuario } = datos;

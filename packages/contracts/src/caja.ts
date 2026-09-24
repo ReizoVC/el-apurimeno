@@ -29,11 +29,13 @@ export const TurnoSchema = z
     efectivoEsperado: CentimosConSignoSchema.nullable(),
     /** efectivoContado − efectivoEsperado. Negativo = faltante. */
     diferencia: CentimosConSignoSchema.nullable(),
+    /** Obligatorio si el cajero cierra con diferencia distinta de cero (PEND-05, README decisión 15). */
+    comentarioCierre: TextoRequeridoSchema.nullable(),
   })
   .strict()
   .superRefine((t, ctx) => {
     if (t.estado === "ABIERTO") {
-      const campos = ["cerradoEn", "cerradoPorId", "efectivoContado", "efectivoEsperado", "diferencia"] as const;
+      const campos = ["cerradoEn", "cerradoPorId", "efectivoContado", "efectivoEsperado", "diferencia", "comentarioCierre"] as const;
       for (const campo of campos) {
         if (t[campo] !== null) problema(ctx, [campo], `Un turno abierto no tiene ${campo}.`);
       }
@@ -62,6 +64,9 @@ export const TurnoSchema = z
       }
       if (t.efectivoContado === null) {
         problema(ctx, ["efectivoContado"], "El arqueo requiere el efectivo contado (RF-28).");
+      }
+      if (t.diferencia !== null && t.diferencia !== 0 && t.comentarioCierre === null) {
+        problema(ctx, ["comentarioCierre"], "Un cierre con diferencia exige comentario (REASON_REQUIRED).");
       }
     }
 

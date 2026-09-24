@@ -40,6 +40,7 @@ export function turnoAbierto(parcial: Partial<Turno> = {}): Turno {
     efectivoContado: null,
     efectivoEsperado: null,
     diferencia: null,
+    comentarioCierre: null,
     ...parcial,
   };
 }

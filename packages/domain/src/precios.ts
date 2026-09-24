@@ -141,8 +141,8 @@ export interface ItemVenta {
 
 /**
  * Venta de tienda (RN-20, RN-22, RN-24, RF-21, RF-22).
- * `esHuesped` es true cuando la venta se asocia a una habitación con alquiler abierto; lo determina el backend,
- * porque la tienda no conoce alquileres (RES-02). Asociar la venta es opcional.
+ * `esHuesped` lo indica el cajero de forma explícita; nadie lo infiere, porque la tienda no conoce
+ * alquileres (RES-02). Asociar la venta a una habitación es opcional.
  */
 export function cotizarVenta(items: readonly ItemVenta[], esHuesped: boolean): Cotizacion {
   if (items.length === 0) throw new RangeError("Una venta tiene al menos un producto.");

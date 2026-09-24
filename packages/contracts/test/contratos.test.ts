@@ -8,6 +8,7 @@ import {
   MovimientoInventarioSchema,
   PERMISOS,
   PARAMETROS_TIEMPO_PRECIO_INICIALES,
+  ProductoSchema,
   RANGOS_INICIALES,
   RegistroAuditoriaSchema,
   TRANSICIONES_HABITACION,
@@ -257,6 +258,25 @@ describe("Turno y caja", () => {
 });
 
 describe("Tienda", () => {
+  it("un producto tiene código de barras opcional", () => {
+    const p = {
+      id: "prod-1",
+      categoriaId: "cat-bebidas",
+      nombre: "Gaseosa 500 ml",
+      codigoBarras: "7751271001234",
+      precioHuesped: 300,
+      precioPublico: 350,
+      controlaStock: true,
+      stock: 10,
+      activo: true,
+    };
+    expect(ProductoSchema.safeParse(p).success).toBe(true);
+    expect(ProductoSchema.safeParse({ ...p, codigoBarras: null }).success).toBe(true);
+    expect(ProductoSchema.safeParse({ ...p, codigoBarras: "" }).success).toBe(false);
+    const { codigoBarras: _omitido, ...sinCampo } = p;
+    expect(ProductoSchema.safeParse(sinCampo).success).toBe(false);
+  });
+
   it("una venta descuenta stock y referencia su ticket", () => {
     const m = { id: "mi1", productoId: "prod-1", tipo: "VENTA", cantidad: -3, ticketId: "ticket-9", creadoPorId: "cajero-1", creadoEn: "2026-09-23T15:00:00.000Z" };
     expect(MovimientoInventarioSchema.safeParse(m).success).toBe(true);
@@ -277,9 +297,15 @@ describe("Clientes, usuarios y permisos", () => {
     expect(UsuarioSchema.safeParse({ ...u, passwordHash: "x" }).success).toBe(false);
   });
 
-  it("el catálogo tiene los 23 permisos de §41.3 y el Cajero no anula por sí mismo", () => {
-    expect(PERMISOS).toHaveLength(23);
+  it("el catálogo tiene los 23 permisos de §41.3 más store.manual_adjustment", () => {
+    expect(PERMISOS).toHaveLength(24);
+    expect(PERMISOS).toContain("store.manual_adjustment");
     expect(RANGOS_INICIALES.ADMINISTRADOR.permisos).toEqual(PERMISOS);
+  });
+
+  it("el Cajero ajusta habitaciones y tienda, pero no anula por sí mismo", () => {
+    expect(RANGOS_INICIALES.CAJERO.permisos).toContain("rentals.manual_adjustment");
+    expect(RANGOS_INICIALES.CAJERO.permisos).toContain("store.manual_adjustment");
     expect(RANGOS_INICIALES.CAJERO.permisos).not.toContain("tickets.void");
   });
 

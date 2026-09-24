@@ -108,7 +108,7 @@ const ticket = resultado.data;
 |---|---|---|
 | `comun.ts` | `Id`, `Centimos`, `CentimosConSigno`, `FechaISO`, `TextoRequerido` | RN-37, §21 |
 | `estados.ts` | Todos los enums de estado y tipo, y las tablas de transición | §19.2, §20 |
-| `permisos.ts` | `Permiso` (catálogo fijo de 23) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
+| `permisos.ts` | `Permiso` (catálogo fijo de 24) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
 | `errores.ts` | `CodigoErrorNegocio` y sus mensajes | §24.2, §16 |
 | `habitaciones.ts` | `Habitacion` | RN-13, §20.1 |
 | `clientes.ts` | `Cliente`, `PrecioEspecialCliente` | RN-14 a RN-16 |
@@ -185,18 +185,28 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
    referencia. Si ese campo existe, se aplicó el precio de huésped (RF-22).
 8. **Limpieza reporta mantenimiento con `cleaning.mark_ready`** (CU-17). `rooms.maintenance` queda
    para el bloqueo y la reactivación administrativos (CU-14).
-9. **Ajustes en ventas:** el catálogo no tiene un permiso de ajuste para la tienda, así que se usa
-   `rentals.manual_adjustment` (CU-10 menciona "el equivalente de tienda" sin nombrarlo).
+9. **Ajustes en ventas usan `store.manual_adjustment`.** Es el "equivalente de tienda" que CU-10
+   menciona sin nombrar; no está en §41.3 y lo agregó el proyecto. Tiene las mismas reglas que el ajuste
+   de habitación: nunca por debajo del precio calculado y con motivo obligatorio (RN-17, RN-18).
+   `rentals.manual_adjustment` queda exclusivo para ingresos y horas adicionales. El Cajero tiene ambos.
 10. **`OCUPADA → LIBRE` es válido** solo al anular el ingreso (RF-30, escenario 31.5). El diagrama
     §20.1 no lo muestra.
 11. **`permitirStockNegativo` es una configuración global** (RN-26 no dice si es global o por producto).
 12. **Cliente:** el documento es texto libre, sin tipo de documento (§21). Se exige documento o nombre.
     No se incluye el teléfono (Planos §9.2 lo menciona, pero el SRS no).
+13. **Hora adicional pedida en cortesía** (RF-08 solo define "aún no venció" y "ya pasó la cortesía";
+    esta regla la definió el proyecto). El tipo depende del estado temporal al momento del pago:
+    - **`EN_CORTESIA`:** se registra como `EXTENSION_ANTICIPADA`. La nueva salida es la salida vigente
+      más 1 h, no el momento del pago más 1 h. `cortesiaConsumida` no cambia, así que la cortesía queda
+      disponible de nuevo para la nueva salida.
+    - **`EN_SOBRETIEMPO`:** se registra como `LIQUIDACION_SOBRETIEMPO`, como ya estaba definido. La
+      nueva salida es el momento del pago más 1 h, y la cortesía queda consumida y no vuelve (RN-06, RN-07).
+
+    El contrato ya admite ambos casos. La regla se implementa en `packages/domain`.
 
 ## Decisiones pendientes que afectan el contrato
 
 | ID | Tema | Estado en el contrato |
 |---|---|---|
 | PEND-05 | Nota obligatoria ante una diferencia de arqueo | Sin campo de nota ni umbral en `Turno` / `ConfiguracionGlobal` |
-| — | Hora adicional pedida **en cortesía** (ni "no vencido" ni "sobretiempo" según RF-08) | El contrato no restringe cuándo ocurre una extensión anticipada; lo decide `packages/domain` |
 | — | Vigencia por defecto del código de autorización (RF-65: "algunos minutos") | Configurable (`minutosVigenciaCodigoAutorizacion`), sin valor inicial definido |

@@ -50,7 +50,7 @@ export const AlquilerSchema = z
     ingresoEn: FechaISOSchema,
     /** Cambia con cada hora adicional (RN-06, RN-08). */
     salidaProgramadaEn: FechaISOSchema,
-    /** La cortesía se otorga una sola vez por alquiler (RN-04, RN-07). */
+    /** Pasa a true al liquidar un sobretiempo y ya no vuelve (RN-07). Una extensión en cortesía no la consume (README, decisión 13). */
     cortesiaConsumida: z.boolean(),
     origenPrecio: OrigenPrecioAlquilerSchema,
     /** Precio de la habitación pactado al ingreso (lista o especial), antes de horas adicionales y ajuste (RN-44). */

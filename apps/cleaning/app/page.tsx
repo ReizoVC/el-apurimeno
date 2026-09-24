@@ -5,7 +5,7 @@ import { EstadoHabitacion, type Habitacion } from "@apurimeno/contracts";
 import { Button } from "@apurimeno/ui/components/button";
 import {
   Card,
-  CardContent,
+  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -38,36 +38,40 @@ export default function CleaningPage() {
   };
 
   return (
-    <main className="container mx-auto max-w-2xl p-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {habitaciones.map((habitacion) => (
-          <Card key={habitacion.id}>
-            <CardHeader>
-              <CardTitle>Habitación {habitacion.numero}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Piso {habitacion.numero.charAt(0)}
-              </p>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                className="w-full sm:w-auto"
-                onClick={() => handleMarcarLista(habitacion.id)}
-              >
-                Marcar lista
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => handleReportarMantenimiento(habitacion.id)}
-              >
-                Reportar mantenimiento
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+    <main className="container mx-auto max-w-4xl p-4">
+      {habitaciones.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No hay habitaciones pendientes de limpieza.
+        </p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {habitaciones.map((habitacion) => (
+            <Card key={habitacion.id} className="flex flex-col justify-between">
+              <CardHeader>
+                <CardTitle>Habitación {habitacion.numero}</CardTitle>
+                <CardDescription>
+                  Piso {habitacion.numero.charAt(0)}
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex flex-col gap-2">
+                <Button
+                  className="w-full"
+                  onClick={() => handleMarcarLista(habitacion.id)}
+                >
+                  Marcar lista
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => handleReportarMantenimiento(habitacion.id)}
+                >
+                  Reportar mantenimiento
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

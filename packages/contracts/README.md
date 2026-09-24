@@ -109,7 +109,7 @@ const ticket = resultado.data;
 | `comun.ts` | `Id`, `Centimos`, `CentimosConSigno`, `FechaISO`, `TextoRequerido` | RN-37, §21 |
 | `estados.ts` | Todos los enums de estado y tipo, y las tablas de transición | §19.2, §20 |
 | `permisos.ts` | `Permiso` (catálogo fijo de 24) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
-| `errores.ts` | `CodigoErrorNegocio` y sus mensajes | §24.2, §16 |
+| `errores.ts` | `CodigoErrorNegocio` y sus mensajes. Los 9 códigos del SRS más `SHIFT_NOT_OPEN`, `RENTAL_NOT_OPEN` e `INVALID_STATE_TRANSITION`, definidos por el proyecto para reglas que el SRS exige sin código | §24.2, §16, RN-32, §20 |
 | `habitaciones.ts` | `Habitacion` | RN-13, §20.1 |
 | `clientes.ts` | `Cliente`, `PrecioEspecialCliente` | RN-14 a RN-16 |
 | `alquileres.ts` | `Alquiler`, `HoraAdicional`, `ParametrosTiempoPrecio`, `MINUTOS_HORA_ADICIONAL` | RN-01 a RN-12, RF-64 |

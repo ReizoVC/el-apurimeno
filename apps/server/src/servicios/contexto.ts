@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Contexto } from "@apurimeno/domain";
-import type { UsuarioAutenticado } from "../auth.js";
+import type { FastifyRequest } from "fastify";
+import { usuarioDe, type UsuarioAutenticado } from "../auth.js";
 import type { PrismaClient, Transaccion } from "../db.js";
 import { ErrorApi } from "../errores.js";
 import { aParametros } from "../mapeo.js";
@@ -10,6 +11,11 @@ export interface ContextoServicio {
   usuario: UsuarioAutenticado;
   /** Hora del servidor (RF-07, §21): nunca la del dispositivo cliente. */
   ahora: Date;
+}
+
+/** Contexto de cada solicitud: el usuario que autenticó el middleware y la hora del servidor en ese momento. */
+export function creadorContexto(prisma: PrismaClient, ahora: () => Date): (request: FastifyRequest) => ContextoServicio {
+  return (request) => ({ prisma, usuario: usuarioDe(request), ahora: ahora() });
 }
 
 export function contextoDominio(ahora: Date): Contexto {

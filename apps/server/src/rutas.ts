@@ -9,6 +9,8 @@ import {
   CotizacionIngresoRespuestaSchema,
   CotizarIngresoEntradaSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
+  MovimientoCajaEntradaSchema,
+  MovimientoCajaRespuestaSchema,
   PeriodoConsultaSchema,
   ProductoEntradaSchema,
   ProductoSchema,
@@ -30,7 +32,6 @@ import {
   TurnoRespuestaSchema,
 } from "@apurimeno/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { usuarioDe } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { validar } from "./errores.js";
 import {
@@ -43,7 +44,7 @@ import {
 } from "./servicios/alquileres.js";
 import { anularTicketServicio, generarCodigoServicio, type SecretoCodigos } from "./servicios/anulacion.js";
 import { claveIdempotencia } from "./servicios/cobros.js";
-import type { ContextoServicio } from "./servicios/contexto.js";
+import { creadorContexto } from "./servicios/contexto.js";
 import { reporteArqueosServicio, reporteOcupacionServicio, reporteVentasServicio } from "./servicios/reportes.js";
 import {
   crearCategoria,
@@ -54,7 +55,7 @@ import {
   registrarVentaServicio,
   reponerProducto,
 } from "./servicios/tienda.js";
-import { abrirTurno, cerrarTurnoPropio } from "./servicios/turnos.js";
+import { abrirTurno, cerrarTurnoPropio, registrarMovimientoCajaServicio } from "./servicios/turnos.js";
 
 type ConId = FastifyRequest<{ Params: { id: string } }>;
 
@@ -65,7 +66,8 @@ function responderCobro<T>(reply: FastifyReply, { resultado, repetido }: { resul
 }
 
 /**
- * Endpoints de la API local: turnos, alquileres, tienda, anulación y reportes. Cada ruta declara la
+ * Endpoints de la API local: turnos y caja, alquileres, tienda, anulación y reportes. Habitaciones y limpieza,
+ * clientes y usuarios están en sus propios archivos (rutas-*.ts). Cada ruta declara la
  * operación que exige; el middleware de auth.ts verifica `puede()` antes de llegar aquí. Toda respuesta
  * se valida con su esquema de contracts.
  */
@@ -75,7 +77,7 @@ export function registrarRutas(
   ahora: () => Date,
   secretoCodigos: SecretoCodigos,
 ): void {
-  const ctx = (request: FastifyRequest): ContextoServicio => ({ prisma, usuario: usuarioDe(request), ahora: ahora() });
+  const ctx = creadorContexto(prisma, ahora);
 
   app.get(RUTAS.salud, { config: { publica: true } }, async () => ({ estado: "ok" }));
 
@@ -88,6 +90,14 @@ export function registrarRutas(
   app.post(RUTAS.cerrarTurno, { config: { operacion: "CERRAR_TURNO" } }, async (request) =>
     TurnoRespuestaSchema.parse(await cerrarTurnoPropio(ctx(request), validar(CerrarTurnoEntradaSchema, request.body))),
   );
+
+  // Idempotente como un cobro (decisión 18 de contracts): un reintento no duplica el movimiento.
+  app.post(RUTAS.movimientosCaja, { config: { operacion: "REGISTRAR_MOVIMIENTO_CAJA" } }, async (request, reply) => {
+    const clave = claveIdempotencia(request);
+    const entrada = validar(MovimientoCajaEntradaSchema, request.body);
+    const r = await registrarMovimientoCajaServicio(ctx(request), entrada, clave);
+    return MovimientoCajaRespuestaSchema.parse(responderCobro(reply, r));
+  });
 
   app.post(RUTAS.cotizarIngreso, { config: { operacion: "REGISTRAR_INGRESO" } }, async (request) =>
     CotizacionIngresoRespuestaSchema.parse(

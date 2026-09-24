@@ -1,10 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { TurnoSchema, type AbrirTurnoEntrada, type CerrarTurnoEntrada, type Turno } from "@apurimeno/contracts";
-import { ErrorNegocio, calcularEfectivoEsperado, cerrarTurno } from "@apurimeno/domain";
+import {
+  TurnoSchema,
+  type AbrirTurnoEntrada,
+  type CerrarTurnoEntrada,
+  type MovimientoCaja,
+  type MovimientoCajaEntrada,
+  type Turno,
+} from "@apurimeno/contracts";
+import { ErrorNegocio, calcularEfectivoEsperado, cerrarTurno, prepararMovimientoCaja } from "@apurimeno/domain";
 import { auditar } from "../auditoria.js";
 import type { Transaccion } from "../db.js";
-import { esViolacionUnica } from "../errores.js";
-import { INCLUIR_TICKET, aMetodoPago, aTicket, aTurno, datosTurno } from "../mapeo.js";
+import { ErrorApi, esViolacionUnica } from "../errores.js";
+import { INCLUIR_TICKET, aMetodoPago, aMovimientoCaja, aTicket, aTurno, datosTurno } from "../mapeo.js";
 import type { ContextoServicio } from "./contexto.js";
 
 /** Turno abierto del usuario, o SHIFT_NOT_OPEN: ningún cobro sin turno (RN-32). */
@@ -61,7 +68,7 @@ export async function cerrarTurnoPropio(ctx: ContextoServicio, entrada: CerrarTu
     const efectivoEsperado = calcularEfectivoEsperado(
       turno,
       tickets.map(aTicket),
-      movimientos.map((m) => ({ ...m, creadoEn: m.creadoEn.toISOString() })),
+      movimientos.map(aMovimientoCaja),
       metodos.map(aMetodoPago),
     );
     const cerrado = cerrarTurno(turno, {
@@ -91,4 +98,57 @@ export async function cerrarTurnoPropio(ctx: ContextoServicio, entrada: CerrarTu
     );
     return cerrado;
   });
+}
+
+/**
+ * Ingreso o retiro manual de efectivo en el turno propio (CU-18, RF-42): motivo obligatorio, monto positivo y
+ * turno abierto (RN-32). Entra en el efectivo esperado del arqueo (RN-33). Es idempotente por clave, como un
+ * cobro: si la clave ya registró un movimiento de este usuario, se devuelve ese mismo sin crear otro.
+ */
+export async function registrarMovimientoCajaServicio(
+  ctx: ContextoServicio,
+  entrada: MovimientoCajaEntrada,
+  clave: string,
+): Promise<{ resultado: MovimientoCaja; repetido: boolean }> {
+  const buscar = async () => {
+    const previo = await ctx.prisma.movimientoCaja.findUnique({ where: { claveIdempotencia: clave } });
+    if (previo !== null && previo.creadoPorId !== ctx.usuario.id) {
+      throw new ErrorApi("CLAVE_IDEMPOTENCIA_REUTILIZADA", "La clave de idempotencia ya se usó en otra operación.");
+    }
+    return previo;
+  };
+  const previo = await buscar();
+  if (previo !== null) return { resultado: aMovimientoCaja(previo), repetido: true };
+
+  try {
+    const resultado = await ctx.prisma.$transaction(async (tx) => {
+      const turno = await turnoAbiertoDe(tx, ctx.usuario.id);
+      const borrador = prepararMovimientoCaja(turno, entrada.tipo, entrada.monto, entrada.motivo);
+      const movimiento = aMovimientoCaja(
+        await tx.movimientoCaja.create({
+          data: { id: randomUUID(), ...borrador, creadoPorId: ctx.usuario.id, creadoEn: ctx.ahora, claveIdempotencia: clave },
+        }),
+      );
+      await auditar(
+        tx,
+        {
+          usuarioId: ctx.usuario.id,
+          accion: "MOVIMIENTO_CAJA_REGISTRADO",
+          tipoEntidad: "MOVIMIENTO_CAJA",
+          entidadId: movimiento.id,
+          valorNuevo: movimiento,
+          motivo: movimiento.motivo,
+        },
+        ctx.ahora,
+      );
+      return movimiento;
+    });
+    return { resultado, repetido: false };
+  } catch (error) {
+    // Dos envíos simultáneos con la misma clave: el índice único rechaza el segundo.
+    if (!esViolacionUnica(error)) throw error;
+    const ganador = await buscar();
+    if (ganador === null) throw error;
+    return { resultado: aMovimientoCaja(ganador), repetido: true };
+  }
 }

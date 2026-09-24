@@ -34,7 +34,7 @@ export interface Entorno {
   crearUsuario(nombreUsuario: string, rangoIds: string[], activo?: boolean): Promise<void>;
   crearRango(id: string, permisos: z.infer<typeof RangoSchema>["permisos"]): Promise<void>;
   login(nombreUsuario: string): Promise<string>;
-  llamar(metodo: "GET" | "POST" | "PUT", url: string, token: string | null, cuerpo?: unknown, clave?: string): Promise<LightMyRequestResponse>;
+  llamar(metodo: "GET" | "POST" | "PUT" | "DELETE", url: string, token: string | null, cuerpo?: unknown, clave?: string): Promise<LightMyRequestResponse>;
   cerrar(): Promise<void>;
 }
 
@@ -54,7 +54,7 @@ export async function prepararEntorno(inicio = "2026-09-23T14:00:00.000Z"): Prom
       this.ahora = new Date(this.ahora.getTime() + minutos * 60_000);
     },
   };
-  const app = await construirApp({ prisma, jwtSecret: "s".repeat(32), ahora: () => reloj.ahora });
+  const app = await construirApp({ prisma, jwtSecret: "s".repeat(32), ahora: () => reloj.ahora, costoBcrypt: 4 });
 
   const entorno: Entorno = {
     app,

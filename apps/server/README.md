@@ -52,9 +52,59 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `GET /reportes/ventas?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
 | `GET /reportes/arqueos?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
 | `GET /reportes/ocupacion?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
+| `POST /turnos/actual/movimientos` | `REGISTRAR_MOVIMIENTO_CAJA` | Sí |
+| `GET /habitaciones/pendientes-limpieza` | `VER_PENDIENTES_LIMPIEZA` | — |
+| `POST /habitaciones/:id/lista` | `MARCAR_HABITACION_LISTA` | — (decisión 18) |
+| `POST /habitaciones/:id/reporte-mantenimiento` | `REPORTAR_MANTENIMIENTO` | — (decisión 18) |
+| `GET /habitaciones` | `CONSULTAR_TABLERO`, `GESTIONAR_HABITACIONES` o `BLOQUEAR_O_REACTIVAR_HABITACION` | — |
+| `POST /habitaciones`, `PUT /habitaciones/:id` | `GESTIONAR_HABITACIONES` | — |
+| `POST /habitaciones/:id/bloqueo`, `POST /habitaciones/:id/reactivacion` | `BLOQUEAR_O_REACTIVAR_HABITACION` | — |
+| `GET /clientes?q=` | `BUSCAR_CLIENTE` o `GESTIONAR_PRECIO_ESPECIAL` | — |
+| `POST /clientes`, `PUT /clientes/:id` | `REGISTRAR_CLIENTE` o `GESTIONAR_PRECIO_ESPECIAL` | — |
+| `GET`/`POST /clientes/:id/precios-especiales` | `GESTIONAR_PRECIO_ESPECIAL` | — |
+| `PUT`/`DELETE /clientes/:id/precios-especiales/:habitacionId` | `GESTIONAR_PRECIO_ESPECIAL` | — |
+| `GET /usuarios`, `POST /usuarios`, `PUT /usuarios/:id` | `GESTIONAR_USUARIOS` | — |
+| `PUT /usuarios/:id/contrasena` | `GESTIONAR_USUARIOS` | — |
+| `GET /rangos` | `GESTIONAR_USUARIOS` | — |
 
-Todavía faltan las rutas de limpieza (marcar lista y reportar mantenimiento), la administración de
-habitaciones, clientes, precios especiales y usuarios, y los movimientos manuales de caja.
+Todavía faltan: gestión de rangos (CU-24), cierre forzado de turno (CU-20), configuración (CU-27),
+métodos de pago, auditoría (CU-25), reimpresión (CU-22) y el tablero con estado temporal (`/rooms/board`).
+
+### Limpieza (CU-15 a CU-17)
+
+Coinciden con lo que `apps/cleaning` espera (`src/api-mock.ts`): una lista y dos acciones que se envían
+solo con el id.
+- `GET /habitaciones/pendientes-limpieza` devuelve **solo** las habitaciones en `PENDIENTE_LIMPIEZA`
+  (RF-40). El filtro lo aplica el servidor; el de `app/page.tsx` queda como redundante.
+- `POST /habitaciones/:id/lista` (`PENDIENTE_LIMPIEZA → LIBRE`) y `POST /habitaciones/:id/reporte-mantenimiento`
+  (`PENDIENTE_LIMPIEZA → MANTENIMIENTO`) no llevan cuerpo. El reporte admite `{ "motivo": "..." }`
+  opcional (RF-41: recomendado), que queda en la auditoría. Ambas responden la habitación actualizada.
+- Sin `idempotency-key`: repetir la acción sobre una habitación que ya cambió responde 422
+  `INVALID_STATE_TRANSITION` y no cambia nada. Con la eliminación optimista de `apps/cleaning`, ese 422
+  (o un 403, 404 o error de red) debe devolver la tarjeta a la lista o avisar; hoy el mock no falla nunca.
+- Si dos personas actúan a la vez sobre la misma habitación, solo una cambia el estado: la actualización
+  exige que el estado siga siendo el leído.
+
+### Administración
+
+- **Habitaciones (CU-13, CU-14):** el alta queda `LIBRE`; editar cambia número, descripción y precio de
+  lista, nunca el estado, y los alquileres abiertos conservan su precio (RN-44). Bloquear exige motivo y
+  una habitación `LIBRE` (sin alquiler abierto); reactivar devuelve de `MANTENIMIENTO` a `LIBRE`.
+- **Clientes (CU-09):** búsqueda parcial por documento o nombre (hasta 20 resultados). El cajero los
+  registra al tomar un ingreso (operación `REGISTRAR_CLIENTE`, con `rentals.checkin`). El documento es
+  único cuando existe (decisión 17 de contracts).
+- **Precios especiales (CU-08):** el alta de una combinación que ya existe responde
+  `CLIENT_ROOM_PRICE_ALREADY_EXISTS` (RF-16); se edita o elimina por cliente + habitación. Todo se audita.
+- **Usuarios (CU-23):** alta, edición, desactivación (nunca eliminación) y asignación de rangos. La
+  desactivación y el cambio de rangos rigen en la siguiente solicitud del usuario, aunque su token siga
+  vigente (RF-63). La contraseña (mínimo 8 caracteres) nunca vuelve en una respuesta ni se audita.
+  Cambiarla no invalida los tokens ya emitidos; desactivar la cuenta sí corta el acceso de inmediato.
+
+### Movimientos manuales de caja (CU-18, RF-42)
+
+Ingreso o retiro de efectivo en el turno abierto propio, con motivo y monto positivo. Entra en el
+efectivo esperado del arqueo (RN-33). Es idempotente como un cobro: la clave se guarda en
+`MovimientoCaja.claveIdempotencia`, y la misma clave usada por otro usuario responde 409.
 
 ### Anulación y códigos de autorización (CU-21, RN-46)
 
@@ -152,3 +202,8 @@ simular el paso del tiempo.
 - `tienda-y-reportes`: catálogo, reposición, venta por HTTP y los tres reportes.
 - `anulacion`: anulación de ingreso, hora adicional y venta; códigos de autorización (un solo uso,
   vencimiento, hash, límite de intentos).
+- `limpieza-y-habitaciones`: la lista de limpieza (solo pendientes), marcar lista y reportar
+  mantenimiento tal como los envía `apps/cleaning`, la carrera entre dos personas, y la administración
+  de habitaciones.
+- `administracion`: clientes, precios especiales aplicados en la cotización, usuarios (desactivación y
+  rangos en caliente) y movimientos de caja (arqueo e idempotencia).

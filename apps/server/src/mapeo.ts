@@ -1,13 +1,16 @@
 import {
   AlquilerSchema,
   CategoriaProductoSchema,
+  ClienteSchema,
   CodigoAutorizacionSchema,
   HabitacionSchema,
   HoraAdicionalSchema,
   MetodoPagoSchema,
+  MovimientoCajaSchema,
   MovimientoInventarioSchema,
   ParametrosTiempoPrecioSchema,
   PermisoSchema,
+  PrecioEspecialClienteSchema,
   ProductoSchema,
   RangoSchema,
   TicketSchema,
@@ -15,12 +18,15 @@ import {
   UsuarioSchema,
   type Alquiler,
   type CategoriaProducto,
+  type Cliente,
   type CodigoAutorizacion,
   type Habitacion,
   type HoraAdicional,
   type MetodoPago,
+  type MovimientoCaja,
   type MovimientoInventario,
   type ParametrosTiempoPrecio,
+  type PrecioEspecialCliente,
   type Producto,
   type Rango,
   type Ticket,
@@ -239,14 +245,43 @@ export function aUsuario(fila: FilaUsuario): Usuario {
   });
 }
 
+export function aRango(fila: Db.Rango & { permisos: Db.RangoPermiso[] }): Rango {
+  return RangoSchema.parse({
+    id: fila.id,
+    nombre: fila.nombre,
+    permisos: fila.permisos.map((p) => PermisoSchema.parse(p.permiso)),
+  });
+}
+
 export function aRangos(fila: FilaUsuario): Rango[] {
-  return fila.rangos.map((r) =>
-    RangoSchema.parse({
-      id: r.rango.id,
-      nombre: r.rango.nombre,
-      permisos: r.rango.permisos.map((p) => PermisoSchema.parse(p.permiso)),
-    }),
-  );
+  return fila.rangos.map((r) => aRango(r.rango));
+}
+
+export function aCliente(fila: Db.Cliente): Cliente {
+  return ClienteSchema.parse({ id: fila.id, documento: fila.documento, nombre: fila.nombre });
+}
+
+export function aPrecioEspecial(fila: Db.PrecioEspecialCliente): PrecioEspecialCliente {
+  return PrecioEspecialClienteSchema.parse({
+    id: fila.id,
+    clienteId: fila.clienteId,
+    habitacionId: fila.habitacionId,
+    precio: fila.precio,
+    creadoPorId: fila.creadoPorId,
+    creadoEn: iso(fila.creadoEn),
+  });
+}
+
+export function aMovimientoCaja(fila: Db.MovimientoCaja): MovimientoCaja {
+  return MovimientoCajaSchema.parse({
+    id: fila.id,
+    turnoId: fila.turnoId,
+    tipo: fila.tipo,
+    monto: fila.monto,
+    motivo: fila.motivo,
+    creadoPorId: fila.creadoPorId,
+    creadoEn: iso(fila.creadoEn),
+  });
 }
 
 export function aCategoria(fila: Db.CategoriaProducto): CategoriaProducto {

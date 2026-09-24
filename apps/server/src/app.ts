@@ -1,10 +1,13 @@
 import { createHmac } from "node:crypto";
 import fastifyJwt from "@fastify/jwt";
 import Fastify, { type FastifyInstance } from "fastify";
-import { registrarAutenticacion } from "./auth.js";
+import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { manejarError } from "./errores.js";
 import { registrarRutas } from "./rutas.js";
+import { registrarRutasClientes } from "./rutas-clientes.js";
+import { registrarRutasHabitaciones } from "./rutas-habitaciones.js";
+import { registrarRutasUsuarios } from "./rutas-usuarios.js";
 
 export interface OpcionesApp {
   prisma: PrismaClient;
@@ -13,6 +16,8 @@ export interface OpcionesApp {
   /** Reloj del servidor; las pruebas lo controlan para simular el paso del tiempo. */
   ahora?: () => Date;
   logger?: boolean;
+  /** Costo bcrypt de las contraseñas nuevas; las pruebas usan uno bajo. */
+  costoBcrypt?: number;
 }
 
 export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstance> {
@@ -27,6 +32,9 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   // Secreto de los códigos de autorización, derivado del de JWT para no exigir otra variable de entorno.
   const secretoCodigos = createHmac("sha256", opciones.jwtSecret).update("codigos-autorizacion").digest();
   registrarRutas(app, opciones.prisma, ahora, secretoCodigos);
+  registrarRutasHabitaciones(app, opciones.prisma, ahora);
+  registrarRutasClientes(app, opciones.prisma, ahora);
+  registrarRutasUsuarios(app, opciones.prisma, ahora, opciones.costoBcrypt ?? COSTO_BCRYPT);
   await app.ready();
   return app;
 }

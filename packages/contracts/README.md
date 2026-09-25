@@ -109,7 +109,7 @@ const ticket = resultado.data;
 | `comun.ts` | `Id`, `Centimos`, `CentimosConSigno`, `FechaISO`, `TextoRequerido` | RN-37, §21 |
 | `estados.ts` | Todos los enums de estado y tipo, y las tablas de transición | §19.2, §20 |
 | `permisos.ts` | `Permiso` (catálogo fijo de 24) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
-| `errores.ts` | `CodigoErrorNegocio` y sus mensajes. Los 9 códigos del SRS más `SHIFT_NOT_OPEN`, `RENTAL_NOT_OPEN` e `INVALID_STATE_TRANSITION`, definidos por el proyecto para reglas que el SRS exige sin código | §24.2, §16, RN-32, §20 |
+| `errores.ts` | `CodigoErrorNegocio` y sus mensajes. Los 9 códigos del SRS más `SHIFT_NOT_OPEN`, `RENTAL_NOT_OPEN`, `INVALID_STATE_TRANSITION` y `SELF_LOCKOUT_FORBIDDEN`, definidos por el proyecto | §24.2, §16, RN-32, §20 |
 | `habitaciones.ts` | `Habitacion` | RN-13, §20.1 |
 | `clientes.ts` | `Cliente`, `PrecioEspecialCliente` | RN-14 a RN-16 |
 | `alquileres.ts` | `Alquiler`, `HoraAdicional`, `ParametrosTiempoPrecio`, `MINUTOS_HORA_ADICIONAL` | RN-01 a RN-12, RF-64 |
@@ -228,11 +228,19 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     14). El documento es la clave preferida (§32): dos clientes con el mismo documento repartirían sus
     precios especiales entre ambos y el cajero no sabría cuál elegir. Varios clientes pueden no tener
     documento. El nombre no es único.
+
+    > **Nota para el futuro (usuarios):** cambiar la contraseña no cierra sesiones abiertas — revisar si
+    > se necesita invalidarlas en caso de sospecha de cuenta comprometida. Hoy los tokens ya emitidos
+    > siguen vigentes hasta vencer (12 h); desactivar la cuenta sí corta el acceso de inmediato.
 18. **Los cambios de estado de una habitación no llevan `idempotency-key`** (Planos §11.1 lo pide para
     "operaciones que cambian una habitación"). La máquina de estados ya evita el doble efecto: repetir
     "marcar lista" sobre una habitación que ya está `LIBRE` responde `INVALID_STATE_TRANSITION` y no
     cambia nada. Así las rutas de limpieza coinciden con lo que `apps/cleaning` envía hoy (solo el id).
     Los movimientos manuales de caja sí la llevan: repetirlos duplicaría el efectivo.
+19. **Nadie se deja a sí mismo sin acceso de administración** (`SELF_LOCKOUT_FORBIDDEN`, CU-23). Al
+    editar su propia cuenta, un usuario no puede desactivarla ni quedarse sin `users.manage` en los
+    rangos que se asigna. Otro usuario con `users.manage` sí puede hacerlo. El SRS no trae esta regla;
+    la pidió el negocio para no quedar sin nadie que administre las cuentas.
 
 ## Decisiones pendientes que afectan el contrato
 

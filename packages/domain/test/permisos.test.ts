@@ -1,6 +1,13 @@
 import { PERMISOS, RANGOS_INICIALES, type Rango, type Usuario } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
-import { PERMISO_POR_OPERACION, permisoAjustePuntual, permisosEfectivos, puede, type Operacion } from "../src/index.js";
+import {
+  PERMISO_POR_OPERACION,
+  permisoAjustePuntual,
+  permisosEfectivos,
+  puede,
+  validarEdicionPropia,
+  type Operacion,
+} from "../src/index.js";
 
 const rangos: Rango[] = [
   { id: "r-admin", ...RANGOS_INICIALES.ADMINISTRADOR, permisos: [...RANGOS_INICIALES.ADMINISTRADOR.permisos] },
@@ -104,5 +111,25 @@ describe("Matriz §22 con los rangos iniciales", () => {
 
   it("toda operación usa un permiso del catálogo", () => {
     for (const permiso of Object.values(PERMISO_POR_OPERACION)) expect(PERMISOS).toContain(permiso);
+  });
+});
+
+describe("CU-23 · nadie se deja a sí mismo sin administración (decisión 19)", () => {
+  const codigo = expect.objectContaining({ codigo: "SELF_LOCKOUT_FORBIDDEN" });
+
+  it("no puede desactivar su propia cuenta", () => {
+    expect(() => validarEdicionPropia("u1", usuario(["r-admin"], false), rangos)).toThrow(codigo);
+  });
+
+  it("no puede quedarse sin users.manage", () => {
+    expect(() => validarEdicionPropia("u1", usuario(["r-cajero"]), rangos)).toThrow(codigo);
+  });
+
+  it("puede editarse si conserva users.manage por algún rango", () => {
+    expect(() => validarEdicionPropia("u1", usuario(["r-cajero", "r-admin"]), rangos)).not.toThrow();
+  });
+
+  it("otro usuario sí puede desactivarlo o quitarle users.manage", () => {
+    expect(() => validarEdicionPropia("otro", usuario(["r-cajero"], false), rangos)).not.toThrow();
   });
 });

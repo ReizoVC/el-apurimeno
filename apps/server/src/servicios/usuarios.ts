@@ -1,4 +1,5 @@
 import type { CrearUsuarioEntrada, EditarUsuarioEntrada, Rango, Usuario } from "@apurimeno/contracts";
+import { validarEdicionPropia } from "@apurimeno/domain";
 import { hashContrasena } from "../auth.js";
 import { auditar } from "../auditoria.js";
 import type { Transaccion } from "../db.js";
@@ -22,10 +23,12 @@ export async function listarRangos(ctx: ContextoServicio): Promise<Rango[]> {
   return filas.map(aRango);
 }
 
-async function exigirRangos(tx: Transaccion, rangoIds: readonly string[]): Promise<void> {
-  const existentes = new Set((await tx.rango.findMany({ where: { id: { in: [...rangoIds] } }, select: { id: true } })).map((r) => r.id));
-  const faltante = rangoIds.find((id) => !existentes.has(id));
+/** Los rangos pedidos, con sus permisos; 404 si alguno no existe. */
+async function exigirRangos(tx: Transaccion, rangoIds: readonly string[]): Promise<Rango[]> {
+  const rangos = (await tx.rango.findMany({ where: { id: { in: [...rangoIds] } }, include: { permisos: true } })).map(aRango);
+  const faltante = rangoIds.find((id) => !rangos.some((r) => r.id === id));
   if (faltante !== undefined) throw noEncontrado(`El rango ${faltante}`);
+  return rangos;
 }
 
 /** Alta de una cuenta individual (RN-40), activa y con al menos un rango. */
@@ -69,8 +72,10 @@ export async function editarUsuarioServicio(ctx: ContextoServicio, id: string, e
     return await ctx.prisma.$transaction(async (tx) => {
       const fila = await tx.usuario.findUnique({ where: { id }, include: INCLUIR_USUARIO });
       if (fila === null) throw noEncontrado("El usuario");
-      await exigirRangos(tx, entrada.rangoIds);
+      const rangos = await exigirRangos(tx, entrada.rangoIds);
       const previo = aUsuario(fila);
+      // Nadie se desactiva ni se quita users.manage a sí mismo (decisión 19 de contracts).
+      validarEdicionPropia(ctx.usuario.id, { id, ...entrada }, rangos);
 
       await tx.usuarioRango.deleteMany({ where: { usuarioId: id } });
       const actualizada = await tx.usuario.update({

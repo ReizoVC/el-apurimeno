@@ -163,6 +163,26 @@ describe("Usuarios (CU-23; RN-40, RF-45, RF-63)", () => {
     expect((await e.llamar("POST", RUTAS.login, null, { nombreUsuario: "maria", contrasena: "otra-clave-larga" })).statusCode).toBe(200);
   });
 
+  it("nadie se desactiva ni se quita users.manage a sí mismo (decisión 19); otro administrador sí puede", async () => {
+    const propio = (cuerpo: object) => e.llamar("PUT", ruta(RUTAS.usuario, "usuario-admin"), admin, { nombreUsuario: "admin", ...cuerpo });
+    const desactivarse = await propio({ activo: false, rangoIds: ["rango-administrador"] });
+    expect(desactivarse.statusCode).toBe(422);
+    expect(desactivarse.json()).toMatchObject({ codigo: "SELF_LOCKOUT_FORBIDDEN" });
+    expect((await propio({ activo: true, rangoIds: ["rango-cajero"] })).json()).toMatchObject({ codigo: "SELF_LOCKOUT_FORBIDDEN" });
+    const fila = await e.prisma.usuario.findUniqueOrThrow({ where: { id: "usuario-admin" }, include: { rangos: true } });
+    expect({ activo: fila.activo, rangos: fila.rangos.map((r) => r.rangoId) }).toEqual({ activo: true, rangos: ["rango-administrador"] });
+    expect(await e.prisma.registroAuditoria.count({ where: { tipoEntidad: "USUARIO", entidadId: "usuario-admin" } })).toBe(0);
+
+    // Conservar users.manage por otro rango sí se permite.
+    expect((await propio({ activo: true, rangoIds: ["rango-administrador", "rango-cajero"] })).statusCode).toBe(200);
+
+    // Otro administrador sí puede desactivarlo.
+    await e.crearUsuario("admin2", ["rango-administrador"]);
+    const otro = await e.login("admin2");
+    const r = await e.llamar("PUT", ruta(RUTAS.usuario, "usuario-admin"), otro, { nombreUsuario: "admin", activo: false, rangoIds: ["rango-administrador"] });
+    expect(UsuarioSchema.parse(r.json()).activo).toBe(false);
+  });
+
   it("rangos desconocidos → 404; solo users.manage administra usuarios", async () => {
     expect((await e.llamar("POST", RUTAS.usuarios, admin, { ...nuevo, rangoIds: ["rango-x"] })).statusCode).toBe(404);
     expect((await e.llamar("GET", RUTAS.usuarios, cajero)).statusCode).toBe(403);

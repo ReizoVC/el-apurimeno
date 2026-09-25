@@ -1,4 +1,5 @@
-import type { OrigenTicket, Permiso, Rango, Usuario } from "@apurimeno/contracts";
+import type { Id, OrigenTicket, Permiso, Rango, Usuario } from "@apurimeno/contracts";
+import { ErrorNegocio } from "./errores.js";
 
 /**
  * Permisos efectivos de un usuario: la unión de los permisos de sus rangos (RN-41).
@@ -68,4 +69,19 @@ export function puede(permisos: readonly Permiso[], operacion: Operacion): boole
 /** Permiso del ajuste puntual según el origen del ticket (decisión 9 de contracts). */
 export function permisoAjustePuntual(origen: OrigenTicket): Permiso {
   return origen === "VENTA_TIENDA" ? "store.manual_adjustment" : "rentals.manual_adjustment";
+}
+
+/**
+ * Al editar su propia cuenta, nadie puede desactivarse ni quitarse `users.manage` (CU-23, decisión 19 de
+ * contracts): se quedaría sin poder deshacerlo. `editado` es la cuenta como quedaría y `rangos`, los rangos
+ * que se le asignan. Si lo edita otro usuario, no hay restricción.
+ */
+export function validarEdicionPropia(solicitanteId: Id, editado: Usuario, rangos: readonly Rango[]): void {
+  if (editado.id !== solicitanteId) return;
+  if (!editado.activo) {
+    throw new ErrorNegocio("SELF_LOCKOUT_FORBIDDEN", "No puede desactivar su propia cuenta.");
+  }
+  if (!permisosEfectivos(editado, rangos).includes("users.manage")) {
+    throw new ErrorNegocio("SELF_LOCKOUT_FORBIDDEN", "No puede quitarse el permiso de gestionar usuarios.");
+  }
 }

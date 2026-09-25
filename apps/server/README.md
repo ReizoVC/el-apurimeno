@@ -97,7 +97,9 @@ solo con el id.
   `CLIENT_ROOM_PRICE_ALREADY_EXISTS` (RF-16); se edita o elimina por cliente + habitación. Todo se audita.
 - **Usuarios (CU-23):** alta, edición, desactivación (nunca eliminación) y asignación de rangos. La
   desactivación y el cambio de rangos rigen en la siguiente solicitud del usuario, aunque su token siga
-  vigente (RF-63). La contraseña (mínimo 8 caracteres) nunca vuelve en una respuesta ni se audita.
+  vigente (RF-63). Nadie puede desactivar su propia cuenta ni quitarse `users.manage`: responde 422
+  `SELF_LOCKOUT_FORBIDDEN` (decisión 19); otro administrador sí puede. La contraseña (mínimo 8
+  caracteres) nunca vuelve en una respuesta ni se audita.
   Cambiarla no invalida los tokens ya emitidos; desactivar la cuenta sí corta el acceso de inmediato.
 
 ### Movimientos manuales de caja (CU-18, RF-42)

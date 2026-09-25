@@ -64,12 +64,13 @@ try {
 | `alquileres.ts` | `iniciarAlquiler`, `registrarHoraAdicional`, `registrarSalida`, `registrarSalidaSinPago`, `aplicarAnulacionHoraAdicional`, `aplicarAnulacionIngreso` |
 | `clientes.ts` | `crearPrecioEspecial`, `editarPrecioEspecial` |
 | `habitaciones.ts` | `crearHabitacion`, `editarHabitacion`, `ocuparHabitacion`, `liberarPorSalida`, `marcarHabitacionLista`, `reportarMantenimiento`, `bloquearPorMantenimiento`, `reactivarHabitacion`, `liberarPorAnulacion` |
-| `caja.ts` | `asegurarTurnoAbierto`, `calcularEfectivoEsperado`, `cerrarTurno`, `forzarCierreTurno`, `prepararMovimientoCaja` |
+| `caja.ts` | `asegurarTurnoAbierto`, `calcularEfectivoEsperado`, `cerrarTurno`, `forzarCierreTurno`, `prepararMovimientoCaja`, `editarMetodoPago` |
 | `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `revertirVentaEnInventario` |
 | `tickets.ts` | `pagoEnEfectivo`, `pagoSinVuelto`, `armarTicketCobro`, `validarInvariantesTicket` |
 | `anulacion.ts` | `crearCodigoAutorizacion`, `validarCodigoAutorizacion`, `anularTicket` |
-| `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual` |
+| `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual`, `validarEdicionPropia` |
 | `reportes.ts` | `esTicketVigente`, `diaLocal`, `resumirVentas`, `resumirArqueos`, `resumirOcupacion` |
+| `comprobantes.ts` | `componerComprobante`, `columnasPorAncho`, `LEYENDA_NO_FISCAL` |
 
 ## Trazabilidad RN-01 a RN-46
 
@@ -112,11 +113,11 @@ Las pruebas se nombran con la regla que verifican (`describe("RN-xx · …")`). 
 | RN-32 | Nada sin turno abierto | `asegurarTurnoAbierto` (en ingreso, hora adicional, ticket, movimiento y anulación) | caja, alquileres, tickets |
 | RN-33 | Efectivo esperado | `calcularEfectivoEsperado` | caja |
 | RN-34 | Arqueo ciego | `cerrarTurno` (el orden de pantallas lo aplica el POS) | caja |
-| RN-35 | Pagos digitales fuera del efectivo | `calcularEfectivoEsperado` | caja |
+| RN-35 | Pagos digitales fuera del efectivo; `afectaCaja` no se edita (decisión 20) | `calcularEfectivoEsperado`, `editarMetodoPago` | caja |
 | RN-36 | Corregir sin borrar | `anularTicket` | anulacion |
 | RN-37 | Céntimos enteros | Validación de montos en todas las funciones | precios, tickets |
-| RN-38 | Comprobante sin datos del cliente | Las descripciones de línea no los incluyen (`cotizarIngreso`) | precios |
-| RN-39 | Comprobante no fiscal | **Fuera de domain:** `DatosComprobanteSchema` (contracts) y la impresión (backend) | contracts |
+| RN-38 | Comprobante sin datos del cliente | Las descripciones de línea no los incluyen (`cotizarIngreso`); `componerComprobante` solo usa el ticket y la configuración | precios, comprobantes |
+| RN-39 | Comprobante no fiscal | `componerComprobante` (leyenda obligatoria, número interno sin serie) y `DatosComprobanteSchema` (contracts). El envío ESC/POS es del backend | comprobantes, contracts |
 | RN-40 | Cuentas individuales | **Fuera de domain:** autenticación (backend) | — |
 | RN-41 | Permisos fijos, rangos configurables | `permisosEfectivos`, `puede` | permisos |
 | RN-42 | Auditoría inmutable | **Fuera de domain:** el backend escribe `RegistroAuditoria` en la misma transacción | contracts |

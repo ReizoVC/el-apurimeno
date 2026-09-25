@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AlquilerSchema, HoraAdicionalSchema } from "./alquileres.js";
+import { AccionAuditoriaSchema, RegistroAuditoriaSchema, TipoEntidadAuditadaSchema } from "./auditoria.js";
 import { MovimientoCajaSchema, TurnoSchema } from "./caja.js";
 import { ClienteSchema, PrecioEspecialClienteSchema } from "./clientes.js";
 import {
@@ -9,6 +10,8 @@ import {
   IdSchema,
   TextoRequeridoSchema,
 } from "./comun.js";
+import { TrabajoImpresionSchema } from "./comprobantes.js";
+import { ConfiguracionGlobalSchema } from "./configuracion.js";
 import { CodigoErrorNegocioSchema } from "./errores.js";
 import {
   EstadoTemporalAlquilerSchema,
@@ -18,9 +21,10 @@ import {
   TipoMovimientoCajaSchema,
 } from "./estados.js";
 import { HabitacionSchema } from "./habitaciones.js";
+import { sonUnicos } from "./interno.js";
 import { PermisoSchema } from "./permisos.js";
 import { MovimientoInventarioSchema, ProductoSchema } from "./tienda.js";
-import { AjustePuntualSchema, LineaTicketSchema, TicketSchema } from "./tickets.js";
+import { AjustePuntualSchema, LineaTicketSchema, MetodoPagoSchema, TicketSchema } from "./tickets.js";
 import { RangoSchema, UsuarioSchema } from "./usuarios.js";
 
 // Cuerpos de entrada y salida de la API local (Planos §11). El servidor valida con estos esquemas
@@ -32,6 +36,8 @@ export const RUTAS = {
   login: "/auth/login",
   abrirTurno: "/turnos",
   cerrarTurno: "/turnos/actual/cierre",
+  turnosAbiertos: "/turnos/abiertos",
+  forzarCierreTurno: "/turnos/:id/cierre-forzado",
   cotizarIngreso: "/alquileres/cotizacion",
   registrarIngreso: "/alquileres",
   cotizarHoraAdicional: "/alquileres/:id/hora-adicional/cotizacion",
@@ -45,6 +51,7 @@ export const RUTAS = {
   registrarVenta: "/ventas",
   generarCodigoAutorizacion: "/codigos-autorizacion",
   anularTicket: "/tickets/:id/anulacion",
+  reimprimirTicket: "/tickets/:id/reimpresion",
   reporteVentas: "/reportes/ventas",
   reporteArqueos: "/reportes/arqueos",
   reporteOcupacion: "/reportes/ocupacion",
@@ -67,8 +74,14 @@ export const RUTAS = {
   usuario: "/usuarios/:id",
   contrasenaUsuario: "/usuarios/:id/contrasena",
   rangos: "/rangos",
+  rango: "/rangos/:id",
   // Movimientos manuales de caja (CU-18).
   movimientosCaja: "/turnos/actual/movimientos",
+  // Configuración (CU-27) y métodos de pago (RF-54).
+  configuracion: "/configuracion",
+  metodosPago: "/metodos-pago",
+  metodoPago: "/metodos-pago/:id",
+  auditoria: "/auditoria",
   salud: "/health",
 } as const;
 
@@ -146,6 +159,15 @@ export const CerrarTurnoEntradaSchema = z
 export type CerrarTurnoEntrada = z.infer<typeof CerrarTurnoEntradaSchema>;
 
 export const TurnoRespuestaSchema = TurnoSchema;
+
+/**
+ * Cierre forzado de un turno ajeno (CU-20, RF-43), p. ej. un turno abandonado. El conteo es opcional: si
+ * el Administrador cuenta el cajón, queda registrada la diferencia; si no, solo el esperado.
+ */
+export const ForzarCierreTurnoEntradaSchema = z
+  .object({ efectivoContado: CentimosSchema.nullable(), comentario: z.string().nullable() })
+  .strict();
+export type ForzarCierreTurnoEntrada = z.infer<typeof ForzarCierreTurnoEntradaSchema>;
 
 /**
  * Ingreso o retiro manual de efectivo en el turno propio (RF-42). Lleva `idempotency-key`: un reintento
@@ -413,20 +435,19 @@ export const PrecioEspecialRespuestaSchema = PrecioEspecialClienteSchema;
 export const CONTRASENA_MINIMA = 8;
 export const ContrasenaSchema = z.string().min(CONTRASENA_MINIMA).max(128);
 
-const rangoIdsUnicos = (ids: readonly string[]) => new Set(ids).size === ids.length;
 
 /** Alta de una cuenta individual (RN-40). La contraseña nunca vuelve en una respuesta. */
 export const CrearUsuarioEntradaSchema = z
   .object({ nombreUsuario: TextoRequeridoSchema, contrasena: ContrasenaSchema, rangoIds: z.array(IdSchema).min(1) })
   .strict()
-  .refine((u) => rangoIdsUnicos(u.rangoIds), { path: ["rangoIds"], message: "Un rango no se asigna dos veces." });
+  .refine((u) => sonUnicos(u.rangoIds), { path: ["rangoIds"], message: "Un rango no se asigna dos veces." });
 export type CrearUsuarioEntrada = z.infer<typeof CrearUsuarioEntradaSchema>;
 
 /** Edición, desactivación y asignación de rangos (RF-45). Desactivar reemplaza a eliminar. */
 export const EditarUsuarioEntradaSchema = z
   .object({ nombreUsuario: TextoRequeridoSchema, activo: z.boolean(), rangoIds: z.array(IdSchema).min(1) })
   .strict()
-  .refine((u) => rangoIdsUnicos(u.rangoIds), { path: ["rangoIds"], message: "Un rango no se asigna dos veces." });
+  .refine((u) => sonUnicos(u.rangoIds), { path: ["rangoIds"], message: "Un rango no se asigna dos veces." });
 export type EditarUsuarioEntrada = z.infer<typeof EditarUsuarioEntradaSchema>;
 
 /** Nueva contraseña fijada por el Administrador. */
@@ -435,3 +456,77 @@ export type CambiarContrasenaEntrada = z.infer<typeof CambiarContrasenaEntradaSc
 
 export const UsuarioRespuestaSchema = UsuarioSchema;
 export const RangoRespuestaSchema = RangoSchema;
+
+// --- Rangos (CU-24; RN-41, RF-62) ---
+
+/**
+ * Alta o edición de un rango: nombre único y permisos del catálogo fijo, sin repetir. Editar un rango
+ * rige de inmediato para todos los usuarios que lo tienen (RF-63).
+ */
+export const RangoEntradaSchema = RangoSchema.innerType()
+  .omit({ id: true })
+  .strict()
+  .refine((r) => sonUnicos(r.permisos), { path: ["permisos"], message: "Un permiso no se repite en un rango." });
+export type RangoEntrada = z.infer<typeof RangoEntradaSchema>;
+
+// --- Configuración (CU-27; RN-43, RF-50 a RF-52) ---
+
+/**
+ * Se lee y se reemplaza completa. Los parámetros de tiempo y precio solo afectan a los alquileres que
+ * empiecen después: cada alquiler guarda su copia (RN-43, RN-44). El comprobante no admite terminología
+ * fiscal (RN-39).
+ */
+export const ConfiguracionEntradaSchema = ConfiguracionGlobalSchema;
+export const ConfiguracionRespuestaSchema = ConfiguracionGlobalSchema;
+
+// --- Métodos de pago (RF-54, RN-35) ---
+
+/**
+ * Alta o edición de un método de pago. Un método deshabilitado deja de aceptarse al cobrar. `afectaCaja`
+ * se fija al crearlo y no se edita (decisión 20).
+ */
+export const MetodoPagoEntradaSchema = MetodoPagoSchema.omit({ id: true }).strict();
+export type MetodoPagoEntrada = z.infer<typeof MetodoPagoEntradaSchema>;
+export const MetodoPagoRespuestaSchema = MetodoPagoSchema;
+
+// --- Auditoría (CU-25, RF-46) ---
+
+export const LIMITE_AUDITORIA_MAXIMO = 200;
+
+/**
+ * Filtros de la consulta de auditoría; todos se combinan (RF-46). El periodo es [desde, hasta) en UTC.
+ * Los resultados van del más reciente al más antiguo; `despuesDe` es el `siguiente` de la página anterior.
+ */
+export const AuditoriaConsultaSchema = z
+  .object({
+    usuarioId: IdSchema.optional(),
+    accion: AccionAuditoriaSchema.optional(),
+    tipoEntidad: TipoEntidadAuditadaSchema.optional(),
+    entidadId: IdSchema.optional(),
+    desde: FechaISOSchema.optional(),
+    hasta: FechaISOSchema.optional(),
+    limite: z.coerce.number().int().min(1).max(LIMITE_AUDITORIA_MAXIMO).default(50),
+    despuesDe: IdSchema.optional(),
+  })
+  .strict()
+  .refine((c) => c.desde === undefined || c.hasta === undefined || Date.parse(c.desde) < Date.parse(c.hasta), {
+    path: ["hasta"],
+    message: "hasta debe ser posterior a desde.",
+  });
+export type AuditoriaConsulta = z.infer<typeof AuditoriaConsultaSchema>;
+
+export const AuditoriaRespuestaSchema = z
+  .object({ registros: z.array(RegistroAuditoriaSchema), siguiente: IdSchema.nullable() })
+  .strict();
+export type AuditoriaRespuesta = z.infer<typeof AuditoriaRespuestaSchema>;
+
+// --- Reimpresión (CU-22, RF-44) ---
+
+/**
+ * Copia de un comprobante ya emitido: el trabajo queda en cola marcado como copia, y `contenido` trae las
+ * líneas de texto tal como se imprimirán, con "COPIA" visible y sin datos del cliente (RN-38, RN-39).
+ */
+export const ReimpresionRespuestaSchema = z
+  .object({ trabajo: TrabajoImpresionSchema, contenido: z.array(z.string()) })
+  .strict();
+export type ReimpresionRespuesta = z.infer<typeof ReimpresionRespuestaSchema>;

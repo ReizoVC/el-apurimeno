@@ -1,6 +1,7 @@
 import type { MovimientoCaja, Ticket } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  editarMetodoPago,
   anularTicket,
   armarTicketCobro,
   asegurarTurnoAbierto,
@@ -145,5 +146,23 @@ describe("Cierre forzado (CU-20, RF-43)", () => {
     expect(() =>
       forzarCierreTurno(turno, { cerradoPorId: "cajero-1", efectivoContado: null, efectivoEsperado: 0, comentario: null, ahora: en("23:00") }),
     ).toThrow(codigo("INVALID_STATE_TRANSITION"));
+  });
+});
+
+describe("RF-54 · edición de métodos de pago (decisión 20)", () => {
+  it("se editan nombre, referencia y habilitación", () => {
+    expect(editarMetodoPago(YAPE, { nombre: "Yape empresa", afectaCaja: false, requiereReferencia: true, activo: false })).toEqual({
+      id: "yape",
+      nombre: "Yape empresa",
+      afectaCaja: false,
+      requiereReferencia: true,
+      activo: false,
+    });
+  });
+
+  it("afectaCaja no cambia: alteraría el esperado de turnos abiertos (RN-35)", () => {
+    expect(() => editarMetodoPago(YAPE, { ...YAPE, afectaCaja: true })).toThrow(
+      expect.objectContaining({ codigo: "INVALID_STATE_TRANSITION" }),
+    );
   });
 });

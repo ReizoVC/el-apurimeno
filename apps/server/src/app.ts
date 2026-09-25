@@ -1,5 +1,7 @@
 import { createHmac } from "node:crypto";
+import fastifyCors from "@fastify/cors";
 import fastifyJwt from "@fastify/jwt";
+import { CABECERA_IDEMPOTENCIA } from "@apurimeno/contracts";
 import Fastify, { type FastifyInstance } from "fastify";
 import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
@@ -18,6 +20,8 @@ export interface OpcionesApp {
   logger?: boolean;
   /** Costo bcrypt de las contraseñas nuevas; las pruebas usan uno bajo. */
   costoBcrypt?: number;
+  /** Lista blanca de orígenes de navegador (CORS); ver cors.ts. Por defecto, ninguno. */
+  origenesPermitidos?: readonly string[];
 }
 
 export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstance> {
@@ -26,6 +30,13 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
 
   const app = Fastify({ logger: opciones.logger ?? false });
   // Un turno de trabajo cabe en la vigencia del token.
+  // Antes que la autenticación: la ruta OPTIONS del preflight es pública y la responde este plugin.
+  await app.register(fastifyCors, {
+    origin: [...(opciones.origenesPermitidos ?? [])],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["authorization", "content-type", CABECERA_IDEMPOTENCIA],
+    exposedHeaders: ["idempotent-replayed"],
+  });
   await app.register(fastifyJwt, { secret: opciones.jwtSecret, sign: { expiresIn: "12h" } });
   app.setErrorHandler(manejarError);
   registrarAutenticacion(app, opciones.prisma, ahora);

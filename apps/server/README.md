@@ -22,6 +22,7 @@ Variables de entorno (ver `.env.example`):
 | `DATABASE_URL` | `file:./datos/apurimeno.db` | |
 | `JWT_SECRET` | aleatorio por arranque | **Obligatorio en producción** (`NODE_ENV=production`), al menos 32 caracteres. En desarrollo, las sesiones se invalidan al reiniciar. |
 | `HOST` / `PORT` | `0.0.0.0` / `3001` | Escucha en la red local para el POS, el Dashboard y la app de limpieza (RES-04). |
+| `CORS_ORIGINS` | en desarrollo, `http://localhost` y `http://127.0.0.1` en los puertos 3000, 3002 y 3003; en producción, ninguno | Orígenes de navegador que pueden llamar a la API, separados por comas y exactos (esquema, host y puerto). No admite `*`: el servidor no arranca con un comodín o un origen mal formado. Para el celular de limpieza en la red del local: `CORS_ORIGINS=http://192.168.1.50:3002` (la IP de la máquina que sirve la app). |
 | `SEED_ADMIN_USER` / `SEED_ADMIN_PASSWORD` | `admin` / — | Solo para `pnpm seed`. |
 
 ## Endpoints
@@ -207,5 +208,6 @@ simular el paso del tiempo.
 - `limpieza-y-habitaciones`: la lista de limpieza (solo pendientes), marcar lista y reportar
   mantenimiento tal como los envía `apps/cleaning`, la carrera entre dos personas, y la administración
   de habitaciones.
+- `cors`: la lista blanca de `CORS_ORIGINS` (sin comodines) y el preflight contra la API.
 - `administracion`: clientes, precios especiales aplicados en la cotización, usuarios (desactivación y
   rangos en caliente) y movimientos de caja (arqueo e idempotencia).

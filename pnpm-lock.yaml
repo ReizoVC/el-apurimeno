@@ -122,7 +122,7 @@ importers:
         specifier: workspace:^
         version: link:../../packages/domain
       '@fastify/cors':
-        specifier: ^11
+        specifier: ^11.3.0
         version: 11.3.0
       '@fastify/jwt':
         specifier: ^10.2.2

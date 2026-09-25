@@ -76,13 +76,15 @@ export default function StoreCatalogPage() {
       ) : productosFiltrados.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            No se encontraron productos que coincidan con &ldquo;{busqueda}&rdquo;.
+            No se encontraron productos que coincidan con &ldquo;{busqueda}
+            &rdquo;.
           </p>
         </div>
       ) : (
         <>
           <p className="mb-4 text-xs text-muted-foreground">
-            Mostrando {productosFiltrados.length} de {productos.length} productos
+            Mostrando {productosFiltrados.length} de {productos.length}{" "}
+            productos
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -126,7 +128,9 @@ export default function StoreCatalogPage() {
                     </div>
 
                     <div className="flex items-center justify-between border-t pt-2 text-xs">
-                      <span className="text-muted-foreground">Stock disponible:</span>
+                      <span className="text-muted-foreground">
+                        Stock disponible:
+                      </span>
                       {producto.controlaStock ? (
                         <span
                           className={

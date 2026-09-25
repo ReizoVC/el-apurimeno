@@ -3,16 +3,23 @@ import {
   TurnoSchema,
   type AbrirTurnoEntrada,
   type CerrarTurnoEntrada,
+  type ForzarCierreTurnoEntrada,
   type MovimientoCaja,
   type MovimientoCajaEntrada,
   type Turno,
 } from "@apurimeno/contracts";
-import { ErrorNegocio, calcularEfectivoEsperado, cerrarTurno, prepararMovimientoCaja } from "@apurimeno/domain";
+import {
+  ErrorNegocio,
+  calcularEfectivoEsperado,
+  cerrarTurno,
+  forzarCierreTurno,
+  prepararMovimientoCaja,
+} from "@apurimeno/domain";
 import { auditar } from "../auditoria.js";
 import type { Transaccion } from "../db.js";
 import { ErrorApi, esViolacionUnica } from "../errores.js";
 import { INCLUIR_TICKET, aMetodoPago, aMovimientoCaja, aTicket, aTurno, datosTurno } from "../mapeo.js";
-import type { ContextoServicio } from "./contexto.js";
+import { noEncontrado, type ContextoServicio } from "./contexto.js";
 
 /** Turno abierto del usuario, o SHIFT_NOT_OPEN: ningún cobro sin turno (RN-32). */
 export async function turnoAbiertoDe(tx: Transaccion, usuarioId: string): Promise<Turno> {
@@ -55,6 +62,14 @@ export async function abrirTurno(ctx: ContextoServicio, entrada: AbrirTurnoEntra
   return turno;
 }
 
+/** Efectivo esperado del turno (RN-33, RN-35): inicial + cobros en métodos que afectan caja ± movimientos. */
+async function efectivoEsperadoDe(tx: Transaccion, turno: Turno): Promise<number> {
+  const tickets = await tx.ticket.findMany({ where: { turnoId: turno.id }, include: INCLUIR_TICKET });
+  const movimientos = await tx.movimientoCaja.findMany({ where: { turnoId: turno.id } });
+  const metodos = await tx.metodoPago.findMany();
+  return calcularEfectivoEsperado(turno, tickets.map(aTicket), movimientos.map(aMovimientoCaja), metodos.map(aMetodoPago));
+}
+
 /**
  * Cierra el turno propio con arqueo ciego (CU-19; RN-33 a RN-35, PEND-05). El cajero envía lo contado;
  * el esperado se calcula aquí y solo se revela en la respuesta, ya cerrado.
@@ -62,15 +77,7 @@ export async function abrirTurno(ctx: ContextoServicio, entrada: AbrirTurnoEntra
 export async function cerrarTurnoPropio(ctx: ContextoServicio, entrada: CerrarTurnoEntrada): Promise<Turno> {
   return ctx.prisma.$transaction(async (tx) => {
     const turno = await turnoAbiertoDe(tx, ctx.usuario.id);
-    const tickets = await tx.ticket.findMany({ where: { turnoId: turno.id }, include: INCLUIR_TICKET });
-    const movimientos = await tx.movimientoCaja.findMany({ where: { turnoId: turno.id } });
-    const metodos = await tx.metodoPago.findMany();
-    const efectivoEsperado = calcularEfectivoEsperado(
-      turno,
-      tickets.map(aTicket),
-      movimientos.map(aMovimientoCaja),
-      metodos.map(aMetodoPago),
-    );
+    const efectivoEsperado = await efectivoEsperadoDe(tx, turno);
     const cerrado = cerrarTurno(turno, {
       efectivoContado: entrada.efectivoContado,
       efectivoEsperado,
@@ -88,6 +95,49 @@ export async function cerrarTurnoPropio(ctx: ContextoServicio, entrada: CerrarTu
       {
         usuarioId: ctx.usuario.id,
         accion: "TURNO_CERRADO",
+        tipoEntidad: "TURNO",
+        entidadId: turno.id,
+        valorPrevio: turno,
+        valorNuevo: cerrado,
+        motivo: cerrado.comentarioCierre,
+      },
+      ctx.ahora,
+    );
+    return cerrado;
+  });
+}
+
+/** Turnos abiertos de todo el personal, para detectar uno abandonado (CU-20). El esperado sigue oculto (RN-34). */
+export async function listarTurnosAbiertos(ctx: ContextoServicio): Promise<Turno[]> {
+  return (await ctx.prisma.turno.findMany({ where: { estado: "ABIERTO" }, orderBy: { abiertoEn: "asc" } })).map(aTurno);
+}
+
+/**
+ * Cierre forzado de un turno ajeno (CU-20, RF-43), p. ej. un cajero que se fue sin cerrar. Queda marcado como
+ * forzado y auditado aparte. Desde ese momento, el cajero no puede cobrar hasta abrir otro turno (RN-32).
+ */
+export async function forzarCierreTurnoServicio(ctx: ContextoServicio, turnoId: string, entrada: ForzarCierreTurnoEntrada): Promise<Turno> {
+  return ctx.prisma.$transaction(async (tx) => {
+    const fila = await tx.turno.findUnique({ where: { id: turnoId } });
+    if (fila === null) throw noEncontrado("El turno");
+    const turno = aTurno(fila);
+    if (turno.estado !== "ABIERTO") throw new ErrorNegocio("SHIFT_NOT_OPEN");
+    // El propio turno se cierra por la vía normal, con arqueo ciego (dominio: INVALID_STATE_TRANSITION).
+    const cerrado = forzarCierreTurno(turno, {
+      cerradoPorId: ctx.usuario.id,
+      efectivoContado: entrada.efectivoContado,
+      efectivoEsperado: await efectivoEsperadoDe(tx, turno),
+      comentario: entrada.comentario,
+      ahora: ctx.ahora.toISOString(),
+    });
+
+    const { count } = await tx.turno.updateMany({ where: { id: turno.id, estado: "ABIERTO" }, data: datosTurno(cerrado) });
+    if (count === 0) throw new ErrorNegocio("SHIFT_NOT_OPEN");
+    await auditar(
+      tx,
+      {
+        usuarioId: ctx.usuario.id,
+        accion: "TURNO_CIERRE_FORZADO",
         tipoEntidad: "TURNO",
         entidadId: turno.id,
         valorPrevio: turno,

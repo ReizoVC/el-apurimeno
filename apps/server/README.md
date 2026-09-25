@@ -66,10 +66,45 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `PUT`/`DELETE /clientes/:id/precios-especiales/:habitacionId` | `GESTIONAR_PRECIO_ESPECIAL` | — |
 | `GET /usuarios`, `POST /usuarios`, `PUT /usuarios/:id` | `GESTIONAR_USUARIOS` | — |
 | `PUT /usuarios/:id/contrasena` | `GESTIONAR_USUARIOS` | — |
-| `GET /rangos` | `GESTIONAR_USUARIOS` | — |
+| `GET /rangos` | `GESTIONAR_USUARIOS` o `GESTIONAR_RANGOS` | — |
+| `POST /rangos`, `PUT /rangos/:id` | `GESTIONAR_RANGOS` | — |
+| `GET /turnos/abiertos` | `FORZAR_CIERRE_TURNO` | — |
+| `POST /turnos/:id/cierre-forzado` | `FORZAR_CIERRE_TURNO` | — |
+| `GET /configuracion`, `PUT /configuracion` | `CONFIGURAR_PARAMETROS` | — |
+| `GET /metodos-pago` | `CONSULTAR_TABLERO` o `CONFIGURAR_METODOS_PAGO` | — |
+| `POST /metodos-pago`, `PUT /metodos-pago/:id` | `CONFIGURAR_METODOS_PAGO` | — |
+| `GET /auditoria?usuarioId=&accion=&tipoEntidad=&entidadId=&desde=&hasta=&limite=&despuesDe=` | `CONSULTAR_AUDITORIA` | — |
+| `POST /tickets/:id/reimpresion` | `REIMPRIMIR_COMPROBANTE` | — |
 
-Todavía faltan: gestión de rangos (CU-24), cierre forzado de turno (CU-20), configuración (CU-27),
-métodos de pago, auditoría (CU-25), reimpresión (CU-22) y el tablero con estado temporal (`/rooms/board`).
+Todavía faltan:
+- **El servicio de impresión** (ADR-05): convertir el comprobante a ESC/POS, enviarlo por USB o Bluetooth
+  a la REDPOS RED-E803, la cola con reintentos (RF-56), y encolar el comprobante original de cada cobro.
+  Hoy solo existe la reimpresión, que compone el contenido y deja el trabajo `PENDIENTE`.
+- El tablero con el estado temporal de cada alquiler (`/rooms/board`) y los avisos por WebSocket.
+
+### Rangos, cierre forzado, configuración y métodos de pago
+
+- **Rangos (CU-24):** alta y edición de combinaciones del catálogo fijo; el nombre es único. Editar un
+  rango rige de inmediato para quienes lo tienen (RF-63). Quien edita no puede quitarse `users.manage`
+  por esta vía (`SELF_LOCKOUT_FORBIDDEN`, decisión 19). No hay eliminación: el SRS no la pide.
+- **Cierre forzado (CU-20, RF-43):** el Administrador lista los turnos abiertos (sin el esperado, RN-34)
+  y cierra uno ajeno, contando el cajón o no. Queda `cierreForzado` y auditado como
+  `TURNO_CIERRE_FORZADO`. El propio turno se cierra por la vía normal.
+- **Configuración (CU-27):** se lee y se reemplaza completa, auditada con el valor previo. Los
+  parámetros rigen para los alquileres que empiecen después (RN-43).
+- **Métodos de pago (RF-54):** alta, edición y habilitación; uno deshabilitado ya no se acepta al cobrar.
+  `afectaCaja` no se edita (decisión 20 de contracts). Se auditan como `CONFIGURACION_CAMBIADA` con
+  `tipoEntidad` `METODO_PAGO`, porque §23.1 no trae una acción propia.
+
+### Auditoría y reimpresión
+
+- **Auditoría (CU-25, RF-46):** filtros combinables por usuario, acción, entidad y periodo `[desde, hasta)`.
+  Del más reciente al más antiguo, hasta 200 por página (50 por defecto), y `siguiente` para pedir la
+  siguiente página con `despuesDe`. Registros del mismo milisegundo se ordenan por id.
+- **Reimpresión (CU-22, RF-44):** encola una copia (`esCopia`) y responde el contenido compuesto por
+  `componerComprobante` del dominio: "COPIA" visible, sin datos del cliente (RN-38), con la leyenda de
+  documento no tributario (RN-39), a 48 o 32 columnas según el papel configurado. **Todavía no se
+  imprime**: el trabajo queda `PENDIENTE` hasta que exista el servicio de impresión.
 
 ### Limpieza (CU-15 a CU-17)
 
@@ -208,6 +243,7 @@ simular el paso del tiempo.
 - `limpieza-y-habitaciones`: la lista de limpieza (solo pendientes), marcar lista y reportar
   mantenimiento tal como los envía `apps/cleaning`, la carrera entre dos personas, y la administración
   de habitaciones.
+- `rangos`, `cierre-forzado`, `configuracion` (con métodos de pago), `auditoria` y `reimpresion`.
 - `cors`: la lista blanca de `CORS_ORIGINS` (sin comodines) y el preflight contra la API.
 - `administracion`: clientes, precios especiales aplicados en la cotización, usuarios (desactivación y
   rangos en caliente) y movimientos de caja (arqueo e idempotencia).

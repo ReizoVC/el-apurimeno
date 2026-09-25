@@ -3,6 +3,7 @@ import {
   CrearUsuarioEntradaSchema,
   EditarUsuarioEntradaSchema,
   RUTAS,
+  RangoEntradaSchema,
   RangoRespuestaSchema,
   UsuarioRespuestaSchema,
 } from "@apurimeno/contracts";
@@ -12,7 +13,9 @@ import { validar } from "./errores.js";
 import { creadorContexto } from "./servicios/contexto.js";
 import {
   cambiarContrasenaServicio,
+  crearRangoServicio,
   crearUsuarioServicio,
+  editarRangoServicio,
   editarUsuarioServicio,
   listarRangos,
   listarUsuarios,
@@ -20,7 +23,7 @@ import {
 
 type ConId = FastifyRequest<{ Params: { id: string } }>;
 
-/** Usuarios (CU-23), exclusivo de `users.manage`. Las respuestas nunca incluyen la contraseña ni su hash. */
+/** Usuarios (CU-23) y rangos (CU-24), exclusivo de `users.manage`. Las respuestas nunca incluyen la contraseña ni su hash. */
 export function registrarRutasUsuarios(app: FastifyInstance, prisma: PrismaClient, ahora: () => Date, costoBcrypt: number): void {
   const ctx = creadorContexto(prisma, ahora);
 
@@ -46,7 +49,19 @@ export function registrarRutasUsuarios(app: FastifyInstance, prisma: PrismaClien
     return reply.status(204).send();
   });
 
-  app.get(RUTAS.rangos, { config: { operacion: "GESTIONAR_USUARIOS" } }, async (request) =>
+  app.get(RUTAS.rangos, { config: { operacion: ["GESTIONAR_USUARIOS", "GESTIONAR_RANGOS"] } }, async (request) =>
     RangoRespuestaSchema.array().parse(await listarRangos(ctx(request))),
+  );
+
+  // --- Rangos (CU-24) ---
+
+  app.post(RUTAS.rangos, { config: { operacion: "GESTIONAR_RANGOS" } }, async (request, reply) => {
+    const rango = await crearRangoServicio(ctx(request), validar(RangoEntradaSchema, request.body));
+    void reply.status(201);
+    return RangoRespuestaSchema.parse(rango);
+  });
+
+  app.put(RUTAS.rango, { config: { operacion: "GESTIONAR_RANGOS" } }, async (request: ConId) =>
+    RangoRespuestaSchema.parse(await editarRangoServicio(ctx(request), request.params.id, validar(RangoEntradaSchema, request.body))),
   );
 }

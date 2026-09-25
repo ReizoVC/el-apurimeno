@@ -8,6 +8,7 @@ import type { PrismaClient } from "./db.js";
 import { manejarError } from "./errores.js";
 import { registrarRutas } from "./rutas.js";
 import { registrarRutasClientes } from "./rutas-clientes.js";
+import { registrarRutasConfiguracion } from "./rutas-configuracion.js";
 import { registrarRutasHabitaciones } from "./rutas-habitaciones.js";
 import { registrarRutasUsuarios } from "./rutas-usuarios.js";
 
@@ -45,6 +46,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   registrarRutas(app, opciones.prisma, ahora, secretoCodigos);
   registrarRutasHabitaciones(app, opciones.prisma, ahora);
   registrarRutasClientes(app, opciones.prisma, ahora);
+  registrarRutasConfiguracion(app, opciones.prisma, ahora);
   registrarRutasUsuarios(app, opciones.prisma, ahora, opciones.costoBcrypt ?? COSTO_BCRYPT);
   await app.ready();
   return app;

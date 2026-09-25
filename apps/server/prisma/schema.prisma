@@ -165,13 +165,13 @@ model Habitacion {
 
 model Cliente {
   id        String  @id
-  documento String?
+  /// Único cuando existe (decisión 17 de contracts); UNIQUE admite varios NULL.
+  documento String? @unique
   nombre    String?
 
   alquileres        Alquiler[]
   preciosEspeciales PrecioEspecialCliente[]
 
-  @@index([documento])
   @@index([nombre])
 }
 
@@ -347,6 +347,8 @@ model MovimientoCaja {
   motivo      String
   creadoPorId String
   creadoEn    DateTime
+  /// Solo base de datos: clave del encabezado idempotency-key (decisión 18 de contracts).
+  claveIdempotencia String? @unique
 
   turno     Turno   @relation(fields: [turnoId], references: [id])
   creadoPor Usuario @relation("MovimientoCajaCreadoPor", fields: [creadoPorId], references: [id])

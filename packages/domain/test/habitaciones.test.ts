@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   bloquearPorMantenimiento,
+  crearHabitacion,
+  editarHabitacion,
   liberarPorAnulacion,
   liberarPorSalida,
   marcarHabitacionLista,
@@ -8,7 +10,7 @@ import {
   reactivarHabitacion,
   reportarMantenimiento,
 } from "../src/index.js";
-import { habitacion } from "./fixtures.js";
+import { contexto, en, habitacion } from "./fixtures.js";
 
 const codigo = (c: string) => expect.objectContaining({ codigo: c });
 
@@ -70,4 +72,21 @@ it("las funciones no modifican la habitación recibida", () => {
   const h = habitacion();
   ocuparHabitacion(h);
   expect(h.estado).toBe("LIBRE");
+});
+
+describe("RF-36, RF-37 · alta y edición de habitaciones", () => {
+  it("una habitación nueva queda LIBRE", () => {
+    const h = crearHabitacion({ numero: "401", descripcion: "Con baño propio", precioBase: 3500 }, contexto(en("10:00")));
+    expect(h).toMatchObject({ numero: "401", descripcion: "Con baño propio", precioBase: 3500, estado: "LIBRE" });
+  });
+
+  it("editar cambia número, descripción y precio, nunca el estado", () => {
+    const h = editarHabitacion(habitacion({ estado: "OCUPADA" }), { numero: "205A", descripcion: null, precioBase: 3200 });
+    expect(h).toMatchObject({ id: "hab-205", numero: "205A", precioBase: 3200, estado: "OCUPADA" });
+  });
+
+  it("el precio base es un entero de céntimos no negativo (RN-37)", () => {
+    expect(() => crearHabitacion({ numero: "402", descripcion: null, precioBase: -100 }, contexto(en("10:00")))).toThrow(RangeError);
+    expect(() => editarHabitacion(habitacion(), { numero: "205", descripcion: null, precioBase: 30.5 })).toThrow(RangeError);
+  });
 });

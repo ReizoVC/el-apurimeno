@@ -1,6 +1,7 @@
 export * from "./errores.js";
 export * from "./tiempo.js";
 export * from "./precios.js";
+export * from "./clientes.js";
 export * from "./habitaciones.js";
 export * from "./alquileres.js";
 export * from "./caja.js";

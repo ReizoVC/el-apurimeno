@@ -24,6 +24,8 @@ export interface OpcionesPublicacion {
 export interface ResultadoPublicacion {
   dias: number;
   turnos: number;
+  /** Si publicó todo el historial: porque se pidió o porque nunca se había sincronizado. */
+  completo: boolean;
 }
 
 const dia = (fecha: Date) => diaLocal(fecha.toISOString());
@@ -126,5 +128,5 @@ export async function publicarResumen(
     ultimoErrorEn: null,
   };
   await prisma.estadoEspejo.upsert({ where: { id: 1 }, create: { id: 1, ...exito }, update: exito });
-  return { dias: filasDias.length, turnos: filasTurnos.length };
+  return { dias: filasDias.length, turnos: filasTurnos.length, completo: cambiosDesde === null };
 }

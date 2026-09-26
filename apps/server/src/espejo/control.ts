@@ -83,7 +83,7 @@ export function crearControlEspejo(
         intervaloMinutos: opciones.intervaloMinutos,
         versionServidor: opciones.versionServidor,
       });
-      log.info({ dias: r.dias, turnos: r.turnos, completo }, "Espejo sincronizado");
+      log.info({ dias: r.dias, turnos: r.turnos, completo: r.completo }, "Espejo sincronizado");
       return { exito: true, diasPublicados: r.dias, turnosPublicados: r.turnos };
     } catch (error) {
       await registrarFalla(inicio, error);

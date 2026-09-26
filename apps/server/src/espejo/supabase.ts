@@ -21,7 +21,14 @@ export const FILAS_POR_SOLICITUD = 200;
 /** El token se renueva un minuto antes de vencer, para no usarlo justo cuando caduca. */
 const MARGEN_TOKEN_MS = 60_000;
 
-const detalle = (error: unknown) => (error instanceof Error ? error.message : String(error));
+/** fetch solo dice "fetch failed"; la causa (ENOTFOUND, ECONNREFUSED, un tiempo agotado) está en `cause`. */
+function detalle(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const causa = error.cause as { code?: unknown; message?: unknown } | undefined;
+  if (error.name === "TimeoutError") return "no respondió a tiempo";
+  if (typeof causa?.code === "string") return `${error.message} (${causa.code})`;
+  return error.message;
+}
 
 /**
  * Publica el resumen en Supabase por su API REST, con la sesión de la cuenta `sincronizador`. Las políticas de

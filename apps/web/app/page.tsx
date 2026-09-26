@@ -14,7 +14,9 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Aviso, Encabezado } from "../src/componentes/comunes";
+import { useSesion } from "../src/componentes/Shell";
 import { useCarga } from "../src/lib/carga";
+import { nombresDeUsuarios } from "../src/lib/nombres";
 import { diaLima, periodoDeDias } from "../src/lib/fechas";
 import { fechaHora, hora, soles } from "../src/lib/formato";
 import { ORIGEN_TICKET } from "../src/lib/rotulos";
@@ -51,18 +53,18 @@ const TEMPORAL: Record<
  * de hoy (día de Lima según la hora del servidor, solo cobros vigentes, como en Reportes).
  */
 export default function VistaGeneral() {
+  const sesion = useSesion();
   const tablero = useCarga(() => servidor.tablero(), []);
   const turnos = useCarga(async () => {
-    const [abiertos, usuarios] = await Promise.all([
+    const [abiertos, nombre] = await Promise.all([
       servidor.turnosAbiertos(),
-      servidor.usuarios(),
+      nombresDeUsuarios(sesion),
     ]);
-    const nombre = new Map(usuarios.map((u) => [u.id, u.nombreUsuario]));
     return abiertos.map((t) => ({
       ...t,
       cajero: nombre.get(t.usuarioId) ?? t.usuarioId,
     }));
-  }, []);
+  }, [sesion]);
   const hoy =
     tablero.datos === null ? null : diaLima(new Date(tablero.datos.ahora));
   const ventas = useCarga(async () => {

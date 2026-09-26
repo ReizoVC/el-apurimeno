@@ -46,7 +46,10 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
   `better-sqlite3` sin binario ("Could not locate the bindings file"), correr `npx prebuild-install` dentro de
   `node_modules/.pnpm/better-sqlite3@12.*/node_modules/better-sqlite3`.
 - **Tauri (`apps/native/src-tauri`)** necesita Visual Studio con "Desarrollo para el escritorio con C++" y el
-  Windows SDK; sin eso, `cargo` falla con `LNK1104: msvcrt.lib`.
+  Windows SDK. Compilar con `pnpm --filter native tauri build` (o `node scripts/con-msvc.mjs cargo …` en
+  `apps/native`): el envoltorio carga el entorno de la última instalación **estable** de Visual Studio. Rust, por su
+  cuenta, elige la más nueva aunque sea una versión preliminar ("Insiders"), que puede no traer las bibliotecas de
+  x64 y falla con `LNK1104: msvcrt.lib`.
 - **Rutas largas:** `pnpm install` en una carpeta de ruta muy larga (p. ej. dentro de `%TEMP%\claude\…`) falla con
   `ELIFECYCLE -4058` por el límite de 260 caracteres de Windows. Para un clon de prueba, usar una ruta corta.
 - **Finales de línea:** el repositorio guarda LF y git en Windows convierte a CRLF al extraer. Prettier escribe

@@ -32,6 +32,8 @@ import {
   SalidaRespuestaSchema,
   SalidaSinPagoEntradaSchema,
   TableroSchema,
+  TicketSchema,
+  TicketsConsultaSchema,
   TurnoActualRespuestaSchema,
   TurnoRespuestaSchema,
 } from "@apurimeno/contracts";
@@ -69,6 +71,7 @@ import {
   turnoActualServicio,
 } from "./servicios/turnos.js";
 import { tableroServicio } from "./servicios/tablero.js";
+import { buscarTickets } from "./servicios/tickets.js";
 
 type ConId = FastifyRequest<{ Params: { id: string } }>;
 
@@ -224,6 +227,10 @@ export function registrarRutas(
       const r = await anularTicketServicio(ctx(request), request.params.id, entrada, clave, secretoCodigos);
       return AnularTicketRespuestaSchema.parse(responderCobro(reply, r));
     },
+  );
+
+  app.get(RUTAS.tickets, { config: { operacion: ["REIMPRIMIR_COMPROBANTE", "CONSULTAR_REPORTES"] } }, async (request) =>
+    TicketSchema.array().parse(await buscarTickets(ctx(request), validar(TicketsConsultaSchema, request.query))),
   );
 
   // Reimpresión (CU-22): una copia marcada como tal. Pulsar dos veces imprime dos copias, como en papel.

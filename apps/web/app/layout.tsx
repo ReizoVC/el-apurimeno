@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@apurimeno/ui/globals.css";
+import { Shell } from "../src/componentes/Shell";
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -13,8 +14,8 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "El Apurimeño",
-  description: "Sistema de gestión para hospedaje por horas",
+  title: "El Apurimeño · Dashboard",
+  description: "Administración del hospedaje por horas",
 };
 
 export default function RootLayout({
@@ -23,9 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={`${fontSans.variable} ${fontMono.variable}`}>
-        {children}
+        <Shell>{children}</Shell>
       </body>
     </html>
   );

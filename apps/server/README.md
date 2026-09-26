@@ -77,6 +77,7 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /metodos-pago`, `PUT /metodos-pago/:id` | `CONFIGURAR_METODOS_PAGO` | — |
 | `GET /auditoria?usuarioId=&accion=&tipoEntidad=&entidadId=&desde=&hasta=&limite=&despuesDe=` | `CONSULTAR_AUDITORIA` | — |
 | `POST /tickets/:id/reimpresion` | `REIMPRIMIR_COMPROBANTE` | — |
+| `GET /tickets?numero=&desde=&hasta=&limite=` | `REIMPRIMIR_COMPROBANTE` o `CONSULTAR_REPORTES` | — |
 
 Todavía faltan:
 - **El envío a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803, la cola con

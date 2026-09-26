@@ -41,6 +41,8 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /auth/login` | pública | — |
 | `GET /health` | pública | — |
 | `POST /turnos` | `ABRIR_TURNO` | — |
+| `GET /turnos/actual` | `ABRIR_TURNO` o `CERRAR_TURNO` | — |
+| `GET /tablero` | `CONSULTAR_TABLERO` | — |
 | `POST /turnos/actual/cierre` | `CERRAR_TURNO` | — |
 | `POST /alquileres/cotizacion` | `REGISTRAR_INGRESO` | — |
 | `POST /alquileres` | `REGISTRAR_INGRESO` | Sí |
@@ -85,11 +87,13 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `GET /espejo` | `CONSULTAR_ESTADO_ESPEJO` | — |
 | `POST /espejo/sincronizacion` | `SINCRONIZAR_ESPEJO` | — (una a la vez) |
 
-Todavía faltan:
-- **El envío a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803, la cola con
-  reintentos (RF-56), y encolar el comprobante original de cada cobro. La parte 1 (contenido y bytes
-  ESC/POS) está hecha; ver "Impresión". Hoy la reimpresión deja el trabajo `PENDIENTE`.
-- El tablero con el estado temporal de cada alquiler (`/rooms/board`) y los avisos por WebSocket.
+Todavía falta **el envío real a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803,
+la impresora en Windows y reintentar los trabajos en `ERROR` o `PENDIENTE` (RF-56). Ver "Impresión".
+
+`GET /tablero` devuelve cada habitación con su alquiler abierto, el estado temporal calculado con la hora del
+servidor y `ahora` para corregir el reloj del POS (Planos §11.2 lo llamaba `/rooms/board`). Los avisos por
+WebSocket de los Planos no se implementaron: el POS pide el tablero cada 15 s y recalcula el estado cada segundo
+con el dominio (ver `apps/native/README.md`).
 
 ### Rangos, cierre forzado, configuración y métodos de pago
 
@@ -139,21 +143,20 @@ productos, auditoría ni el estado de las habitaciones en vivo (RN-45, RIE-08).
   siguiente página con `despuesDe`. Registros del mismo milisegundo se ordenan por id.
 - **Reimpresión (CU-22, RF-44):** encola una copia (`esCopia`) y responde el contenido compuesto por
   `componerComprobante` del dominio: "COPIA" visible, sin datos del cliente (RN-38), con la leyenda de
-  documento no tributario (RN-39), a 48 o 32 columnas según el papel configurado. **Todavía no se
-  imprime**: el trabajo queda `PENDIENTE` hasta que exista el servicio de impresión.
+  documento no tributario (RN-39), a 48 o 32 columnas según el papel configurado. La copia sale por la
+  misma cola que los cobros (ver "Impresión"); sin `IMPRESORA_DISPOSITIVO`, queda `PENDIENTE`.
 
 ### Limpieza (CU-15 a CU-17)
 
-Coinciden con lo que `apps/cleaning` espera (`src/api-mock.ts`): una lista y dos acciones que se envían
-solo con el id.
+Lo que usa `apps/cleaning` (`src/api.ts`): una lista y dos acciones que se envían solo con el id.
 - `GET /habitaciones/pendientes-limpieza` devuelve **solo** las habitaciones en `PENDIENTE_LIMPIEZA`
-  (RF-40). El filtro lo aplica el servidor; el de `app/page.tsx` queda como redundante.
+  (RF-40). El filtro lo aplica el servidor.
 - `POST /habitaciones/:id/lista` (`PENDIENTE_LIMPIEZA → LIBRE`) y `POST /habitaciones/:id/reporte-mantenimiento`
   (`PENDIENTE_LIMPIEZA → MANTENIMIENTO`) no llevan cuerpo. El reporte admite `{ "motivo": "..." }`
   opcional (RF-41: recomendado), que queda en la auditoría. Ambas responden la habitación actualizada.
 - Sin `idempotency-key`: repetir la acción sobre una habitación que ya cambió responde 422
-  `INVALID_STATE_TRANSITION` y no cambia nada. Con la eliminación optimista de `apps/cleaning`, ese 422
-  (o un 403, 404 o error de red) debe devolver la tarjeta a la lista o avisar; hoy el mock no falla nunca.
+  `INVALID_STATE_TRANSITION` y no cambia nada. `apps/cleaning` quita la tarjeta solo cuando el servidor
+  confirma; si falla (ese 422, un 403, 404 o sin red), avisa y recarga la lista.
 - Si dos personas actúan a la vez sobre la misma habitación, solo una cambia el estado: la actualización
   exige que el estado siga siendo el leído.
 

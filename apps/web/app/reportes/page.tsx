@@ -343,7 +343,9 @@ function Arqueos({
                   <TableCell>
                     {cajero.get(t.usuarioId) ?? t.usuarioId}
                   </TableCell>
-                  <TableCell>{fechaHora(t.abiertoEn)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {fechaHora(t.abiertoEn)}
+                  </TableCell>
                   <TableCell>
                     {t.cerradoEn === null ? "—" : fechaHora(t.cerradoEn)}
                     {t.cierreForzado && (
@@ -352,21 +354,21 @@ function Arqueos({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="whitespace-nowrap text-right">
                     {soles(t.efectivoInicial)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="whitespace-nowrap text-right">
                     {t.efectivoEsperado === null
                       ? "—"
                       : soles(t.efectivoEsperado)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="whitespace-nowrap text-right">
                     {t.efectivoContado === null
                       ? "sin conteo"
                       : soles(t.efectivoContado)}
                   </TableCell>
                   <TableCell
-                    className={`text-right font-medium ${t.diferencia !== null && t.diferencia !== 0 ? "text-destructive" : ""}`}
+                    className={`whitespace-nowrap text-right font-medium ${t.diferencia !== null && t.diferencia !== 0 ? "text-destructive" : ""}`}
                   >
                     {t.diferencia === null ? "—" : soles(t.diferencia)}
                   </TableCell>
@@ -394,8 +396,10 @@ function Ocupacion({ reporte }: { reporte: ReporteOcupacion }) {
   const ordenadas = [...reporte.habitaciones].sort(
     (a, b) => b.alquileres - a.alquileres || b.ingresos - a.ingresos,
   );
-  const max = ordenadas[0]?.alquileres ?? 0;
-  const min = ordenadas.at(-1)?.alquileres ?? 0;
+  // "Menos usada" solo entre las que tuvieron uso; las que no tuvieron ninguno se marcan aparte.
+  const usadas = ordenadas.filter((h) => h.alquileres > 0);
+  const max = usadas[0]?.alquileres ?? 0;
+  const min = usadas.at(-1)?.alquileres ?? 0;
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
@@ -415,7 +419,10 @@ function Ocupacion({ reporte }: { reporte: ReporteOcupacion }) {
             </TableHeader>
             <TableBody>
               {ordenadas.map((h) => (
-                <TableRow key={h.habitacionId}>
+                <TableRow
+                  key={h.habitacionId}
+                  className={h.alquileres === 0 ? "text-muted-foreground" : ""}
+                >
                   <TableCell className="flex items-center gap-2">
                     {h.numero}
                     {max > min && h.alquileres === max && (
@@ -425,6 +432,9 @@ function Ocupacion({ reporte }: { reporte: ReporteOcupacion }) {
                     )}
                     {max > min && h.alquileres === min && (
                       <Badge variant="outline">menos usada</Badge>
+                    )}
+                    {h.alquileres === 0 && (
+                      <span className="text-xs">sin uso</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">{h.alquileres}</TableCell>

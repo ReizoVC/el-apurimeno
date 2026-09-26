@@ -311,9 +311,9 @@ export default function Auditoria() {
           </Table>
           <div className="flex items-center justify-between pt-3 text-sm text-muted-foreground">
             <span>
-              {registros.length} registro{registros.length === 1 ? "" : "s"}{" "}
-              mostrados
-              {siguiente !== null ? "; hay más." : "."}
+              {cargando && registros.length === 0
+                ? "Cargando…"
+                : `${registros.length} registro${registros.length === 1 ? "" : "s"} mostrados${siguiente !== null ? "; hay más." : "."}`}
             </span>
             {siguiente !== null && (
               <Button

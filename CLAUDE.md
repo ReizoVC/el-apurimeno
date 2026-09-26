@@ -21,6 +21,18 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
   `feat(ámbito):` / `fix(ámbito):` / `docs(ámbito):`; los PR se integran de a uno, en el orden en que se abrieron.
 - No se toca la impresión parte 2 (transporte USB/Bluetooth/Windows) sin la impresora física conectada.
 
+## Acciones sobre el sistema
+
+Las sesiones de trabajo corren en el PC de la propietaria del repositorio, junto a sus otros programas y archivos.
+
+- **Ninguna acción sobre el sistema que la tarea no pida directamente:** no cerrar ventanas, no matar ni detener
+  procesos, no crear, cambiar ni borrar archivos fuera del repositorio. Tampoco para probar qué se puede hacer
+  desde la sesión ni para diagnosticar algo.
+- **Si hace falta saber si algo es posible** (por ejemplo, abrir una ventana de escritorio), se pregunta o se deja
+  como duda en la respuesta, en vez de probarlo.
+- Si la tarea exige detener un proceso que la propia sesión lanzó (un servidor de prueba), se detiene por el PID
+  exacto que se lanzó, nunca por nombre.
+
 ## Pruebas
 
 - `pnpm check-types`, `pnpm lint` y `pnpm test` desde la raíz cubren todo el monorepo (las pruebas viven en

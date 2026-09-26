@@ -70,3 +70,13 @@ export function respaldosVencidos<T extends { creadoEn: string }>(copias: readon
   const limite = ahora.getTime() - retencionMs;
   return copias.filter((c) => c !== masReciente && Date.parse(c.creadoEn) < limite);
 }
+
+/**
+ * Copias recientes de la carpeta sincronizada que sobran: se conservan solo las `maximo` más recientes (la ventana de
+ * 2 horas de la decisión 23). A diferencia de las demás, esta retención es por cantidad: si las copias se detienen,
+ * las últimas 8 quedan.
+ */
+export function recientesSobrantes<T extends { creadoEn: string }>(copias: readonly T[], maximo: number): T[] {
+  if (!Number.isSafeInteger(maximo) || maximo < 1) throw new RangeError(`Máximo de copias inválido: ${maximo}`);
+  return [...copias].sort((a, b) => Date.parse(b.creadoEn) - Date.parse(a.creadoEn)).slice(maximo);
+}

@@ -147,12 +147,12 @@ Copias completas y restaurables de la base, distintas del espejo (que solo tiene
 retención, hora y cifrado los decidió la propietaria (decisión 23 de contracts). Configuración y restauración paso a
 paso: `docs/RESPALDO_Y_RESTAURACION.md`.
 
-| | Local | Externa |
-|---|---|---|
-| Cuándo | 10 s después de arrancar y cada 15 min (contando desde la última copia, también tras un reinicio) | A las 04:00 de Lima; si el servidor estaba apagado a esa hora, apenas enciende. Si falla, reintenta cada 15 min |
-| Dónde | `RESPALDO_CARPETA_LOCAL` (por defecto `datos/respaldos/`) | `RESPALDO_CARPETA_EXTERNA`, que la propietaria sincroniza con la nube |
-| Formato | `apurimeno-AAAAMMDDTHHMMSSZ.db`: una base SQLite lista para usar | `apurimeno-AAAAMMDDTHHMMSSZ.db.gz.cifrado`: gzip + X25519/AES-256-GCM |
-| Retención | 24 horas | 30 días |
+| | Local | Reciente en la nube | Externa diaria |
+|---|---|---|---|
+| Cuándo | 10 s después de arrancar y cada 15 min (contando desde la última copia, también tras un reinicio) | Con cada copia local: es la misma foto, cifrada | A las 04:00 de Lima; si el servidor estaba apagado a esa hora, apenas enciende. Si falla, reintenta cada 15 min |
+| Dónde | `RESPALDO_CARPETA_LOCAL` (por defecto `datos/respaldos/`) | `RESPALDO_CARPETA_EXTERNA`, que la propietaria sincroniza con la nube | La misma carpeta |
+| Formato | `apurimeno-AAAAMMDDTHHMMSSZ.db`: una base SQLite lista para usar | `apurimeno-reciente-AAAAMMDDTHHMMSSZ.db.gz.cifrado` | `apurimeno-AAAAMMDDTHHMMSSZ.db.gz.cifrado`: gzip + X25519/AES-256-GCM |
+| Retención | 24 horas | Las últimas 8 (2 horas) | 30 días |
 
 - **Consistente sin detener nada:** `VACUUM INTO` toma una foto en una sola transacción de lectura (en WAL no
   bloquea a quien escribe) e incluye lo que todavía está en el WAL. La copia se verifica (`integrity_check` y
@@ -169,8 +169,9 @@ paso: `docs/RESPALDO_Y_RESTAURACION.md`.
 - **Restaurar:** `pnpm restaurar` (lista), `pnpm restaurar ultima` o `pnpm restaurar <archivo>`, con el servidor
   detenido. Verifica la copia completa antes de tocar la base; la actual queda apartada en `reemplazada-…`, y
   aplica las migraciones que falten.
-- **Claves:** `pnpm clave-respaldo` genera un par sin escribir nada en disco; `pnpm clave-respaldo publica`
-  deriva la pública de la privada, para configurar otro equipo.
+- **Claves:** `pnpm clave-respaldo` genera un par sin escribir nada en disco y muestra la privada una vez;
+  `pnpm clave-respaldo --privada-en <archivo>` la escribe en un archivo nuevo sin mostrarla; `pnpm clave-respaldo
+  publica` deriva la pública de la privada, para configurar otro equipo.
 
 ### Auditoría y reimpresión
 

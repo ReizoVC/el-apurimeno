@@ -72,12 +72,12 @@ pantalla de productos e inventario.
 | Número de operación de Yape/Plin (P-05) | Opcional | ¿Obligatorio? Se cambia en el Dashboard, sin código |
 | Vigencia del código de anulación (RF-65) | 5 minutos | ¿Está bien? Configurable en el Dashboard |
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
-| Pérdida de datos si se pierde el equipo | La copia externa es diaria (04:00): si se pierde el equipo entero, se puede perder hasta un día de operación. El objetivo de 15 minutos (RNF-REC-02) solo se cumple si el disco sigue sano | ¿Se acepta, o las copias de cada 15 min también van cifradas a la carpeta sincronizada (o a un segundo disco)? |
 | Arranque del servidor en el PC | A mano | ¿Servicio de Windows o tarea programada? ¿Quién enciende el equipo? |
 | Logotipo en el comprobante | Sin logotipo | La RED-E803 lo soporta; ¿se quiere? Se decide con la impresora conectada |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
 
-Ya resueltas y registradas (no requieren nada): respaldos (destino, retención, hora, cifrado y aviso; decisión 23), comentario obligatorio con cualquier diferencia de arqueo
+Ya resueltas y registradas (no requieren nada): respaldos (destino, retención, hora, cifrado, aviso y la ventana de 2
+horas en la nube; decisión 23), comentario obligatorio con cualquier diferencia de arqueo
 (decisión 15), leyenda del comprobante editable (21), `afectaCaja` inmutable (20), nadie se quita su propio
 acceso (19), contenido del espejo y lectura con TOTP (22), dos cuentas lectoras (propietaria e hija), Cloudflare
 Pages para la vista remota.

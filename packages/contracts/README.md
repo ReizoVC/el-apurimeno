@@ -274,6 +274,10 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     local cada 15 minutos y una diaria fuera del equipo, pero no fijaban destino, retención, hora ni cifrado. Los
     decidió la propietaria:
     - **Local:** cada 15 minutos en el disco del equipo; se guardan 24 horas.
+    - **Ventana de 2 horas en la nube** (decidida por la propietaria después de la auditoría del 26/09): cada copia
+      local, comprimida y cifrada, también va a la carpeta sincronizada como `apurimeno-reciente-….db.gz.cifrado`;
+      ahí se guardan solo las últimas 8 (`COPIAS_RECIENTES_EXTERNAS`). Si se pierde el equipo, lo perdido ronda los
+      15 minutos más lo que tarde Drive u OneDrive en subir el archivo.
     - **Externa:** una por día a las **04:00 de Lima**; si el servidor estaba apagado a esa hora, apenas vuelve a
       encender. Va a **una carpeta local que la propietaria sincroniza con la nube** (Google Drive u OneDrive); no
       hay soporte para discos USB. Se guardan **30 días**.
@@ -285,7 +289,8 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
       (`pnpm restaurar`).
 
     Detalles fijados por el proyecto, que solo agregan protección: la copia más reciente nunca se borra por
-    retención (si las copias dejan de hacerse, la carpeta no queda vacía); si la externa falla, se reintenta cada
+    retención (si las copias dejan de hacerse, la carpeta no queda vacía; las recientes se retienen por cantidad,
+    así que también quedan las últimas 8); una falla de la copia reciente no cuenta como falla de la local; si la externa falla, se reintenta cada
     15 minutos; y "Desactualizado" aparece en las locales tras 30 minutos sin copia (dos intervalos, como el
     espejo) y en la externa una hora después de las 04:00 sin la copia del día (`MARGEN_RESPALDO_EXTERNO_MINUTOS`).
 24. **El catálogo sin inactivos, salvo para gestionarlo** (`ProductosConsulta.incluirInactivos`). `GET /productos`

@@ -1,15 +1,18 @@
 import { z } from "zod";
 import { FechaISOSchema } from "./comun.js";
 
-// Respaldos de la base del local (Planos §14.3, RNF-BKP-01, RNF-REC-02). Dos copias completas y restaurables,
+// Respaldos de la base del local (Planos §14.3, RNF-BKP-01, RNF-REC-02). Copias completas y restaurables,
 // distintas del espejo en la nube (que solo tiene totales):
 // - local: cada 15 minutos, en el disco del propio equipo; se guardan las de las últimas 24 horas;
-// - externa: una diaria a las 04:00 de Lima, comprimida y cifrada, en una carpeta que la propietaria sincroniza
-//   con la nube (Google Drive, OneDrive); se guardan las de los últimos 30 días.
-// Frecuencias, destino, retención, hora y cifrado los decidió la propietaria (decisión 23 del README).
+// - recientes en la nube: cada copia local, comprimida y cifrada, también va a la carpeta sincronizada; ahí se
+//   guardan solo las últimas 8 (2 horas). Así, si se pierde el equipo, se pierden como mucho unos 15 minutos;
+// - externa diaria: a las 04:00 de Lima, comprimida y cifrada, en la misma carpeta; se guardan 30 días.
+// Frecuencias, destino, retención, hora, cifrado y la ventana de 2 horas los decidió la propietaria (decisión 23).
 
 export const INTERVALO_RESPALDO_LOCAL_MINUTOS = 15;
 export const RETENCION_RESPALDO_LOCAL_HORAS = 24;
+/** Copias recientes (las de cada 15 minutos) que se conservan en la carpeta sincronizada: 8 = 2 horas. */
+export const COPIAS_RECIENTES_EXTERNAS = 8;
 /** Hora de Lima de la copia externa diaria (04:00). */
 export const HORA_RESPALDO_EXTERNO_LIMA = 4;
 export const RETENCION_RESPALDO_EXTERNO_DIAS = 30;
@@ -63,7 +66,13 @@ export const EstadoCopiaRespaldoSchema = z
 export type EstadoCopiaRespaldo = z.infer<typeof EstadoCopiaRespaldoSchema>;
 
 export const EstadoRespaldosSchema = z
-  .object({ local: EstadoCopiaRespaldoSchema, externo: EstadoCopiaRespaldoSchema })
+  .object({
+    local: EstadoCopiaRespaldoSchema,
+    /** Copias de cada 15 minutos, cifradas, en la carpeta sincronizada (ventana de 2 horas). */
+    reciente: EstadoCopiaRespaldoSchema,
+    /** Copia diaria de las 04:00, cifrada, en la carpeta sincronizada. */
+    externo: EstadoCopiaRespaldoSchema,
+  })
   .strict();
 export type EstadoRespaldos = z.infer<typeof EstadoRespaldosSchema>;
 

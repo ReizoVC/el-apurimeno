@@ -31,8 +31,9 @@ const HABITACIONES: [numero: string, precio: number, descripcion: string][] = [
 // Planos §19.3. Transferencia queda creada pero inactiva (P-04).
 const METODOS_PAGO = [
   { id: "metodo-efectivo", nombre: "Efectivo", afectaCaja: true, requiereReferencia: false, activo: true },
-  { id: "metodo-yape", nombre: "Yape", afectaCaja: false, requiereReferencia: false, activo: true },
-  { id: "metodo-plin", nombre: "Plin", afectaCaja: false, requiereReferencia: false, activo: true },
+  // Yape y Plin piden el número de operación (P-05, decidido por la propietaria): con él se ubica el pago en la app.
+  { id: "metodo-yape", nombre: "Yape", afectaCaja: false, requiereReferencia: true, activo: true },
+  { id: "metodo-plin", nombre: "Plin", afectaCaja: false, requiereReferencia: true, activo: true },
   { id: "metodo-transferencia", nombre: "Transferencia", afectaCaja: false, requiereReferencia: true, activo: false },
 ];
 

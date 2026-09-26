@@ -69,14 +69,14 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | Tema | Cómo está hoy | Qué hace falta decidir |
 |---|---|---|
 | Transferencia bancaria (P-04) | Creada pero desactivada | ¿Se activa desde el inicio? Se cambia en el Dashboard, sin código |
-| Número de operación de Yape/Plin (P-05) | Opcional | ¿Obligatorio? Se cambia en el Dashboard, sin código |
 | Vigencia del código de anulación (RF-65) | 5 minutos | ¿Está bien? Configurable en el Dashboard |
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
 | Arranque del servidor en el PC | A mano | ¿Servicio de Windows o tarea programada? ¿Quién enciende el equipo? |
 | Logotipo en el comprobante | Sin logotipo | La RED-E803 lo soporta; ¿se quiere? Se decide con la impresora conectada |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
 
-Ya resueltas y registradas (no requieren nada): respaldos (destino, retención, hora, cifrado, aviso y la ventana de 2
+Ya resueltas y registradas (no requieren nada): número de operación obligatorio para Yape y Plin (P-05; en la
+semilla, y se cambia en el Dashboard), respaldos (destino, retención, hora, cifrado, aviso y la ventana de 2
 horas en la nube; decisión 23), comentario obligatorio con cualquier diferencia de arqueo
 (decisión 15), leyenda del comprobante editable (21), `afectaCaja` inmutable (20), nadie se quita su propio
 acceso (19), contenido del espejo y lectura con TOTP (22), dos cuentas lectoras (propietaria e hija), Cloudflare

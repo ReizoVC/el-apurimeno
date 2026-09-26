@@ -1,4 +1,9 @@
-import type { ConfiguracionImpresora, DatosComprobante, MetodoPago, Ticket } from "@apurimeno/contracts";
+import type {
+  ConfiguracionImpresora,
+  DatosComprobante,
+  MetodoPago,
+  Ticket,
+} from "@apurimeno/contracts";
 import { ms } from "./interno.js";
 import { ZONA_HORARIA_NEGOCIO } from "./reportes.js";
 
@@ -9,7 +14,9 @@ import { ZONA_HORARIA_NEGOCIO } from "./reportes.js";
 export const LEYENDA_NO_FISCAL = "Documento interno sin valor tributario.";
 
 /** Columnas de texto por ancho de papel: 48 en 80 mm (la REDPOS RED-E803), 32 en 58 mm. */
-export function columnasPorAncho(anchoPapelMm: ConfiguracionImpresora["anchoPapelMm"]): number {
+export function columnasPorAncho(
+  anchoPapelMm: ConfiguracionImpresora["anchoPapelMm"],
+): number {
   return anchoPapelMm === 80 ? 48 : 32;
 }
 
@@ -44,7 +51,8 @@ function envolver(texto: string, ancho: number): string[] {
       actual = "";
     }
     if (actual.trim() === "") actual += resto;
-    else if (actual.length + 1 + resto.length <= ancho) actual = `${actual} ${resto}`;
+    else if (actual.length + 1 + resto.length <= ancho)
+      actual = `${actual} ${resto}`;
     else {
       lineas.push(actual);
       actual = resto;
@@ -55,7 +63,9 @@ function envolver(texto: string, ancho: number): string[] {
 }
 
 function centrar(texto: string, ancho: number): string[] {
-  return envolver(texto, ancho).map((l) => " ".repeat(Math.floor((ancho - l.length) / 2)) + l);
+  return envolver(texto, ancho).map(
+    (l) => " ".repeat(Math.floor((ancho - l.length) / 2)) + l,
+  );
 }
 
 /** Texto a la izquierda y monto a la derecha; si no caben juntos, el monto va en la línea siguiente. */
@@ -63,7 +73,10 @@ function fila(izquierda: string, derecha: string, ancho: number): string[] {
   const partes = envolver(izquierda, ancho);
   const ultima = partes.pop() ?? "";
   if (ultima.length + 1 + derecha.length <= ancho) {
-    return [...partes, ultima + " ".repeat(ancho - ultima.length - derecha.length) + derecha];
+    return [
+      ...partes,
+      ultima + " ".repeat(ancho - ultima.length - derecha.length) + derecha,
+    ];
   }
   return [...partes, ultima, derecha.padStart(ancho)];
 }
@@ -77,37 +90,88 @@ export interface OpcionesComprobante {
 }
 
 /**
- * Compone el comprobante de un ticket. Solo usa datos del ticket y de la configuración: nunca el nombre ni
- * el documento del cliente (RN-38). Siempre declara que no es un documento tributario, y no usa series ni
- * términos de comprobantes fiscales (RN-39): el número es el correlativo interno, sin serie.
+ * Cómo se destaca una línea al imprimirla: `negrita`, o `grande` (negrita a doble alto, que no cambia el
+ * ancho y conserva el centrado). El comprobante en texto plano la ignora.
  */
-export function componerComprobante(ticket: Ticket, opciones: OpcionesComprobante): string[] {
+export type EstiloLineaComprobante = "normal" | "negrita" | "grande";
+
+export interface LineaComprobante {
+  texto: string;
+  estilo: EstiloLineaComprobante;
+}
+
+/**
+ * Compone el comprobante de un ticket, línea por línea y con el estilo de cada una. Solo usa datos del ticket y
+ * de la configuración: nunca el nombre ni el documento del cliente (RN-38). Siempre declara que no es un
+ * documento tributario, y no usa series ni términos de comprobantes fiscales (RN-39): el número es el
+ * correlativo interno, sin serie.
+ */
+export function componerLineasComprobante(
+  ticket: Ticket,
+  opciones: OpcionesComprobante,
+): LineaComprobante[] {
   const ancho = columnasPorAncho(opciones.anchoPapelMm);
   const separador = "-".repeat(ancho);
-  const nombreMetodo = new Map(opciones.metodosPago.map((m) => [m.id, m.nombre]));
+  const nombreMetodo = new Map(
+    opciones.metodosPago.map((m) => [m.id, m.nombre]),
+  );
+  const lineas: LineaComprobante[] = [];
+  const agregar = (
+    textos: string[],
+    estilo: EstiloLineaComprobante = "normal",
+  ) => {
+    for (const texto of textos) lineas.push({ texto, estilo });
+  };
 
-  const lineas: string[] = [...centrar(opciones.datos.nombreNegocio, ancho)];
-  if (opciones.datos.datosAdicionales !== null) lineas.push(...centrar(opciones.datos.datosAdicionales, ancho));
-  lineas.push(separador);
-  if (opciones.esCopia) lineas.push(...centrar("*** COPIA ***", ancho));
-  if (ticket.tipo === "COMPENSATORIO") lineas.push(...centrar("ANULACIÓN DE UN COBRO ANTERIOR", ancho));
-  if (ticket.estado === "ANULADO") lineas.push(...centrar("*** ANULADO ***", ancho));
-  lineas.push(...fila(`Ticket ${ticket.numero}`, formatoFecha.format(new Date(ms(ticket.creadoEn))), ancho));
-  lineas.push(separador);
+  agregar(centrar(opciones.datos.nombreNegocio, ancho), "negrita");
+  if (opciones.datos.datosAdicionales !== null)
+    agregar(centrar(opciones.datos.datosAdicionales, ancho));
+  agregar([separador]);
+  if (opciones.esCopia) agregar(centrar("*** COPIA ***", ancho), "grande");
+  if (ticket.tipo === "COMPENSATORIO")
+    agregar(centrar("ANULACIÓN DE UN COBRO ANTERIOR", ancho), "negrita");
+  if (ticket.estado === "ANULADO")
+    agregar(centrar("*** ANULADO ***", ancho), "grande");
+  agregar(
+    fila(
+      `Ticket ${ticket.numero}`,
+      formatoFecha.format(new Date(ms(ticket.creadoEn))),
+      ancho,
+    ),
+  );
+  agregar([separador]);
 
   for (const linea of ticket.lineas) {
-    lineas.push(...fila(linea.descripcion, soles(linea.importe), ancho));
-    if (linea.cantidad > 1) lineas.push(`  ${linea.cantidad} x ${soles(linea.precioUnitario)}`);
+    agregar(fila(linea.descripcion, soles(linea.importe), ancho));
+    if (linea.cantidad > 1)
+      agregar([`  ${linea.cantidad} x ${soles(linea.precioUnitario)}`]);
   }
-  lineas.push(separador);
-  lineas.push(...fila("TOTAL", soles(ticket.total), ancho));
+  agregar([separador]);
+  agregar(fila("TOTAL", soles(ticket.total), ancho), "negrita");
   for (const pago of ticket.pagos) {
-    lineas.push(...fila(nombreMetodo.get(pago.metodoPagoId) ?? "Otro medio", soles(pago.monto), ancho));
-    if (pago.montoRecibido !== null) lineas.push(...fila("  Recibido", soles(pago.montoRecibido), ancho));
-    if (pago.vuelto !== null && pago.vuelto !== 0) lineas.push(...fila("  Vuelto", soles(pago.vuelto), ancho));
-    if (pago.referencia !== null) lineas.push(...envolver(`  Op. ${pago.referencia}`, ancho));
+    agregar(
+      fila(
+        nombreMetodo.get(pago.metodoPagoId) ?? "Otro medio",
+        soles(pago.monto),
+        ancho,
+      ),
+    );
+    if (pago.montoRecibido !== null)
+      agregar(fila("  Recibido", soles(pago.montoRecibido), ancho));
+    if (pago.vuelto !== null && pago.vuelto !== 0)
+      agregar(fila("  Vuelto", soles(pago.vuelto), ancho));
+    if (pago.referencia !== null)
+      agregar(envolver(`  Op. ${pago.referencia}`, ancho));
   }
-  lineas.push(separador);
-  lineas.push(...centrar(LEYENDA_NO_FISCAL, ancho));
+  agregar([separador]);
+  agregar(centrar(LEYENDA_NO_FISCAL, ancho));
   return lineas;
+}
+
+/** El comprobante como texto plano: lo que devuelve la API para mostrarlo en pantalla. */
+export function componerComprobante(
+  ticket: Ticket,
+  opciones: OpcionesComprobante,
+): string[] {
+  return componerLineasComprobante(ticket, opciones).map((l) => l.texto);
 }

@@ -1,18 +1,37 @@
-import { PATRONES_FISCALES_PROHIBIDOS, type DatosComprobante } from "@apurimeno/contracts";
+import {
+  PATRONES_FISCALES_PROHIBIDOS,
+  type DatosComprobante,
+} from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
 import {
   LEYENDA_NO_FISCAL,
   anularTicket,
   armarTicketCobro,
   componerComprobante,
+  componerLineasComprobante,
   cotizarVenta,
   pagoEnEfectivo,
   pagoSinVuelto,
 } from "../src/index.js";
-import { EFECTIVO, YAPE, contexto, en, producto, turnoAbierto } from "./fixtures.js";
+import {
+  EFECTIVO,
+  YAPE,
+  contexto,
+  en,
+  producto,
+  turnoAbierto,
+} from "./fixtures.js";
 
-const datos: DatosComprobante = { nombreNegocio: "El Apurimeño", datosAdicionales: "Av. Siempre Viva 123" };
-const opciones = { datos, anchoPapelMm: 80 as const, metodosPago: [EFECTIVO, YAPE], esCopia: false };
+const datos: DatosComprobante = {
+  nombreNegocio: "El Apurimeño",
+  datosAdicionales: "Av. Siempre Viva 123",
+};
+const opciones = {
+  datos,
+  anchoPapelMm: 80 as const,
+  metodosPago: [EFECTIVO, YAPE],
+  esCopia: false,
+};
 
 function venta() {
   return armarTicketCobro(
@@ -57,21 +76,36 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
   it("la reimpresión dice COPIA de forma visible (RF-44)", () => {
     const texto = componerComprobante(venta(), { ...opciones, esCopia: true });
     expect(texto).toContain("                 *** COPIA ***");
-    expect(componerComprobante(venta(), opciones).join("\n")).not.toContain("COPIA");
+    expect(componerComprobante(venta(), opciones).join("\n")).not.toContain(
+      "COPIA",
+    );
   });
 
   it("siempre declara que no es tributario y no usa términos ni series fiscales (RN-39)", () => {
-    const sinDatos = componerComprobante(venta(), { ...opciones, datos: { nombreNegocio: "El Apurimeño", datosAdicionales: null } });
+    const sinDatos = componerComprobante(venta(), {
+      ...opciones,
+      datos: { nombreNegocio: "El Apurimeño", datosAdicionales: null },
+    });
     expect(sinDatos.at(-1)?.trim()).toBe(LEYENDA_NO_FISCAL);
     const texto = sinDatos.join("\n");
     expect(PATRONES_FISCALES_PROHIBIDOS.some((p) => p.test(texto))).toBe(false);
   });
 
   it("58 mm: 32 columnas; los textos largos se parten sin pasarse del ancho", () => {
-    const largo = { nombreNegocio: "Hospedaje El Apurimeño de la Avenida Principal", datosAdicionales: null };
-    const texto = componerComprobante(venta(), { ...opciones, datos: largo, anchoPapelMm: 58 });
+    const largo = {
+      nombreNegocio: "Hospedaje El Apurimeño de la Avenida Principal",
+      datosAdicionales: null,
+    };
+    const texto = componerComprobante(venta(), {
+      ...opciones,
+      datos: largo,
+      anchoPapelMm: 58,
+    });
     expect(texto.every((l) => l.length <= 32)).toBe(true);
-    expect(texto.slice(0, 2).map((l) => l.trim())).toEqual(["Hospedaje El Apurimeño de la", "Avenida Principal"]);
+    expect(texto.slice(0, 2).map((l) => l.trim())).toEqual([
+      "Hospedaje El Apurimeño de la",
+      "Avenida Principal",
+    ]);
   });
 
   it("un ticket anulado y su compensatorio lo indican; el número de operación sale, el cliente nunca (RN-38)", () => {
@@ -82,20 +116,49 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
         turno: turnoAbierto(),
         alquilerId: null,
         habitacionReferenciaId: null,
-        cotizacion: cotizarVenta([{ producto: producto(), cantidad: 1 }], false),
+        cotizacion: cotizarVenta(
+          [{ producto: producto(), cantidad: 1 }],
+          false,
+        ),
         pagos: [pagoSinVuelto(YAPE.id, 350, "0001")],
         creadoPorId: "cajero-1",
       },
       contexto(en("14:10")),
     );
     const { original, compensatorio } = anularTicket(
-      { ticket: conYape, numero: 125, turno: turnoAbierto(), motivo: "error", usuario: { id: "admin", permisos: ["tickets.void"] }, autorizacion: null },
+      {
+        ticket: conYape,
+        numero: 125,
+        turno: turnoAbierto(),
+        motivo: "error",
+        usuario: { id: "admin", permisos: ["tickets.void"] },
+        autorizacion: null,
+      },
       contexto(en("14:20")),
     );
-    expect(componerComprobante(original, opciones)).toContain("                *** ANULADO ***");
+    expect(componerComprobante(original, opciones)).toContain(
+      "                *** ANULADO ***",
+    );
     const devolucion = componerComprobante(compensatorio, opciones);
     expect(devolucion).toContain("         ANULACIÓN DE UN COBRO ANTERIOR");
-    expect(devolucion.some((l) => l.endsWith("-S/ 3.50") && l.startsWith("TOTAL"))).toBe(true);
+    expect(
+      devolucion.some((l) => l.endsWith("-S/ 3.50") && l.startsWith("TOTAL")),
+    ).toBe(true);
     expect(componerComprobante(conYape, opciones)).toContain("  Op. 0001");
+  });
+
+  it("estilos para la impresora: negocio y total en negrita, COPIA y ANULADO en grande; el resto normal", () => {
+    const lineas = componerLineasComprobante(venta(), {
+      ...opciones,
+      esCopia: true,
+    });
+    const destacadas = lineas
+      .filter((l) => l.estilo !== "normal")
+      .map((l) => [l.texto.trim(), l.estilo]);
+    expect(destacadas).toEqual([
+      ["El Apurimeño", "negrita"],
+      ["*** COPIA ***", "grande"],
+      ["TOTAL                                    S/ 7.00", "negrita"],
+    ]);
   });
 });

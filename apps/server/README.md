@@ -77,9 +77,9 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /tickets/:id/reimpresion` | `REIMPRIMIR_COMPROBANTE` | — |
 
 Todavía faltan:
-- **El servicio de impresión** (ADR-05): convertir el comprobante a ESC/POS, enviarlo por USB o Bluetooth
-  a la REDPOS RED-E803, la cola con reintentos (RF-56), y encolar el comprobante original de cada cobro.
-  Hoy solo existe la reimpresión, que compone el contenido y deja el trabajo `PENDIENTE`.
+- **El envío a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803, la cola con
+  reintentos (RF-56), y encolar el comprobante original de cada cobro. La parte 1 (contenido y bytes
+  ESC/POS) está hecha; ver "Impresión". Hoy la reimpresión deja el trabajo `PENDIENTE`.
 - El tablero con el estado temporal de cada alquiler (`/rooms/board`) y los avisos por WebSocket.
 
 ### Rangos, cierre forzado, configuración y métodos de pago
@@ -171,6 +171,29 @@ El periodo es `[desde, hasta)` en UTC. La agregación es de `@apurimeno/domain` 
 - **Arqueos:** turnos cerrados en el periodo, con la suma de diferencias.
 - **Ocupación:** alquileres ingresados en el periodo que no fueron anulados; horas vendidas e ingresos
   por habitación.
+
+### Impresión (ADR-05)
+
+**Parte 1, hecha y probada sin impresora:** `src/impresion/escpos.ts` convierte las líneas del comprobante
+(`componerLineasComprobante` del dominio, a 48 o 32 columnas) en los bytes exactos para la impresora:
+- `ESC @` (reinicio), `ESC t n` (página de códigos), negrita (`ESC E`) para el negocio y el total, y
+  negrita a doble alto (`GS ! 0x01`, no cambia el ancho) para "COPIA" y "ANULADO"; al final `ESC d 4` y
+  corte parcial `GS V 1`.
+- **Tildes y "ñ":** página PC850 (`ESC t 2`) por defecto, que incluye las mayúsculas con tilde; WPC1252
+  (`ESC t 16`) como alternativa. Los signos tipográficos se pasan a ASCII ("—" → "-"), otras letras con
+  acento pierden el acento, lo demás sale como "?". **Los caracteres de control se descartan**: un nombre
+  de producto no puede colar comandos a la impresora.
+- Pruebas byte a byte (`test/impresion`): los bytes esperados (`*.hex`) los genera
+  `generar_esperados.py` con los códecs cp850/cp1252 de Python, una implementación independiente. Si
+  cambia el diseño del comprobante: `pnpm exec tsx test/impresion/volcar-casos.ts && python3
+  test/impresion/generar_esperados.py`, y revisar el diff de los `.hex`.
+
+**Por confirmar con la impresora real:** qué página de códigos imprime bien las tildes (`pnpm
+prueba-impresora prueba.bin` genera una página con la misma línea en PC850 y WPC1252, el tamaño doble y
+una regla de 48 columnas), que `GS V 1` corte, y cuántas líneas de avance hacen falta antes del corte.
+
+**Parte 2, pendiente (con el hardware):** el transporte USB/Bluetooth, la cola de `TrabajoImpresion` con
+reintentos que nunca revierten el cobro (RF-56), y encolar el original de cada cobro.
 
 ### Respuestas de error
 

@@ -70,7 +70,7 @@ try {
 | `anulacion.ts` | `crearCodigoAutorizacion`, `validarCodigoAutorizacion`, `anularTicket` |
 | `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual`, `validarEdicionPropia` |
 | `reportes.ts` | `esTicketVigente`, `diaLocal`, `resumirVentas`, `resumirArqueos`, `resumirOcupacion` |
-| `comprobantes.ts` | `componerComprobante`, `columnasPorAncho`, `LEYENDA_NO_FISCAL` |
+| `comprobantes.ts` | `componerLineasComprobante` (líneas con estilo, para la impresora), `componerComprobante` (texto plano), `columnasPorAncho`, `LEYENDA_NO_FISCAL` |
 
 ## Trazabilidad RN-01 a RN-46
 

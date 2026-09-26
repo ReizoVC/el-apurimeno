@@ -93,6 +93,7 @@ enum EstadoTrabajoImpresion {
 
 enum OperacionAutorizable {
   ANULAR_TICKET
+  REINTENTAR_CIERRE_TURNO
 }
 
 enum AccionAuditoria {
@@ -103,6 +104,7 @@ enum AccionAuditoria {
   TURNO_ABIERTO
   TURNO_CERRADO
   TURNO_CIERRE_FORZADO
+  CIERRE_TURNO_RECHAZADO
   MOVIMIENTO_CAJA_REGISTRADO
   INGRESO_REGISTRADO
   HORA_ADICIONAL_COBRADA
@@ -337,6 +339,7 @@ model Turno {
   alquileres  Alquiler[]
   tickets     Ticket[]
   movimientos MovimientoCaja[]
+  codigosAutorizacion CodigoAutorizacion[]
 
   // Un solo turno ABIERTO por usuario (RF-32, Planos §9.4).
   @@unique([usuarioId], map: "Turno_usuarioId_abierto_key", where: { estado: "ABIERTO" })
@@ -473,10 +476,13 @@ model CodigoAutorizacion {
   usadoEn       DateTime?
   usadoPorId    String?
   ticketId      String?              @unique
+  /// Turno cuyo cierre habilitó un código REINTENTAR_CIERRE_TURNO. Un turno puede consumir varios.
+  turnoId       String?
 
   generadoPor Usuario  @relation("CodigoGeneradoPor", fields: [generadoPorId], references: [id])
   usadoPor    Usuario? @relation("CodigoUsadoPor", fields: [usadoPorId], references: [id])
   ticket      Ticket?  @relation(fields: [ticketId], references: [id])
+  turno       Turno?   @relation(fields: [turnoId], references: [id])
 
   @@index([codigoHash])
 }

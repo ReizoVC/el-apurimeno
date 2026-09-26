@@ -9,13 +9,16 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@apurimeno/eslint-config": "workspace:*",
     "@apurimeno/typescript-config": "workspace:*",
+    "eslint": "^9.15.0",
     "typescript": "5.5.4",
     "vitest": "^3.2.4"
   }

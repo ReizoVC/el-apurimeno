@@ -1,6 +1,7 @@
 import { mkdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  COPIAS_RECIENTES_EXTERNAS,
   EstadoRespaldosSchema,
   INTERVALO_RESPALDO_LOCAL_MINUTOS,
   RETENCION_RESPALDO_EXTERNO_DIAS,
@@ -9,12 +10,27 @@ import {
   type EstadoCopiaRespaldo,
   type EstadoRespaldos,
 } from "@apurimeno/contracts";
-import { proximaCitaRespaldoExterno, proximaCopiaLocal, respaldoExternoPendiente, respaldosVencidos } from "@apurimeno/domain";
+import {
+  proximaCitaRespaldoExterno,
+  proximaCopiaLocal,
+  recientesSobrantes,
+  respaldoExternoPendiente,
+  respaldosVencidos,
+} from "@apurimeno/domain";
 import type { FastifyBaseLogger } from "fastify";
 import { ErrorApi } from "../errores.js";
 import { cifrarArchivo } from "./cifrado.js";
 import type { ConfiguracionRespaldos } from "./configuracion.js";
-import { clasificarError, limpiarParciales, listarCopias, nombreCopia, SUFIJO_PARCIAL, tomarCopia, type CopiaGuardada } from "./copia.js";
+import {
+  clasificarError,
+  limpiarParciales,
+  listarCopias,
+  nombreCopia,
+  SUFIJO_PARCIAL,
+  tomarCopia,
+  type CopiaGuardada,
+  type TipoCopia,
+} from "./copia.js";
 
 export const SIN_RESPALDOS: ConfiguracionRespaldos = {
   rutaBase: ":memory:",
@@ -60,9 +76,11 @@ export interface ControlRespaldos {
  * falla, el POS sigue igual y el Dashboard lo muestra.
  */
 export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () => Date, log: FastifyBaseLogger): ControlRespaldos {
-  const carpeta: Record<DestinoRespaldo, string | null> = { LOCAL: config.carpetaLocal, EXTERNO: config.externo?.carpeta ?? null };
-  const seguimiento: Record<DestinoRespaldo, Seguimiento> = {
+  const externa = config.externo?.carpeta ?? null;
+  const carpeta: Record<TipoCopia, string | null> = { LOCAL: config.carpetaLocal, RECIENTE: externa, EXTERNO: externa };
+  const seguimiento: Record<TipoCopia, Seguimiento> = {
     LOCAL: { copiando: false, ultimoIntentoEn: null, ultimoError: null },
+    RECIENTE: { copiando: false, ultimoIntentoEn: null, ultimoError: null },
     EXTERNO: { copiando: false, ultimoIntentoEn: null, ultimoError: null },
   };
   // Una copia a la vez: la externa toma su propia foto y no debe competir por el disco con la local.
@@ -70,7 +88,7 @@ export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () 
   let temporizador: NodeJS.Timeout | null = null;
   let detenido = true;
 
-  async function copias(destino: DestinoRespaldo): Promise<CopiaGuardada[]> {
+  async function copias(destino: TipoCopia): Promise<CopiaGuardada[]> {
     const dir = carpeta[destino];
     if (dir === null) return [];
     try {
@@ -93,6 +111,12 @@ export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () 
       const nombre = nombreCopia(destino, inicio);
       if (destino === "LOCAL") {
         await tomarCopia(config.rutaBase, join(dir, nombre));
+        s.ultimoError = null;
+        log.info({ destino, archivo: nombre }, "Respaldo: copia hecha");
+        await aplicarRetencion(destino);
+        // La misma foto, cifrada, a la carpeta sincronizada: si se pierde el equipo, lo perdido ronda 15 minutos.
+        if (config.externo !== null) await sincronizarReciente(join(dir, nombre), inicio);
+        return true;
       } else {
         // La foto se toma junto a las locales (disco del equipo) y sale ya cifrada: nada sin cifrar pasa por la
         // carpeta sincronizada.
@@ -119,6 +143,40 @@ export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () 
     }
   }
 
+  /**
+   * Copia reciente (decisión 23, ventana de 2 horas): la copia local recién verificada, comprimida y cifrada, a la
+   * carpeta sincronizada; ahí se guardan solo las últimas `COPIAS_RECIENTES_EXTERNAS`. Una falla queda en su propio
+   * estado y no cuenta como falla de la copia local, que ya está hecha.
+   */
+  async function sincronizarReciente(copiaLocal: string, tomadaEn: Date): Promise<void> {
+    const dir = carpeta.RECIENTE;
+    if (dir === null || config.externo === null) return;
+    const s = seguimiento.RECIENTE;
+    s.copiando = true;
+    s.ultimoIntentoEn = tomadaEn;
+    try {
+      await limpiarParciales(dir);
+      const nombre = nombreCopia("RECIENTE", tomadaEn);
+      const parcial = join(dir, nombre + SUFIJO_PARCIAL);
+      await cifrarArchivo(copiaLocal, parcial, config.externo.clavePublica);
+      await rename(parcial, join(dir, nombre));
+      s.ultimoError = null;
+      log.info({ destino: "RECIENTE", archivo: nombre }, "Respaldo: copia reciente en la carpeta sincronizada");
+      for (const sobrante of recientesSobrantes(await copias("RECIENTE"), COPIAS_RECIENTES_EXTERNAS)) {
+        await rm(sobrante.ruta, { force: true }).catch((err: unknown) =>
+          log.warn({ err, archivo: sobrante.nombre }, "Respaldo: no se pudo borrar una copia reciente sobrante"),
+        );
+      }
+    } catch (error) {
+      const e = clasificarError(error);
+      if (e.codigo === "ERROR_INTERNO") log.error({ err: error }, "Respaldo: error en la copia reciente");
+      else log.warn({ codigo: e.codigo }, `Respaldo reciente: ${e.message}`);
+      s.ultimoError = { codigo: e.codigo, mensaje: e.message, ocurridoEn: tomadaEn.toISOString() };
+    } finally {
+      s.copiando = false;
+    }
+  }
+
   async function aplicarRetencion(destino: DestinoRespaldo): Promise<void> {
     for (const vencida of respaldosVencidos(await copias(destino), ahora(), RETENCION_MS[destino])) {
       try {
@@ -129,10 +187,10 @@ export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () 
     }
   }
 
-  const ultimaCopia = async (destino: DestinoRespaldo) => (await copias(destino)).at(-1) ?? null;
+  const ultimaCopia = async (destino: TipoCopia) => (await copias(destino)).at(-1) ?? null;
 
   /** Cuándo toca la próxima copia de cada destino, o null si no está configurado. */
-  async function proximas(): Promise<Record<DestinoRespaldo, Date | null>> {
+  async function proximas(): Promise<Record<TipoCopia, Date | null>> {
     const t = ahora();
     const local = carpeta.LOCAL === null ? null : proximaCopiaLocal(seguimiento.LOCAL.ultimoIntentoEn?.toISOString() ?? null, t);
     let externo: Date | null = null;
@@ -145,20 +203,21 @@ export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () 
         externo = proximaCitaRespaldoExterno(t);
       }
     }
-    return { LOCAL: local, EXTERNO: externo };
+    // Las recientes salen con cada copia local.
+    return { LOCAL: local, RECIENTE: carpeta.RECIENTE === null ? null : local, EXTERNO: externo };
   }
 
   const control: ControlRespaldos = {
     async estado() {
       const siguientes = await proximas();
-      const estadoDe = async (destino: DestinoRespaldo): Promise<EstadoCopiaRespaldo> => {
+      const estadoDe = async (destino: TipoCopia): Promise<EstadoCopiaRespaldo> => {
         const guardadas = await copias(destino);
         const ultima = guardadas.at(-1) ?? null;
         const s = seguimiento[destino];
         return {
           configurado: carpeta[destino] !== null,
-          problemaConfiguracion: destino === "EXTERNO" ? config.problemaExterno : null,
-          carpeta: carpeta[destino] ?? (destino === "EXTERNO" ? config.carpetaExternaConfigurada : null),
+          problemaConfiguracion: destino === "LOCAL" ? null : config.problemaExterno,
+          carpeta: carpeta[destino] ?? (destino === "LOCAL" ? null : config.carpetaExternaConfigurada),
           copiando: s.copiando,
           ultimoExitoEn: ultima?.creadoEn ?? null,
           ultimoArchivo: ultima?.nombre ?? null,
@@ -169,7 +228,11 @@ export function crearControlRespaldos(config: ConfiguracionRespaldos, ahora: () 
           proximaEn: detenido ? null : (siguientes[destino]?.toISOString() ?? null),
         };
       };
-      return EstadoRespaldosSchema.parse({ local: await estadoDe("LOCAL"), externo: await estadoDe("EXTERNO") });
+      return EstadoRespaldosSchema.parse({
+        local: await estadoDe("LOCAL"),
+        reciente: await estadoDe("RECIENTE"),
+        externo: await estadoDe("EXTERNO"),
+      });
     },
 
     respaldar(destino) {

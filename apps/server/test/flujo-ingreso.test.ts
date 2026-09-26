@@ -149,6 +149,26 @@ describe("Reglas que rechazan sin dejar rastro", () => {
     expect(r.statusCode).toBe(400);
     expect(r.json()).toMatchObject({ codigo: "VALIDACION" });
   });
+
+  it.each(["metodo-yape", "metodo-plin"])("%s pide número de operación desde la semilla (P-05)", async (metodoPagoId) => {
+    await abrirTurno();
+    expect((await e.prisma.metodoPago.findUniqueOrThrow({ where: { id: metodoPagoId } })).requiereReferencia).toBe(true);
+    const sinNumero = await ingreso({ pagos: [{ metodoPagoId, monto: 4000, montoRecibido: null, referencia: null }] }, `sin-${metodoPagoId}`);
+    expect(sinNumero.statusCode).toBe(400);
+    expect(sinNumero.json().mensaje).toMatch(/exige número de operación/);
+    const enBlanco = await ingreso({ pagos: [{ metodoPagoId, monto: 4000, montoRecibido: null, referencia: "   " }] }, `blanco-${metodoPagoId}`);
+    expect(enBlanco.statusCode).toBe(400);
+    const conNumero = await ingreso({ pagos: [{ metodoPagoId, monto: 4000, montoRecibido: null, referencia: "12345678" }] }, `con-${metodoPagoId}`);
+    expect(conNumero.statusCode).toBe(201);
+  });
+
+  it("efectivo y transferencia quedan como estaban", async () => {
+    const metodos = await e.prisma.metodoPago.findMany({ where: { id: { in: ["metodo-efectivo", "metodo-transferencia"] } }, orderBy: { id: "asc" } });
+    expect(metodos.map((m) => [m.id, m.requiereReferencia, m.activo])).toEqual([
+      ["metodo-efectivo", false, true],
+      ["metodo-transferencia", true, false],
+    ]);
+  });
 });
 
 describe("Arqueo con diferencia (PEND-05)", () => {

@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { GenerarCodigoAutorizacionRespuesta } from "@apurimeno/contracts";
+import type {
+  GenerarCodigoAutorizacionRespuesta,
+  OperacionAutorizable,
+} from "@apurimeno/contracts";
 import {
   Alert,
   AlertDescription,
@@ -16,26 +19,30 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Aviso, Encabezado } from "../../src/componentes/comunes";
+import { OPERACION_AUTORIZABLE } from "../../src/lib/rotulos";
 import { hora } from "@apurimeno/formato";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 
 /**
- * Códigos de autorización de anulación (RF-65, RN-46): el Administrador genera uno, incluso a distancia, y se
- * lo dicta al cajero que no tiene tickets.void. El servidor solo guarda su hash: el código se ve una sola vez,
- * aquí, y no se guarda en el navegador. Es de un solo uso y vence solo.
+ * Códigos de autorización (RF-65, RN-46; decisión 25): el Administrador genera uno, incluso a distancia, y se lo
+ * dicta al cajero. Sirven para anular un cobro (cajero sin tickets.void) o para un intento más de cierre de turno
+ * tras 3 rechazos por diferencia. Cada código vale solo para su operación. El servidor solo guarda su hash: el
+ * código se ve una sola vez, aquí, y no se guarda en el navegador. Es de un solo uso y vence solo.
  */
 export default function CodigosAutorizacion() {
   const [codigo, setCodigo] =
     useState<GenerarCodigoAutorizacionRespuesta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generando, setGenerando] = useState(false);
+  const [operacion, setOperacion] =
+    useState<OperacionAutorizable>("ANULAR_TICKET");
 
   const generar = async () => {
     setGenerando(true);
     setError(null);
     setCodigo(null);
     try {
-      setCodigo(await servidor.generarCodigoAutorizacion());
+      setCodigo(await servidor.generarCodigoAutorizacion(operacion));
     } catch (e) {
       setError(mensajeDe(e));
     } finally {
@@ -46,8 +53,8 @@ export default function CodigosAutorizacion() {
   return (
     <>
       <Encabezado
-        titulo="Códigos de anulación"
-        descripcion="Para que un cajero sin permiso de anular pueda anular un cobro. Cada código sirve una sola vez."
+        titulo="Códigos de autorización"
+        descripcion="Para anular un cobro o reintentar un cierre de turno. Cada código sirve una sola vez y solo para lo que se eligió."
       />
       {error !== null && (
         <Aviso tipo="error" onCerrar={() => setError(null)}>
@@ -64,6 +71,31 @@ export default function CodigosAutorizacion() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-medium">Para qué es</legend>
+            {(Object.keys(OPERACION_AUTORIZABLE) as OperacionAutorizable[]).map(
+              (op) => (
+                <label key={op} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="operacion"
+                    className="mt-1"
+                    checked={operacion === op}
+                    onChange={() => {
+                      setOperacion(op);
+                      setCodigo(null);
+                    }}
+                  />
+                  <span>
+                    {OPERACION_AUTORIZABLE[op].etiqueta}
+                    <span className="block text-xs text-muted-foreground">
+                      {OPERACION_AUTORIZABLE[op].descripcion}
+                    </span>
+                  </span>
+                </label>
+              ),
+            )}
+          </fieldset>
           {codigo !== null && (
             <>
               <div className="rounded-md border bg-muted/40 p-4 text-center">
@@ -74,7 +106,8 @@ export default function CodigosAutorizacion() {
                   {codigo.codigo}
                 </div>
                 <div className="mt-2 text-sm text-muted-foreground">
-                  Vale una sola vez, hasta las {hora(codigo.expiraEn)}.
+                  {OPERACION_AUTORIZABLE[codigo.operacion].etiqueta}. Vale una
+                  sola vez, hasta las {hora(codigo.expiraEn)}.
                 </div>
               </div>
               <Alert variant="warning">

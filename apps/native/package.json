@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
+    "tauri": "node scripts/con-msvc.mjs tauri",
     "clean": "rm -rf dist",
     "check-types": "tsc --noEmit",
     "lint": "tsc --noEmit"

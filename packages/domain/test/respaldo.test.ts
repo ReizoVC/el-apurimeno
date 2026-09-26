@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   proximaCitaRespaldoExterno,
   proximaCopiaLocal,
+  recientesSobrantes,
   respaldoExternoDesactualizado,
   respaldoExternoPendiente,
   respaldoLocalDesactualizado,
@@ -100,5 +101,24 @@ describe("Retención", () => {
     expect(respaldosVencidos(copias, ahora, horas(24 * 30)).map((c) => c.nombre)).toEqual(["vieja"]);
     expect(respaldosVencidos([copias[0]!], ahora, horas(24 * 30))).toEqual([]);
     expect(respaldosVencidos([], ahora, horas(24))).toEqual([]);
+  });
+});
+
+describe("Ventana de 2 horas en la carpeta sincronizada (decisión 23)", () => {
+  const cada15 = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ nombre: `c${i}`, creadoEn: new Date(Date.UTC(2026, 8, 26, 12, i * 15)).toISOString() }));
+
+  it("con 10 copias sobran las 2 más antiguas; con 8 o menos, ninguna", () => {
+    expect(recientesSobrantes(cada15(10), 8).map((c) => c.nombre).sort()).toEqual(["c0", "c1"]);
+    expect(recientesSobrantes(cada15(8), 8)).toEqual([]);
+    expect(recientesSobrantes([], 8)).toEqual([]);
+  });
+
+  it("no depende del orden en que llegan", () => {
+    expect(recientesSobrantes([...cada15(9)].reverse(), 8).map((c) => c.nombre)).toEqual(["c0"]);
+  });
+
+  it("rechaza un máximo imposible", () => {
+    expect(() => recientesSobrantes(cada15(3), 0)).toThrow(RangeError);
   });
 });

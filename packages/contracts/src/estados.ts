@@ -95,8 +95,11 @@ export const EstadoTrabajoImpresionSchema = z.enum(["PENDIENTE", "IMPRESO", "ERR
 export type EstadoTrabajoImpresion = z.infer<typeof EstadoTrabajoImpresionSchema>;
 export const EstadoTrabajoImpresion = EstadoTrabajoImpresionSchema.enum;
 
-/** Operaciones que un código de autorización temporal puede habilitar (RN-46, RF-65). */
-export const OperacionAutorizableSchema = z.enum(["ANULAR_TICKET"]);
+/**
+ * Operaciones que un código de autorización temporal puede habilitar (RN-46, RF-65). `REINTENTAR_CIERRE_TURNO`:
+ * un intento más de cierre de turno después de `MAX_CIERRES_RECHAZADOS_SIN_CODIGO` rechazos (decisión 25).
+ */
+export const OperacionAutorizableSchema = z.enum(["ANULAR_TICKET", "REINTENTAR_CIERRE_TURNO"]);
 export type OperacionAutorizable = z.infer<typeof OperacionAutorizableSchema>;
 export const OperacionAutorizable = OperacionAutorizableSchema.enum;
 

@@ -1,6 +1,7 @@
 import type { MovimientoCaja, Ticket } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
 import {
+  cierreExigeCodigo,
   editarMetodoPago,
   anularTicket,
   armarTicketCobro,
@@ -127,6 +128,18 @@ describe("PEND-05 · un cierre con diferencia exige comentario (decisión 15 de 
   it("sin diferencia el comentario es opcional", () => {
     const cerrado = cerrarTurno(turno, { efectivoContado: 34000, efectivoEsperado: 34000, comentario: null, ahora: en("20:00") });
     expect(cerrado).toMatchObject({ diferencia: 0, comentarioCierre: null });
+  });
+});
+
+describe("Decisión 25 · el aviso de diferencia no sirve para adivinar el esperado", () => {
+  it("los tres primeros intentos rechazados no piden código; desde el cuarto, cada uno lo pide", () => {
+    expect([0, 1, 2].map(cierreExigeCodigo)).toEqual([false, false, false]);
+    expect([3, 4, 10].map(cierreExigeCodigo)).toEqual([true, true, true]);
+  });
+
+  it("rechaza una cantidad de rechazos imposible", () => {
+    expect(() => cierreExigeCodigo(-1)).toThrow(RangeError);
+    expect(() => cierreExigeCodigo(1.5)).toThrow(RangeError);
   });
 });
 

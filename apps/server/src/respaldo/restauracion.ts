@@ -1,22 +1,25 @@
 import { copyFile, mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import type { DestinoRespaldo } from "@apurimeno/contracts";
 import { descifrarArchivo, ErrorClave, leerClavePrivada } from "./cifrado.js";
 import type { ConfiguracionRespaldos } from "./configuracion.js";
-import { fechaDeCopia, listarCopias, verificarBase, type CopiaGuardada, type ResumenBase } from "./copia.js";
+import { destinoDeArchivo, fechaDeCopia, listarCopias, verificarBase, type CopiaGuardada, type ResumenBase, type TipoCopia } from "./copia.js";
 
 // Restauración completa de la base desde una copia local o externa (RNF-BKP-02, RNF-REC-02). La base actual
 // nunca se borra: se aparta a una carpeta "reemplazada-…" junto a la base.
 
 export interface CopiaDisponible extends CopiaGuardada {
-  destino: DestinoRespaldo;
+  destino: TipoCopia;
 }
 
-/** Copias locales y externas que se pueden restaurar, de la más reciente a la más antigua. */
+/**
+ * Copias locales y externas (recientes y diarias) que se pueden restaurar, de la más reciente a la más antigua. Si
+ * una local y una reciente son de la misma hora, primero la local: no necesita la clave privada.
+ */
 export async function copiasDisponibles(config: Pick<ConfiguracionRespaldos, "carpetaLocal" | "carpetaExternaConfigurada">): Promise<CopiaDisponible[]> {
   const todas: CopiaDisponible[] = [];
-  const carpetas: [DestinoRespaldo, string | null][] = [
+  const carpetas: [TipoCopia, string | null][] = [
     ["LOCAL", config.carpetaLocal],
+    ["RECIENTE", config.carpetaExternaConfigurada],
     ["EXTERNO", config.carpetaExternaConfigurada],
   ];
   for (const [destino, carpeta] of carpetas) {
@@ -27,7 +30,8 @@ export async function copiasDisponibles(config: Pick<ConfiguracionRespaldos, "ca
       // La carpeta no existe (p. ej. el disco que falló): se restaura desde la otra.
     }
   }
-  return todas.sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
+  const orden: Record<TipoCopia, number> = { LOCAL: 0, RECIENTE: 1, EXTERNO: 2 };
+  return todas.sort((a, b) => b.creadoEn.localeCompare(a.creadoEn) || orden[a.destino] - orden[b.destino]);
 }
 
 async function esCifrada(ruta: string): Promise<boolean> {
@@ -70,7 +74,8 @@ export interface ResultadoRestauracion {
 export async function restaurar(archivo: string, rutaBase: string, clavePrivada: string | null, ahora: Date): Promise<ResultadoRestauracion> {
   const cifrada = await esCifrada(archivo);
   const nombre = basename(archivo);
-  const tomadaEn = (fechaDeCopia("LOCAL", nombre) ?? fechaDeCopia("EXTERNO", nombre))?.toISOString() ?? null;
+  const tipo = destinoDeArchivo(nombre);
+  const tomadaEn = (tipo === null ? null : fechaDeCopia(tipo, nombre))?.toISOString() ?? null;
   const temporal = `${rutaBase}.restaurando`;
   await mkdir(dirname(rutaBase), { recursive: true });
   await rm(temporal, { force: true });

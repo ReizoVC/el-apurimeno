@@ -15,22 +15,30 @@ export class ErrorRespaldo extends Error {
   }
 }
 
-const EXTENSION: Record<DestinoRespaldo, string> = { LOCAL: ".db", EXTERNO: ".db.gz.cifrado" };
-const PATRON: Record<DestinoRespaldo, RegExp> = {
+/**
+ * Tipos de copia: las locales, las recientes cifradas en la carpeta sincronizada (ventana de 2 horas) y la externa
+ * diaria de las 04:00. Recientes y diarias conviven en la misma carpeta; el nombre las distingue.
+ */
+export type TipoCopia = DestinoRespaldo | "RECIENTE";
+
+const PREFIJO: Record<TipoCopia, string> = { LOCAL: "apurimeno-", RECIENTE: "apurimeno-reciente-", EXTERNO: "apurimeno-" };
+const EXTENSION: Record<TipoCopia, string> = { LOCAL: ".db", RECIENTE: ".db.gz.cifrado", EXTERNO: ".db.gz.cifrado" };
+const PATRON: Record<TipoCopia, RegExp> = {
   LOCAL: /^apurimeno-(\d{8}T\d{6})Z\.db$/,
+  RECIENTE: /^apurimeno-reciente-(\d{8}T\d{6})Z\.db\.gz\.cifrado$/,
   EXTERNO: /^apurimeno-(\d{8}T\d{6})Z\.db\.gz\.cifrado$/,
 };
 /** Archivo a medio escribir: se renombra al terminar; si queda uno, es de una copia interrumpida. */
 export const SUFIJO_PARCIAL = ".parcial";
 
 /** "apurimeno-20260926T141500Z.db": la hora (UTC) en que se tomó la foto de la base. */
-export function nombreCopia(destino: DestinoRespaldo, tomadaEn: Date): string {
+export function nombreCopia(destino: TipoCopia, tomadaEn: Date): string {
   const sello = tomadaEn.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  return `apurimeno-${sello}${EXTENSION[destino]}`;
+  return `${PREFIJO[destino]}${sello}${EXTENSION[destino]}`;
 }
 
-/** Hora de una copia por su nombre; null si el archivo no es una copia de ese destino. */
-export function fechaDeCopia(destino: DestinoRespaldo, nombre: string): Date | null {
+/** Hora de una copia por su nombre; null si el archivo no es una copia de ese tipo. */
+export function fechaDeCopia(destino: TipoCopia, nombre: string): Date | null {
   const m = PATRON[destino].exec(nombre);
   if (m?.[1] === undefined) return null;
   const s = m[1];
@@ -38,10 +46,9 @@ export function fechaDeCopia(destino: DestinoRespaldo, nombre: string): Date | n
   return Number.isFinite(fecha.getTime()) ? fecha : null;
 }
 
-/** Destino de una copia por su nombre, o null si no es una copia. */
-export function destinoDeArchivo(nombre: string): DestinoRespaldo | null {
-  if (fechaDeCopia("LOCAL", nombre) !== null) return "LOCAL";
-  if (fechaDeCopia("EXTERNO", nombre) !== null) return "EXTERNO";
+/** Tipo de una copia por su nombre, o null si no es una copia. */
+export function destinoDeArchivo(nombre: string): TipoCopia | null {
+  for (const tipo of ["LOCAL", "RECIENTE", "EXTERNO"] as const) if (fechaDeCopia(tipo, nombre) !== null) return tipo;
   return null;
 }
 
@@ -52,8 +59,8 @@ export interface CopiaGuardada {
   tamanoBytes: number;
 }
 
-/** Copias de un destino en una carpeta, de la más antigua a la más reciente. Otros archivos se ignoran. */
-export async function listarCopias(carpeta: string, destino: DestinoRespaldo): Promise<CopiaGuardada[]> {
+/** Copias de un tipo en una carpeta, de la más antigua a la más reciente. Otros archivos se ignoran. */
+export async function listarCopias(carpeta: string, destino: TipoCopia): Promise<CopiaGuardada[]> {
   const copias: CopiaGuardada[] = [];
   for (const nombre of await readdir(carpeta)) {
     const fecha = fechaDeCopia(destino, nombre);

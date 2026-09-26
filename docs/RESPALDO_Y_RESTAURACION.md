@@ -8,26 +8,27 @@ está en `apps/server/README.md`, sección "Respaldos".
 
 ## Qué se guarda y dónde
 
-| | Copias locales | Copia externa |
-|---|---|---|
-| Cuándo | Cada 15 minutos, mientras el servidor está encendido | Una por día a las 04:00 de Lima; si el equipo estaba apagado a esa hora, apenas se enciende |
-| Dónde | `apps/server/datos/respaldos/`, en el disco del equipo | La carpeta que se sincroniza con Google Drive u OneDrive (`RESPALDO_CARPETA_EXTERNA`) |
-| Se guardan | Las de las últimas 24 horas | Las de los últimos 30 días |
-| Formato | Una base SQLite lista para usar (`.db`) | Comprimida y cifrada (`.db.gz.cifrado`); solo se abre con la clave privada |
-| Protege de | Una base dañada o borrada, un error grave de operación | La pérdida del equipo o de su disco (robo, incendio, falla de hardware) |
+| | Copias locales | Copias recientes en la nube | Copia externa diaria |
+|---|---|---|---|
+| Cuándo | Cada 15 minutos, mientras el servidor está encendido | Con cada copia local (la misma foto) | Una por día a las 04:00 de Lima; si el equipo estaba apagado a esa hora, apenas se enciende |
+| Dónde | `apps/server/datos/respaldos/`, en el disco del equipo | La carpeta que se sincroniza con Google Drive u OneDrive (`RESPALDO_CARPETA_EXTERNA`) | La misma carpeta |
+| Se guardan | Las de las últimas 24 horas | Las últimas 8 (2 horas) | Las de los últimos 30 días |
+| Formato | Una base SQLite lista para usar (`.db`) | Comprimida y cifrada (`apurimeno-reciente-….db.gz.cifrado`) | Comprimida y cifrada (`.db.gz.cifrado`) |
+| Protege de | Una base dañada o borrada, un error grave de operación | La pérdida del equipo o de su disco (robo, incendio, falla de hardware), perdiendo unos 15 minutos | Lo mismo, y permite volver a cualquiera de los últimos 30 días |
 
 Cada copia es la base **completa**: habitaciones, alquileres, tickets, caja, clientes, usuarios, auditoría y
 configuración. El espejo en la nube **no** es un respaldo: solo tiene totales.
 
 > **Cuánto se puede perder.** Si falla la base pero el disco del equipo sigue sano, se restaura la copia local más
-> reciente: se pierden como máximo 15 minutos. Si se pierde el equipo entero, sus copias locales se pierden con él
-> y queda la copia externa más reciente, que es **de las 04:00 de ese día: se puede perder hasta un día de
-> operación**. Ver "Prueba de restauración" al final.
+> reciente: se pierden como máximo 15 minutos. Si se pierde el equipo entero, queda la copia reciente más nueva de
+> la carpeta sincronizada: se pierden unos 15 minutos, más lo que Drive u OneDrive tarde en subirla (si el equipo
+> estaba sin internet, lo que no alcanzó a subir). Ver "Prueba de restauración" al final.
 
 ## Configuración (una sola vez, en el equipo del local)
 
 1. **Generar la clave de cifrado.** En `apps/server`: `pnpm clave-respaldo`. Muestra dos claves y no las guarda en
-   ningún archivo:
+   ningún archivo (con `--privada-en <archivo>`, la privada va a ese archivo en vez de a la pantalla; después se pasa
+   al gestor y se borra el archivo):
    - la **privada** (`apr-privada-…`): se guarda en el gestor de contraseñas de la propietaria, con un nombre
      claro ("El Apurimeño: clave de respaldo"). **Sin ella no se puede abrir ninguna copia externa.** No va en el
      equipo, ni en la carpeta de las copias, ni en el repositorio;
@@ -76,8 +77,8 @@ En el equipo nuevo:
 3. Copiar `apps/server/.env.example` a `apps/server/.env` y completarlo (`JWT_SECRET` nuevo, `ESPEJO_*`,
    `IMPRESORA_*`, y `RESPALDO_CARPETA_EXTERNA` y `RESPALDO_CLAVE_PUBLICA` como en "Configuración"). Si no se tiene
    la pública, sale de la privada: `pnpm clave-respaldo publica`.
-4. Esperar a que Drive u OneDrive baje la carpeta de respaldos (o descargar el `.db.gz.cifrado` más reciente desde
-   la web).
+4. Esperar a que Drive u OneDrive baje la carpeta de respaldos (o descargar desde la web el
+   `apurimeno-reciente-….db.gz.cifrado` más nuevo).
 5. En `apps/server`: `pnpm restaurar ultima` (o `pnpm restaurar <archivo descargado>`), escribir `RESTAURAR` y la
    clave privada.
 6. `pnpm start`, y seguir con los pasos 6 y 7 del caso A. Después, instalar el POS y configurar la red como en la
@@ -103,6 +104,39 @@ clave.
 
 ## Prueba de restauración (RNF-BKP-02)
 
+### Con la ventana de 2 horas (vigente)
+
+Repetida el 26/09/2026 por la tarde, con el mismo método que la primera (abajo): servidor real, copias reales cada
+15 minutos, 38 minutos de operación con un cobro cada 30 segundos (76 cobros) y falla con el proceso matado a la
+fuerza. Ahora cada copia local deja también su copia reciente cifrada en la carpeta sincronizada.
+
+**Copias hechas:** locales a las 13:34:26, 13:49:26 y 14:04:26 (hora de Lima), separadas por **15,00 minutos**; en la
+carpeta sincronizada, la diaria de las 13:34:26 (al encender) y las tres recientes de las mismas horas.
+
+| | A. Base perdida, disco sano | B. Equipo perdido ("PC nuevo") |
+|---|---|---|
+| Copia usada | Local de las 14:04:26 | **Reciente cifrada de las 14:04:26**, desde la carpeta sincronizada |
+| Falla | 14:12:22 | 14:12:22 |
+| **Datos perdidos (RPO)** | **7,9 min** (15 cobros) | **7,9 min (15 cobros)**: lo mismo que con el disco sano |
+| Coherencia | Los 61 cobros anteriores a la copia estaban; ninguno posterior | Igual: los mismos 61 |
+| Restaurar | 19,5 s | clonar 3,9 s + instalar 325,7 s + restaurar 4,6 s |
+| **Volver a atender (RTO técnico)** | **28 s** | **5 min 37 s** desde el clon |
+
+Los tiempos salieron más largos que en la primera prueba porque el equipo compilaba el POS al mismo tiempo.
+
+**Qué se puede afirmar ahora:**
+
+- **RPO ≤ 15 min en los dos escenarios.** Las copias salen cada 15 minutos exactos y cada una va también a la carpeta
+  sincronizada, así que perder el equipo cuesta lo mismo que perder la base. A eso hay que sumar lo que Drive u
+  OneDrive tarden en subir la copia (en la prueba, la carpeta "sincronizada" era local): si el equipo estaba sin
+  internet, se pierde lo que no alcanzó a subir. Si las copias se detienen, el Dashboard marca "Desactualizado" a
+  los 30 minutos.
+- **RTO ≤ 60 min en la parte automática** (segundos, o menos de 6 minutos en un equipo nuevo). Los pasos manuales de
+  un equipo nuevo (instalar Node, pnpm, Git y Drive u OneDrive, bajar la copia, configurar la red y el POS) siguen
+  sin cronometrar: hay que ensayarlos una vez con el equipo real antes de producción.
+
+### Primera prueba, antes de la ventana de 2 horas
+
 Hecha el 26/09/2026 en Windows 11, con el servidor real (`pnpm start`), una base de prueba recién sembrada y el
 **ritmo real** de copias (cada 15 minutos, sin acelerar el reloj). Durante 38 minutos se registró un ingreso cada 30
 segundos por la API (76 cobros, cada uno con su salida y limpieza). Luego se simuló la falla **matando el proceso
@@ -124,7 +158,7 @@ exactos; la externa cifrada, a las 08:37:45 (al encender, porque no había copia
 Además, con una base de **273 MB** (más de lo que el negocio junta en años): copia local 2,1 s, copia externa
 cifrada 4,5 s (queda en 24 MB), restaurar desde la local 1,6 s y desde la externa 1,7 s.
 
-**Qué se puede afirmar:**
+**Qué se podía afirmar entonces** (la pérdida de hasta 24 h del escenario B ya no rige: ver arriba):
 
 - **RPO ≤ 15 min, si el disco del equipo sigue sano (A).** Las copias salen cada 15 minutos exactos, contando desde
   la última también tras un reinicio, así que lo máximo que se pierde es lo registrado en los 15 minutos anteriores a
@@ -132,7 +166,7 @@ cifrada 4,5 s (queda en 24 MB), restaurar desde la local 1,6 s y desde la extern
   minutos.
 - **RPO de hasta 24 horas si se pierde el equipo (B).** Con la copia externa diaria, lo que se puede recuperar es la
   copia de las 04:00. Para que el objetivo de 15 minutos valga también ante la pérdida del equipo, las copias de
-  cada 15 minutos tendrían que salir del equipo. Es una decisión pendiente de la propietaria (`docs/ESTADO_ACTUAL.md`).
+  cada 15 minutos tendrían que salir del equipo. La propietaria lo decidió así: es la ventana de 2 horas.
 - **RTO ≤ 60 min.** La parte automática tarda segundos (A) o menos de 4 minutos (B). El resto es trabajo manual que
   esta prueba no cronometró: en A, darse cuenta, detener el servidor y correr el comando (minutos). En B, instalar
   Node, pnpm, Git y Drive u OneDrive en un equipo nuevo, esperar la descarga de la copia y volver a configurar la red

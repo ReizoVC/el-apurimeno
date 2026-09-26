@@ -14,7 +14,8 @@
     "dev": "prisma migrate deploy && tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "tsx --env-file-if-exists=.env src/index.ts",
     "check-types": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "@apurimeno/contracts": "workspace:^",
@@ -30,9 +31,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@apurimeno/eslint-config": "workspace:^",
     "@apurimeno/typescript-config": "workspace:^",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22",
+    "eslint": "^9.15.0",
     "prisma": "7.10.0",
     "tsx": "^4.23.15",
     "typescript": "5.5.4",

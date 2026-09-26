@@ -6,6 +6,7 @@ import {
   cotizarIngreso,
   crearCodigoAutorizacion,
   pagoEnEfectivo,
+  validarCodigoAutorizacion,
   type DatosAnulacion,
 } from "../src/index.js";
 import { EFECTIVO, PARAMETROS, contexto, en, habitacion, turnoAbierto, turnoCerrado } from "./fixtures.js";
@@ -115,5 +116,25 @@ describe("RN-46 · un Cajero anula solo con código de autorización", () => {
 
   it("el código vence a los minutos configurados (RF-65)", () => {
     expect(codigoGenerado.expiraEn).toBe(en("14:15"));
+  });
+});
+
+describe("Decisión 25 · un código sirve solo para su operación", () => {
+  const paraCierre = crearCodigoAutorizacion(
+    { codigo: "731005", operacion: "REINTENTAR_CIERRE_TURNO", generadoPorId: "admin-1", minutosVigencia: 5 },
+    contexto(en("14:10")),
+  );
+
+  it("un código de reintento de cierre no anula un cobro", () => {
+    expect(() =>
+      anular({ usuario: { id: "cajero-1", permisos: [] }, autorizacion: { codigo: paraCierre, valorIngresado: "731005" } }),
+    ).toThrow(expect.objectContaining({ codigo: "AUTH_CODE_INVALID" }));
+  });
+
+  it("y un código de anulación no habilita un reintento de cierre", () => {
+    expect(() => validarCodigoAutorizacion(codigoGenerado, "482913", "REINTENTAR_CIERRE_TURNO", en("14:12"))).toThrow(
+      expect.objectContaining({ codigo: "AUTH_CODE_INVALID" }),
+    );
+    expect(() => validarCodigoAutorizacion(paraCierre, "731005", "REINTENTAR_CIERRE_TURNO", en("14:12"))).not.toThrow();
   });
 });

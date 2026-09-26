@@ -25,7 +25,7 @@ const config = leerConfiguracionRespaldos(process.env, rutaBase);
 
 const MB = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const describir = (c: CopiaDisponible) =>
-  `${c.destino === "LOCAL" ? "local  " : "externa"}  ${fechaHora(c.creadoEn)}  (${hace(c.creadoEn)})  ${MB(c.tamanoBytes).padStart(9)}  ${c.ruta}`;
+  `${{ LOCAL: "local   ", RECIENTE: "reciente", EXTERNO: "diaria  " }[c.destino]}  ${fechaHora(c.creadoEn)}  (${hace(c.creadoEn)})  ${MB(c.tamanoBytes).padStart(9)}  ${c.ruta}`;
 
 function fallar(mensaje: string): never {
   console.error(`\nNo se restauró nada: ${mensaje}`);

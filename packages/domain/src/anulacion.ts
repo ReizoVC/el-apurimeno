@@ -32,6 +32,7 @@ export function crearCodigoAutorizacion(
     usadoEn: null,
     usadoPorId: null,
     ticketId: null,
+    turnoId: null,
   });
 }
 

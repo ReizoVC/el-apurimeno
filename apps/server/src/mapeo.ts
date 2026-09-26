@@ -322,6 +322,7 @@ export function aCodigoAutorizacion(fila: Db.CodigoAutorizacion): CodigoAutoriza
     usadoEn: isoONulo(fila.usadoEn),
     usadoPorId: fila.usadoPorId,
     ticketId: fila.ticketId,
+    turnoId: fila.turnoId,
   });
 }
 

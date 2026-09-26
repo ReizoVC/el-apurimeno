@@ -34,6 +34,7 @@ import {
   type ForzarCierreTurnoEntrada,
   type HabitacionEntrada,
   type MetodoPagoEntrada,
+  type OperacionAutorizable,
   type PeriodoConsulta,
   type ProductoEntrada,
   type RangoEntrada,
@@ -309,11 +310,12 @@ export const servidor = {
   /** Espera a que termine la copia: devuelve el resultado, o el error en el estado del destino. */
   respaldar: (destino: DestinoRespaldo) =>
     llamar("POST", RUTAS.respaldar, RespaldoRespuestaSchema, { destino }),
-  generarCodigoAutorizacion: () =>
+  generarCodigoAutorizacion: (operacion: OperacionAutorizable) =>
     llamar(
       "POST",
       RUTAS.generarCodigoAutorizacion,
       GenerarCodigoAutorizacionRespuestaSchema,
+      { operacion },
     ),
   reimprimir: (ticketId: string) =>
     llamar(

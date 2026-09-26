@@ -225,12 +225,16 @@ function NuevoMovimiento({
 
 /**
  * Arqueo ciego. Si lo contado no coincide con el esperado, el servidor exige un comentario (REASON_REQUIRED,
- * decisión 15): el POS lo pide sin revelar el monto esperado ni la diferencia.
+ * decisión 15): el POS lo pide sin revelar el monto esperado ni la diferencia. Tras 3 intentos rechazados, cada
+ * intento más necesita un código de autorización de un Administrador (AUTH_CODE_INVALID, decisión 25): el POS
+ * muestra el campo y lo vacía después de cada intento, porque cada código se consume.
  */
 function CerrarTurno({ onCerrado }: { onCerrado: (turno: Turno) => void }) {
   const [contado, setContado] = useState("");
   const [comentario, setComentario] = useState("");
   const [pideComentario, setPideComentario] = useState(false);
+  const [codigo, setCodigo] = useState("");
+  const [pideCodigo, setPideCodigo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const centimos = leerSoles(contado);
@@ -244,16 +248,21 @@ function CerrarTurno({ onCerrado }: { onCerrado: (turno: Turno) => void }) {
         await servidor.cerrarTurno({
           efectivoContado: centimos,
           comentario: comentario.trim() === "" ? null : comentario.trim(),
+          codigoAutorizacion: codigo.trim() === "" ? null : codigo.trim(),
         }),
       );
     } catch (e) {
-      if (e instanceof ErrorApi && e.codigo === "REASON_REQUIRED") {
+      if (e instanceof ErrorApi && e.codigo === "AUTH_CODE_INVALID") {
+        setPideCodigo(true);
+        setError(mensajeDe(e));
+      } else if (e instanceof ErrorApi && e.codigo === "REASON_REQUIRED") {
         setPideComentario(true);
         setError(
           "El efectivo contado no coincide con el esperado. Vuelva a contar o explique la diferencia en un comentario.",
         );
       } else setError(mensajeDe(e));
     } finally {
+      setCodigo("");
       setEnviando(false);
     }
   };
@@ -285,6 +294,19 @@ function CerrarTurno({ onCerrado }: { onCerrado: (turno: Turno) => void }) {
             onChange={(e) => setComentario(e.target.value)}
           />
         </Campo>
+        {pideCodigo && (
+          <Campo
+            etiqueta="Código de autorización"
+            ayuda="Pídalo a un Administrador: sirve para un solo intento."
+          >
+            <Input
+              inputMode="numeric"
+              autoComplete="off"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+            />
+          </Campo>
+        )}
       </CardContent>
       <CardFooter>
         <Button
@@ -293,7 +315,8 @@ function CerrarTurno({ onCerrado }: { onCerrado: (turno: Turno) => void }) {
           disabled={
             centimos === null ||
             enviando ||
-            (pideComentario && comentario.trim() === "")
+            (pideComentario && comentario.trim() === "") ||
+            (pideCodigo && codigo.trim() === "")
           }
           onClick={() => void cerrar()}
         >

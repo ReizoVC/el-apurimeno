@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Configuración local (URL del servidor, etc.): solo .env.example se sube.
+.env*
+!.env.example

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   HORA_RESPALDO_EXTERNO_LIMA,
+  COPIAS_RECIENTES_EXTERNAS,
   INTERVALO_RESPALDO_LOCAL_MINUTOS,
   RETENCION_RESPALDO_EXTERNO_DIAS,
   RETENCION_RESPALDO_LOCAL_HORAS,
@@ -125,7 +126,19 @@ export default function Respaldos() {
             onCopiar={() => void copiar("LOCAL")}
           />
           <TarjetaCopia
-            titulo="Copia externa"
+            titulo="Copias recientes en la nube"
+            descripcion={`Cada copia local, comprimida y cifrada, también va a la carpeta que se sincroniza con la nube. Ahí se guardan solo las últimas ${COPIAS_RECIENTES_EXTERNAS} (2 horas): si se pierde el equipo, se pierden unos 15 minutos. Se hacen con "Copiar ahora" de las copias locales.`}
+            copia={e.reciente}
+            desactualizado={respaldoLocalDesactualizado(
+              e.reciente.ultimoExitoEn,
+              ahora,
+            )}
+            enviando={enviando === "LOCAL"}
+            ocupado={enviando !== null}
+            onCopiar={() => void copiar("LOCAL")}
+          />
+          <TarjetaCopia
+            titulo="Copia externa diaria"
             descripcion={`Una por día a las ${String(HORA_RESPALDO_EXTERNO_LIMA).padStart(2, "0")}:00 (o al encender, si el equipo estaba apagado), comprimida y cifrada, en la carpeta que se sincroniza con la nube. Se guardan ${RETENCION_RESPALDO_EXTERNO_DIAS} días.`}
             copia={e.externo}
             desactualizado={respaldoExternoDesactualizado(

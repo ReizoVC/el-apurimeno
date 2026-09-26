@@ -137,7 +137,7 @@ const SECCIONES: {
   },
   {
     href: "/codigos-autorizacion",
-    etiqueta: "Códigos de anulación",
+    etiqueta: "Códigos de autorización",
     permiso: "tickets.void",
     grupo: "Control",
   },

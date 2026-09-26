@@ -43,7 +43,7 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 | Respaldos | `settings.manage` | Última copia local (cada 15 min) y externa (diaria, cifrada), el error si lo hay y "Copiar ahora". |
 | Auditoría | `audit.view` | Registros filtrables y paginados, con valor previo y nuevo. |
 | Turnos abiertos | `shifts.force_close` | Turnos sin cerrar y cierre forzado. |
-| Códigos de anulación | `tickets.void` | Generar un código de un solo uso para que un cajero anule un cobro (RF-65). |
+| Códigos de autorización | `tickets.void` | Generar un código de un solo uso para que un cajero anule un cobro (RF-65) o reintente un cierre de turno tras 3 rechazos (decisión 25). |
 | Reimpresión | `tickets.reprint` | Buscar un ticket y encolar su copia. |
 
 ## Decisiones de interfaz
@@ -94,7 +94,8 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
   ámbar y el error del último intento con su causa. Si la copia externa no está configurada, se muestra en
   rojo, porque sin ella una falla del disco se lleva la base y sus copias locales. Restaurar no se hace desde
   aquí: exige detener el servidor.
-- **Códigos de anulación:** un botón y nada más. El código se muestra grande, una sola vez, con su hora de
+- **Códigos de autorización:** primero se elige para qué es (anular un cobro o reintentar un cierre de turno, con
+  su explicación) y después un botón. El código se muestra grande, una sola vez, con su hora de
   vencimiento y la advertencia de que no se puede volver a ver: el servidor solo guarda su hash y el
   Dashboard no lo guarda en el navegador (recargar o salir lo borra de la pantalla).
 - **Nombres de usuario:** listarlos exige `users.manage`. Sin ese permiso las pantallas muestran el id en vez

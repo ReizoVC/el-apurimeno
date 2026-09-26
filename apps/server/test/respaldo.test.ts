@@ -240,6 +240,7 @@ describe("Respaldos desde el servidor (Planos §14.3)", () => {
     expect(readdirSync(externa).sort()).toEqual([
       "apurimeno-20260828T090000Z.db.gz.cifrado",
       "apurimeno-20260926T150000Z.db.gz.cifrado",
+      "apurimeno-reciente-20260926T150000Z.db.gz.cifrado",
       "notas-de-la-propietaria.txt",
     ]);
   });
@@ -327,10 +328,13 @@ describe("Restauración completa (RNF-BKP-02)", () => {
   it("desde la copia externa cifrada, con la clave privada", async () => {
     const { externa } = await conDatos();
     const disponibles = await copiasDisponibles({ carpetaLocal: join(dir, "disco-que-fallo"), carpetaExternaConfigurada: externa });
-    expect(disponibles.map((c) => c.destino)).toEqual(["EXTERNO"]);
-    const r = await restaurar(disponibles[0]!.ruta, e.ruta, claves.privada, new Date("2026-09-26T16:00:00.000Z"));
-    expect(r).toMatchObject({ cifrada: true, resumen: { tickets: 1 } });
-    expect(tickets(e.ruta)).toBe(1);
+    // La reciente (de la copia local) y la diaria son de la misma hora: las dos sirven.
+    expect(disponibles.map((c) => c.destino)).toEqual(["RECIENTE", "EXTERNO"]);
+    for (const copia of disponibles) {
+      const r = await restaurar(copia.ruta, e.ruta, claves.privada, new Date("2026-09-26T16:00:00.000Z"));
+      expect(r).toMatchObject({ cifrada: true, tomadaEn: "2026-09-26T15:00:00.000Z", resumen: { tickets: 1 } });
+      expect(tickets(e.ruta)).toBe(1);
+    }
   });
 
   it("con la clave equivocada, o sin ella, no toca la base actual", async () => {
@@ -347,5 +351,82 @@ describe("Restauración completa (RNF-BKP-02)", () => {
     writeFileSync(join(dir, "cualquier.db"), "no soy una base");
     await expect(restaurar(join(dir, "cualquier.db"), e.ruta, null, new Date())).rejects.toThrow(/no es una copia/);
     expect(tickets(e.ruta)).toBe(2);
+  });
+});
+
+describe("Ventana de 2 horas: las copias de cada 15 minutos también van cifradas a la carpeta sincronizada", () => {
+  let e: Entorno;
+  const claves = generarClaves();
+  let local: string;
+  let externa: string;
+  afterEach(() => e.cerrar());
+
+  async function preparar(conCarpetaExterna = true) {
+    local = join(dir, "respaldos");
+    externa = join(dir, "OneDrive-Respaldos");
+    const { mkdirSync } = await import("node:fs");
+    if (conCarpetaExterna) mkdirSync(externa);
+    e = await prepararEntorno("2026-09-26T15:00:00.000Z", {
+      respaldos: (rutaBase) =>
+        leerConfiguracionRespaldos(
+          { RESPALDO_CARPETA_LOCAL: local, RESPALDO_CARPETA_EXTERNA: externa, RESPALDO_CLAVE_PUBLICA: claves.publica },
+          rutaBase,
+        ),
+    });
+    const cajero = await e.login("cajero");
+    await e.llamar("POST", RUTAS.abrirTurno, cajero, { efectivoInicial: 10000 });
+    await e.llamar(
+      "POST",
+      RUTAS.registrarIngreso,
+      cajero,
+      { habitacionId: "hab-205", clienteId: null, horasAdicionalesAlIngreso: 0, ajuste: null, pagos: [efectivo(4000)] },
+      "clave-ventana",
+    );
+  }
+
+  it("cada copia local deja su gemela cifrada en la nube, con los mismos datos", async () => {
+    await preparar();
+    expect(await e.app.respaldos.respaldar("LOCAL")).toBe(true);
+    const nombre = "apurimeno-reciente-20260926T150000Z.db.gz.cifrado";
+    expect(readdirSync(externa)).toEqual([nombre]);
+    expect(readFileSync(join(externa, nombre)).includes(Buffer.from("SQLite format 3"))).toBe(false);
+    await descifrarArchivo(join(externa, nombre), join(dir, "abierta.db"), leerClavePrivada(claves.privada));
+    expect(verificarBase(join(dir, "abierta.db"))).toMatchObject({ tickets: 1 });
+    const estado = await e.app.respaldos.estado();
+    expect(estado.reciente).toMatchObject({ configurado: true, ultimoArchivo: nombre, copiasGuardadas: 1, ultimoError: null });
+    // La diaria sigue aparte: esta copia no la reemplaza.
+    expect(estado.externo.copiasGuardadas).toBe(0);
+  });
+
+  it("en la nube quedan solo las últimas 8 recientes; las diarias no se tocan", async () => {
+    await preparar();
+    for (let i = 1; i <= 9; i++) {
+      writeFileSync(join(externa, `apurimeno-reciente-20260926T${String(12 + Math.floor((i * 15) / 60)).padStart(2, "0")}${String((i * 15) % 60).padStart(2, "0")}00Z.db.gz.cifrado`), "x");
+    }
+    writeFileSync(join(externa, "apurimeno-20260901T090000Z.db.gz.cifrado"), "diaria");
+    await e.app.respaldos.respaldar("LOCAL");
+    const recientes = readdirSync(externa).filter((n) => n.startsWith("apurimeno-reciente-")).sort();
+    expect(recientes).toHaveLength(8);
+    expect(recientes.at(-1)).toBe("apurimeno-reciente-20260926T150000Z.db.gz.cifrado");
+    expect(recientes[0]).toBe("apurimeno-reciente-20260926T124500Z.db.gz.cifrado"); // se van 12:15 y 12:30
+    expect(readdirSync(externa)).toContain("apurimeno-20260901T090000Z.db.gz.cifrado");
+  });
+
+  it("si la carpeta sincronizada no está, la copia local se hace igual y la reciente queda con su error", async () => {
+    await preparar(false);
+    expect(await e.app.respaldos.respaldar("LOCAL")).toBe(true);
+    expect(readdirSync(local)).toEqual(["apurimeno-20260926T150000Z.db"]);
+    const estado = await e.app.respaldos.estado();
+    expect(estado.local.ultimoError).toBeNull();
+    expect(estado.reciente.ultimoError).toMatchObject({ codigo: "DESTINO_INACCESIBLE" });
+  });
+
+  it("perdido el equipo, la restauración toma la reciente más nueva, no la diaria", async () => {
+    await preparar();
+    expect(await e.app.respaldos.respaldar("EXTERNO")).toBe(true); // diaria de las 15:00
+    e.reloj.avanzarMinutos(15);
+    expect(await e.app.respaldos.respaldar("LOCAL")).toBe(true); // reciente de las 15:15
+    const disponibles = await copiasDisponibles({ carpetaLocal: join(dir, "disco-perdido"), carpetaExternaConfigurada: externa });
+    expect(disponibles[0]).toMatchObject({ destino: "RECIENTE", creadoEn: "2026-09-26T15:15:00.000Z" });
   });
 });

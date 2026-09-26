@@ -66,6 +66,12 @@ importers:
 
   apps/native:
     dependencies:
+      '@apurimeno/contracts':
+        specifier: workspace:^
+        version: link:../../packages/contracts
+      '@apurimeno/domain':
+        specifier: workspace:^
+        version: link:../../packages/domain
       '@apurimeno/ui':
         specifier: workspace:^
         version: link:../../packages/ui

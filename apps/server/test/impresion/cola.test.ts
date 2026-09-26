@@ -58,7 +58,7 @@ describe("Impresión en cada cobro (ADR-05, RF-56)", () => {
     expect(await trabajos(ticket.id)).toMatchObject([{ estado: "IMPRESO", esCopia: false }]);
     const esperado = comandosComprobante(
       componerLineasComprobante(ticket, {
-        datos: { nombreNegocio: "El Apurimeño", datosAdicionales: "Documento interno sin valor tributario" },
+        datos: { nombreNegocio: "El Apurimeño", datosAdicionales: "Gracias por su preferencia.", leyenda: "Documento interno sin valor tributario." },
         anchoPapelMm: 80,
         metodosPago: (await e.prisma.metodoPago.findMany()).map((m) => ({ ...m })),
         esCopia: false,

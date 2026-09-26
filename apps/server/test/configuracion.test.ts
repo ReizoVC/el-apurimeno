@@ -3,6 +3,7 @@ import {
   MetodoPagoSchema,
   RUTAS,
   RegistrarIngresoRespuestaSchema,
+  ReimpresionRespuestaSchema,
   type ConfiguracionGlobal,
 } from "@apurimeno/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -49,6 +50,31 @@ describe("Configuración global (CU-27; RN-43, RF-50 a RF-52)", () => {
     expect((await e.llamar("PUT", RUTAS.configuracion, admin, conBoleta)).json()).toMatchObject({ codigo: "VALIDACION" });
     expect((await e.llamar("GET", RUTAS.configuracion, cajero)).statusCode).toBe(403);
     expect((await e.llamar("PUT", RUTAS.configuracion, cajero, actual)).statusCode).toBe(403);
+  });
+});
+
+describe("Leyenda del comprobante (RN-39, decisión 21)", () => {
+  it("se edita desde la configuración y la siguiente impresión ya la usa; vacía o con términos fiscales, no", async () => {
+    const actual = ConfiguracionGlobalSchema.parse((await e.llamar("GET", RUTAS.configuracion, admin)).json());
+    expect(actual.comprobante).toEqual({
+      nombreNegocio: "El Apurimeño",
+      datosAdicionales: "Gracias por su preferencia.",
+      leyenda: "Documento interno sin valor tributario.",
+    });
+    const nueva = "Comprobante interno, no válido para fines tributarios.";
+    const r = await e.llamar("PUT", RUTAS.configuracion, admin, { ...actual, comprobante: { ...actual.comprobante, leyenda: nueva } });
+    expect(r.statusCode).toBe(200);
+
+    await e.llamar("POST", RUTAS.abrirTurno, cajero, { efectivoInicial: 0 });
+    const ticketId = RegistrarIngresoRespuestaSchema.parse((await ingreso("hab-205", "clave-leyenda-1")).json()).ticket.id;
+    const copia = ReimpresionRespuestaSchema.parse((await e.llamar("POST", ruta(RUTAS.reimprimirTicket, ticketId), cajero)).json());
+    expect(copia.contenido.slice(-2).map((l) => l.trim()).join(" ")).toBe(nueva);
+
+    for (const leyenda of ["  ", "Boleta de venta electrónica"]) {
+      const rechazo = await e.llamar("PUT", RUTAS.configuracion, admin, { ...actual, comprobante: { ...actual.comprobante, leyenda } });
+      expect(rechazo.json()).toMatchObject({ codigo: "VALIDACION" });
+    }
+    expect(await e.prisma.registroAuditoria.count({ where: { accion: "CONFIGURACION_CAMBIADA", tipoEntidad: "CONFIGURACION" } })).toBe(1);
   });
 });
 

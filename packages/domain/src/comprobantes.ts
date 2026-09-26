@@ -10,9 +10,6 @@ import { ZONA_HORARIA_NEGOCIO } from "./reportes.js";
 // Contenido del comprobante impreso (§13, RN-38, RN-39, RF-44, RF-55): texto plano en líneas del ancho del
 // papel. Convertirlo a comandos ESC/POS y enviarlo a la impresora es trabajo del servidor (ADR-05).
 
-/** Declaración obligatoria de todo comprobante, sea cual sea la configuración (RN-39). */
-export const LEYENDA_NO_FISCAL = "Documento interno sin valor tributario.";
-
 /** Columnas de texto por ancho de papel: 48 en 80 mm (la REDPOS RED-E803), 32 en 58 mm. */
 export function columnasPorAncho(
   anchoPapelMm: ConfiguracionImpresora["anchoPapelMm"],
@@ -102,9 +99,9 @@ export interface LineaComprobante {
 
 /**
  * Compone el comprobante de un ticket, línea por línea y con el estilo de cada una. Solo usa datos del ticket y
- * de la configuración: nunca el nombre ni el documento del cliente (RN-38). Siempre declara que no es un
- * documento tributario, y no usa series ni términos de comprobantes fiscales (RN-39): el número es el
- * correlativo interno, sin serie.
+ * de la configuración: nunca el nombre ni el documento del cliente (RN-38). Siempre termina con la leyenda
+ * configurada, que declara que no es un documento tributario, y no usa series ni términos de comprobantes
+ * fiscales (RN-39): el número es el correlativo interno, sin serie.
  */
 export function componerLineasComprobante(
   ticket: Ticket,
@@ -164,7 +161,8 @@ export function componerLineasComprobante(
       agregar(envolver(`  Op. ${pago.referencia}`, ancho));
   }
   agregar([separador]);
-  agregar(centrar(LEYENDA_NO_FISCAL, ancho));
+  // Siempre al pie, sea cual sea la configuración: el texto es editable, pero no se puede omitir (RN-39).
+  agregar(centrar(opciones.datos.leyenda, ancho));
   return lineas;
 }
 

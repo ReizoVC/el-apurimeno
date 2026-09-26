@@ -70,7 +70,7 @@ try {
 | `anulacion.ts` | `crearCodigoAutorizacion`, `validarCodigoAutorizacion`, `anularTicket` |
 | `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual`, `validarEdicionPropia` |
 | `reportes.ts` | `esTicketVigente`, `diaLocal`, `resumirVentas`, `resumirArqueos`, `resumirOcupacion` |
-| `comprobantes.ts` | `componerLineasComprobante` (líneas con estilo, para la impresora), `componerComprobante` (texto plano), `columnasPorAncho`, `LEYENDA_NO_FISCAL` |
+| `comprobantes.ts` | `componerLineasComprobante` (líneas con estilo, para la impresora), `componerComprobante` (texto plano), `columnasPorAncho` |
 
 ## Trazabilidad RN-01 a RN-46
 
@@ -117,7 +117,7 @@ Las pruebas se nombran con la regla que verifican (`describe("RN-xx · …")`). 
 | RN-36 | Corregir sin borrar | `anularTicket` | anulacion |
 | RN-37 | Céntimos enteros | Validación de montos en todas las funciones | precios, tickets |
 | RN-38 | Comprobante sin datos del cliente | Las descripciones de línea no los incluyen (`cotizarIngreso`); `componerComprobante` solo usa el ticket y la configuración | precios, comprobantes |
-| RN-39 | Comprobante no fiscal | `componerComprobante` (leyenda obligatoria, número interno sin serie) y `DatosComprobanteSchema` (contracts). El envío ESC/POS es del backend | comprobantes, contracts |
+| RN-39 | Comprobante no fiscal | `componerLineasComprobante` (leyenda configurada siempre al pie, número interno sin serie) y `DatosComprobanteSchema` (contracts). El envío ESC/POS es del backend | comprobantes, contracts |
 | RN-40 | Cuentas individuales | **Fuera de domain:** autenticación (backend) | — |
 | RN-41 | Permisos fijos, rangos configurables | `permisosEfectivos`, `puede` | permisos |
 | RN-42 | Auditoría inmutable | **Fuera de domain:** el backend escribe `RegistroAuditoria` en la misma transacción | contracts |

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   AjusteEntrada,
   AlquilerEnTablero,
@@ -44,6 +44,8 @@ interface Props {
   sesion: Sesion;
   metodos: readonly MetodoPago[];
   onTerminado: (mensaje: string) => void;
+  /** Recarga el tablero sin cerrar el panel (p. ej. tras anular una hora antes que el ingreso). */
+  onActualizar: () => Promise<void>;
   onCerrar: () => void;
 }
 
@@ -59,6 +61,7 @@ export function HabitacionOcupada({
   sesion,
   metodos,
   onTerminado,
+  onActualizar,
   onCerrar,
 }: Props) {
   const [vista, setVista] = useState<Vista>("resumen");
@@ -145,6 +148,7 @@ export function HabitacionOcupada({
         <Anular
           tickets={tickets}
           sesion={sesion}
+          onActualizar={onActualizar}
           onTerminado={(numero, devolucion) =>
             onTerminado(
               `Ticket ${numero} anulado. Devolver ${soles(Math.abs(devolucion))} al cliente.`,
@@ -413,55 +417,113 @@ function Salida({
 
 /**
  * CU-21: anular un cobro vigente del alquiler. Quien tiene `tickets.void` anula directo; el cajero ingresa el
- * código de autorización que le da el Administrador (RN-46). Las reglas (anular primero las horas antes que
- * el ingreso, código de un solo uso) las aplica el servidor y se muestran sus mensajes.
+ * código de autorización que le da el Administrador (RN-46), uno por anulación. Las reglas las aplica el
+ * servidor. Una en particular se guía en pantalla: el ingreso solo se anula cuando no quedan horas adicionales
+ * vigentes. Si el servidor lo rechaza por eso, se listan esas horas para anularlas una por una desde aquí.
  */
 function Anular({
   tickets,
   sesion,
+  onActualizar,
   onTerminado,
   onVolver,
 }: {
   tickets: readonly Ticket[];
   sesion: Sesion;
+  onActualizar: () => Promise<void>;
   onTerminado: (numero: number, devolucion: number) => void;
   onVolver: () => void;
 }) {
   const vigentes = tickets
     .filter((t) => t.tipo === "COBRO" && t.estado === "EMITIDO")
     .reverse();
+  const horasVigentes = vigentes.filter((t) => t.origen === "HORA_ADICIONAL");
   const [ticketId, setTicketId] = useState<string | null>(
     vigentes[0]?.id ?? null,
   );
   const [motivo, setMotivo] = useState("");
   const [codigo, setCodigo] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [clave, renovarClave] = useClaveIdempotencia();
+  const [aviso, setAviso] = useState<string | null>(null);
+  /** El servidor rechazó anular el ingreso porque quedan horas adicionales vigentes. */
+  const [bloqueadoPorHoras, setBloqueadoPorHoras] = useState(false);
+  /** Mensaje de ese rechazo, por si al recargar no aparece ninguna hora (otra causa, u otro equipo). */
+  const [rechazo, setRechazo] = useState<string | null>(null);
+  const [horasAnuladas, setHorasAnuladas] = useState(0);
+  const [enviando, setEnviando] = useState<string | null>(null);
+  // Una clave de idempotencia por ticket a anular, conservada si el envío falla (RF-59).
+  const claves = useRef(new Map<string, string>());
+  const claveDe = (id: string) => {
+    const existente = claves.current.get(id);
+    if (existente !== undefined) return existente;
+    const nueva = crypto.randomUUID();
+    claves.current.set(id, nueva);
+    return nueva;
+  };
   const conCodigo = !tienePermiso(sesion, "tickets.void");
+  const seleccionado = vigentes.find((t) => t.id === ticketId) ?? null;
+  const faltaDato = motivo.trim() === "" || (conCodigo && codigo.trim() === "");
 
-  const anular = async () => {
-    if (ticketId === null) return;
-    setEnviando(true);
+  const anular = async (ticket: Ticket) => {
+    setEnviando(ticket.id);
     setError(null);
+    setAviso(null);
     try {
       const r = await servidor.anularTicket(
-        ticketId,
+        ticket.id,
         { motivo, codigoAutorizacion: conCodigo ? codigo.trim() : null },
-        clave,
+        claveDe(ticket.id),
       );
-      renovarClave();
-      onTerminado(r.original.numero, r.compensatorio.total);
-    } catch (e) {
-      setError(mensajeDe(e));
+      claves.current.delete(ticket.id);
+      return r;
     } finally {
-      setEnviando(false);
+      setEnviando(null);
     }
   };
+
+  const anularSeleccionado = async () => {
+    if (seleccionado === null) return;
+    try {
+      const r = await anular(seleccionado);
+      onTerminado(r.original.numero, r.compensatorio.total);
+    } catch (e) {
+      if (
+        e instanceof ErrorApi &&
+        e.codigo === "INVALID_STATE_TRANSITION" &&
+        seleccionado.origen === "INGRESO_ALQUILER"
+      ) {
+        // Puede que otro equipo haya cobrado una hora que este panel aún no ve: se recarga antes de listar.
+        await onActualizar();
+        setBloqueadoPorHoras(true);
+        setRechazo(mensajeDe(e));
+        return;
+      }
+      setError(mensajeDe(e));
+    }
+  };
+
+  /** Anula una hora adicional desde la lista, sin salir del panel, y deja listo el ingreso. */
+  const anularHora = async (hora: Ticket) => {
+    try {
+      const r = await anular(hora);
+      setAviso(
+        `Hora adicional #${hora.numero} anulada. Devolver ${soles(Math.abs(r.compensatorio.total))} al cliente.`,
+      );
+      setHorasAnuladas((n) => n + 1);
+      if (conCodigo) setCodigo(""); // El código ya se consumió (RN-46).
+      await onActualizar();
+    } catch (e) {
+      setError(mensajeDe(e));
+    }
+  };
+
+  const guiando =
+    bloqueadoPorHoras && seleccionado?.origen === "INGRESO_ALQUILER";
 
   return (
     <>
       <CardContent className="flex flex-col gap-3 text-sm">
+        {aviso !== null && <Aviso tipo="exito">{aviso}</Aviso>}
         {error !== null && <Aviso tipo="error">{error}</Aviso>}
         {vigentes.length === 0 ? (
           <p className="text-muted-foreground">
@@ -469,29 +531,31 @@ function Anular({
           </p>
         ) : (
           <>
-            <div
-              className="flex flex-col gap-1"
-              role="radiogroup"
-              aria-label="Cobro a anular"
-            >
-              {vigentes.map((t) => (
-                <label
-                  key={t.id}
-                  className="flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 has-[:checked]:border-foreground"
-                >
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="ticket"
-                      checked={ticketId === t.id}
-                      onChange={() => setTicketId(t.id)}
-                    />
-                    #{t.numero} · {ORIGEN[t.origen]} · {hora(t.creadoEn)}
-                  </span>
-                  <span>{soles(t.total)}</span>
-                </label>
-              ))}
-            </div>
+            {!guiando && (
+              <div
+                className="flex flex-col gap-1"
+                role="radiogroup"
+                aria-label="Cobro a anular"
+              >
+                {vigentes.map((t) => (
+                  <label
+                    key={t.id}
+                    className="flex cursor-pointer items-center justify-between rounded-md border px-3 py-2 has-[:checked]:border-foreground"
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="ticket"
+                        checked={ticketId === t.id}
+                        onChange={() => setTicketId(t.id)}
+                      />
+                      #{t.numero} · {ORIGEN[t.origen]} · {hora(t.creadoEn)}
+                    </span>
+                    <span>{soles(t.total)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
             <Campo etiqueta="Motivo (obligatorio)">
               <Input
                 value={motivo}
@@ -501,7 +565,7 @@ function Anular({
             {conCodigo && (
               <Campo
                 etiqueta="Código de autorización"
-                ayuda="Lo genera un Administrador; sirve una sola vez y vence en minutos."
+                ayuda="Lo genera un Administrador. Sirve una sola vez: cada anulación necesita su propio código."
               >
                 <Input
                   inputMode="numeric"
@@ -511,6 +575,58 @@ function Anular({
                 />
               </Campo>
             )}
+            {guiando && (
+              <div
+                className="flex flex-col gap-2 rounded-md border border-amber-500 bg-amber-50 p-3"
+                role="region"
+                aria-label="Horas adicionales por anular"
+              >
+                {horasVigentes.length > 0 ? (
+                  <>
+                    <p className="font-medium">
+                      Para anular el ingreso #{seleccionado?.numero}, primero
+                      anule las horas adicionales vigentes:
+                    </p>
+                    <ul className="flex flex-col divide-y rounded-md border bg-background">
+                      {horasVigentes.map((t) => (
+                        <li
+                          key={t.id}
+                          className="flex items-center justify-between gap-2 px-3 py-2"
+                        >
+                          <span>
+                            #{t.numero} · Hora adicional · {hora(t.creadoEn)} ·{" "}
+                            {soles(t.total)}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            aria-label={`Anular hora adicional ${t.numero}`}
+                            disabled={enviando !== null || faltaDato}
+                            onClick={() => void anularHora(t)}
+                          >
+                            {enviando === t.id ? "Anulando…" : "Anular"}
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-muted-foreground">
+                      Se usa el motivo de arriba
+                      {conCodigo
+                        ? " y el código ingresado; después de cada anulación, pida un código nuevo"
+                        : ""}
+                      .
+                    </p>
+                  </>
+                ) : horasAnuladas > 0 ? (
+                  <p className="font-medium">
+                    Ya no quedan horas adicionales vigentes: puede anular el
+                    ingreso #{seleccionado?.numero}.
+                  </p>
+                ) : (
+                  <Aviso tipo="error">{rechazo}</Aviso>
+                )}
+              </div>
+            )}
           </>
         )}
       </CardContent>
@@ -519,14 +635,18 @@ function Anular({
           className="flex-1"
           variant="destructive"
           disabled={
-            enviando ||
-            ticketId === null ||
-            motivo.trim() === "" ||
-            (conCodigo && codigo.trim() === "")
+            enviando !== null ||
+            seleccionado === null ||
+            faltaDato ||
+            (guiando && horasVigentes.length > 0)
           }
-          onClick={() => void anular()}
+          onClick={() => void anularSeleccionado()}
         >
-          {enviando ? "Anulando…" : "Anular cobro"}
+          {enviando !== null && enviando === ticketId
+            ? "Anulando…"
+            : seleccionado === null
+              ? "Anular cobro"
+              : `Anular ${ORIGEN[seleccionado.origen].toLowerCase()} #${seleccionado.numero}`}
         </Button>
         <Button variant="outline" onClick={onVolver}>
           Volver

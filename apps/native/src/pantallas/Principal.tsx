@@ -235,6 +235,7 @@ export function Principal({ sesion, onSalir }: Props) {
                       sesion={sesion}
                       metodos={metodos}
                       onTerminado={terminar}
+                      onActualizar={cargarTablero}
                       onCerrar={() => setSeleccionada(null)}
                     />
                   ) : (

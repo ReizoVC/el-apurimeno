@@ -246,6 +246,13 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     abierto se calcula con el valor actual de cada método (RN-35): cambiarlo alteraría arqueos en curso
     sin que nadie lo note. Para otro comportamiento se crea un método nuevo y se deshabilita el anterior.
     Nombre, número de referencia y habilitación sí se editan (RF-54).
+21. **La leyenda al pie del comprobante es configurable** (`DatosComprobante.leyenda`). La pidió el negocio,
+    para poder reformularla rápido si cambia su situación tributaria. Por defecto es
+    `LEYENDA_COMPROBANTE_POR_DEFECTO` ("Documento interno sin valor tributario."). RN-39 sigue
+    vigente: la leyenda no puede quedar vacía, siempre se imprime al pie y pasa el mismo control de
+    términos y series fiscales que el resto del comprobante. Mientras el sistema no emita comprobantes
+    electrónicos, un texto como "Boleta" seguiría imitando uno fiscal. `datosAdicionales` queda para la
+    dirección del local o un mensaje breve.
 
 ## Decisiones pendientes que afectan el contrato
 

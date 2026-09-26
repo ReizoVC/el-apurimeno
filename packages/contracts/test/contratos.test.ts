@@ -98,7 +98,11 @@ function alquilerAbierto(): Alquiler {
 function configuracion(): ConfiguracionGlobal {
   return {
     parametrosAlquiler: PARAMETROS_TIEMPO_PRECIO_INICIALES,
-    comprobante: { nombreNegocio: "El Apurimeño", datosAdicionales: "Documento interno sin valor tributario" },
+    comprobante: {
+      nombreNegocio: "El Apurimeño",
+      datosAdicionales: "Gracias por su preferencia.",
+      leyenda: "Documento interno sin valor tributario.",
+    },
     impresora: { anchoPapelMm: 80, conexion: "USB" },
     permitirStockNegativo: false,
     minutosVigenciaCodigoAutorizacion: 5,
@@ -442,5 +446,19 @@ describe("API · rangos (CU-24)", () => {
     expect(RangoEntradaSchema.safeParse({ nombre: "X", permisos: ["pos.access", "pos.access"] }).success).toBe(false);
     expect(RangoEntradaSchema.safeParse({ nombre: "X", permisos: ["root.all"] }).success).toBe(false);
     expect(RangoEntradaSchema.safeParse({ nombre: " ", permisos: [] }).success).toBe(false);
+  });
+});
+
+describe("Leyenda del comprobante (RN-39, decisión 21)", () => {
+  it("es editable, pero no puede quedar vacía ni usar términos fiscales", () => {
+    const con = (leyenda: string) => {
+      const c = configuracion();
+      c.comprobante.leyenda = leyenda;
+      return ConfiguracionGlobalSchema.safeParse(c).success;
+    };
+    expect(con("Comprobante interno, no válido como documento tributario.")).toBe(true);
+    expect(con("   ")).toBe(false);
+    expect(con("Boleta de venta electrónica")).toBe(false);
+    expect(con("Serie B001-00000123")).toBe(false);
   });
 });

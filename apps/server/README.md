@@ -194,6 +194,11 @@ El periodo es `[desde, hasta)` en UTC. La agregación es de `@apurimeno/domain` 
 prueba-impresora prueba.bin` genera una página con la misma línea en PC850 y WPC1252, el tamaño doble y
 una regla de 48 columnas), que `GS V 1` corte, y cuántas líneas de avance hacen falta antes del corte.
 
+**Contenido configurable (CU-27):** nombre del negocio, dato adicional (dirección o mensaje) y la leyenda
+al pie (decisión 21 de contracts). La migración `leyenda_comprobante_configurable` completa las bases
+existentes con la leyenda que antes estaba fija, y quita la frase repetida que dejaba la semilla anterior
+como dato adicional.
+
 **Conectado a los cobros:** el ingreso, la hora adicional y la venta crean su `TrabajoImpresion` original
 en la misma transacción que el cobro, así ningún cobro queda sin comprobante; la reimpresión crea la copia.
 Después de responder, `impresion/cola.ts` compone el comprobante, lo convierte con `escpos.ts` y lo pasa al

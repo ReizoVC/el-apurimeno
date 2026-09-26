@@ -47,6 +47,11 @@ Mismo patrón que `apps/cleaning`:
 - **Ajuste puntual** oculto tras "Ajustar precio…", y solo para quien tiene el permiso.
 - **Anulación:** se elige el cobro en la lista del alquiler. El campo del código de autorización solo
   aparece si el usuario no tiene `tickets.void`.
+- **Anular un ingreso con horas adicionales vigentes:** el servidor lo rechaza, porque las horas se anulan
+  primero. El POS no muestra el mensaje crudo: recarga el alquiler y lista esas horas, cada una con su
+  botón "Anular", usando el mismo motivo. Para un cajero, cada anulación consume su propio código (RN-46):
+  el campo se limpia después de cada una. Cuando no quedan horas, se habilita anular el ingreso. Si al
+  recargar no aparece ninguna hora (otra causa), se muestra el mensaje del servidor.
 - **Arqueo ciego:** el comentario se pide sin revelar el esperado ni la diferencia; ambos aparecen
   recién con el turno cerrado.
 - **Movimientos de caja:** se listan los registrados en la sesión; el servidor no tiene todavía una ruta

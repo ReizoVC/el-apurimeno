@@ -1,24 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@apurimeno/ui"],
-  // This is needed to support CORS headers for the API
-  async headers() {
-    return [
-      {
-        source: "/api/text-analysis",
-        headers: [
-          { key: "Access-Control-Allow-Credentials", value: "false" },
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "POST" },
-          {
-            key: "Access-Control-Allow-Headers",
-            value:
-              "Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date",
-          },
-        ],
-      },
-    ];
+  transpilePackages: ["@apurimeno/ui", "@apurimeno/contracts", "@apurimeno/domain"],
+  // contracts y domain importan sus módulos con extensión .js (ESM de Node); aquí se resuelven a .ts.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      ".js": [".ts", ".tsx", ".js", ".jsx"],
+      ".mjs": [".mts", ".mjs"],
+      ".cjs": [".cts", ".cjs"],
+    };
+    return config;
   },
 };
 

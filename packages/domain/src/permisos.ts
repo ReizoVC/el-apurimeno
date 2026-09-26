@@ -54,6 +54,9 @@ export const PERMISO_POR_OPERACION = {
   CONFIGURAR_PARAMETROS: "settings.manage",
   CONFIGURAR_METODOS_PAGO: "settings.manage",
   CONSULTAR_RESUMEN_REMOTO: "dashboard.access",
+  /** Estado y "sincronizar ahora" del espejo en la nube (ADR-06), junto al resto de la configuración del sistema. */
+  CONSULTAR_ESTADO_ESPEJO: "settings.manage",
+  SINCRONIZAR_ESPEJO: "settings.manage",
 } as const satisfies Record<string, Permiso>;
 
 export type Operacion = keyof typeof PERMISO_POR_OPERACION;

@@ -129,6 +129,7 @@ enum AccionAuditoria {
   RANGO_CREADO
   RANGO_EDITADO
   CONFIGURACION_CAMBIADA
+  ESPEJO_SINCRONIZADO
 }
 
 enum TipoEntidadAuditada {
@@ -149,6 +150,7 @@ enum TipoEntidadAuditada {
   METODO_PAGO
   CODIGO_AUTORIZACION
   TRABAJO_IMPRESION
+  ESPEJO
 }
 
 model Habitacion {
@@ -495,4 +497,19 @@ model ConfiguracionGlobal {
   impresora                         Json
   permitirStockNegativo             Boolean
   minutosVigenciaCodigoAutorizacion Int
+}
+
+/// Una sola fila (id = 1): estado de la sincronización con el espejo en la nube (ADR-06). No es un dato del
+/// negocio: solo dice cuándo se publicó el resumen por última vez y desde cuándo buscar cambios.
+model EstadoEspejo {
+  id                 Int       @id @default(1)
+  ultimoIntentoEn    DateTime?
+  /// Fin de la última sincronización correcta.
+  ultimoExitoEn      DateTime?
+  /// Desde cuándo buscar cambios en la siguiente sincronización: el inicio de la última correcta, con margen.
+  /// null = nunca se sincronizó: la siguiente publica todo el historial.
+  cambiosDesde       DateTime?
+  ultimoErrorCodigo  String?
+  ultimoErrorMensaje String?
+  ultimoErrorEn      DateTime?
 }

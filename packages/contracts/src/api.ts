@@ -85,6 +85,9 @@ export const RUTAS = {
   metodosPago: "/metodos-pago",
   metodoPago: "/metodos-pago/:id",
   auditoria: "/auditoria",
+  // Espejo en la nube (ADR-06): estado y "sincronizar ahora" desde el Dashboard.
+  estadoEspejo: "/espejo",
+  sincronizarEspejo: "/espejo/sincronizacion",
   salud: "/health",
 } as const;
 
@@ -99,6 +102,10 @@ export const CodigoErrorApiSchema = z.enum([
   "PERMISO_DENEGADO",
   "NO_ENCONTRADO",
   "CLAVE_IDEMPOTENCIA_REUTILIZADA",
+  /** Faltan las variables de entorno del espejo en la nube. */
+  "ESPEJO_NO_CONFIGURADO",
+  /** Ya hay una sincronización con el espejo en marcha. */
+  "SINCRONIZACION_EN_CURSO",
   "ERROR_INTERNO",
 ]);
 export type CodigoErrorApi = z.infer<typeof CodigoErrorApiSchema>;

@@ -76,6 +76,7 @@ export const ACCION: Record<AccionAuditoria, string> = {
   RANGO_CREADO: "Rango creado",
   RANGO_EDITADO: "Rango editado",
   CONFIGURACION_CAMBIADA: "Configuración cambiada",
+  ESPEJO_SINCRONIZADO: "Sincronización del espejo",
 };
 
 export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
@@ -96,4 +97,5 @@ export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
   METODO_PAGO: "Método de pago",
   CODIGO_AUTORIZACION: "Código de autorización",
   TRABAJO_IMPRESION: "Impresión",
+  ESPEJO: "Espejo en la nube",
 };

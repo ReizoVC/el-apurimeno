@@ -5,6 +5,7 @@ import { CABECERA_IDEMPOTENCIA } from "@apurimeno/contracts";
 import Fastify, { type FastifyInstance } from "fastify";
 import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
+import { SIN_ESPEJO, crearControlEspejo, type ControlEspejo, type OpcionesEspejo } from "./espejo/control.js";
 import { manejarError } from "./errores.js";
 import { despacharPendientes } from "./impresion/cola.js";
 import { OPCIONES_ESCPOS_POR_DEFECTO, type PaginaCodigos } from "./impresion/escpos.js";
@@ -12,6 +13,7 @@ import type { TransporteImpresora } from "./impresion/transporte.js";
 import { registrarRutas } from "./rutas.js";
 import { registrarRutasClientes } from "./rutas-clientes.js";
 import { registrarRutasConfiguracion } from "./rutas-configuracion.js";
+import { registrarRutasEspejo } from "./rutas-espejo.js";
 import { registrarRutasHabitaciones } from "./rutas-habitaciones.js";
 import { registrarRutasUsuarios } from "./rutas-usuarios.js";
 
@@ -19,6 +21,8 @@ declare module "fastify" {
   interface FastifyInstance {
     /** Promesa del último envío a la impresora: las pruebas la esperan antes de revisar el resultado. */
     colaImpresion: () => Promise<void>;
+    /** Sincronización con el espejo en la nube; `index.ts` la inicia, las pruebas la llaman a mano. */
+    espejo: ControlEspejo;
   }
 }
 
@@ -37,6 +41,8 @@ export interface OpcionesApp {
   impresora?: TransporteImpresora | null;
   /** Página de códigos de la impresora; por defecto PC850. */
   paginaCodigos?: PaginaCodigos;
+  /** Espejo en la nube (ADR-06). Sin él, el servidor funciona igual, sin sincronizar. */
+  espejo?: OpcionesEspejo;
 }
 
 export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstance> {
@@ -71,6 +77,10 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   registrarRutasClientes(app, opciones.prisma, ahora);
   registrarRutasConfiguracion(app, opciones.prisma, ahora);
   registrarRutasUsuarios(app, opciones.prisma, ahora, opciones.costoBcrypt ?? COSTO_BCRYPT);
+  const espejo = crearControlEspejo(opciones.prisma, ahora, opciones.espejo ?? SIN_ESPEJO, app.log);
+  app.decorate("espejo", espejo);
+  app.addHook("onClose", async () => espejo.detener());
+  registrarRutasEspejo(app, opciones.prisma, ahora, espejo);
   await app.ready();
   return app;
 }

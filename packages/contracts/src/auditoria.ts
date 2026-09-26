@@ -38,6 +38,8 @@ export const AccionAuditoriaSchema = z.enum([
   "RANGO_CREADO",
   "RANGO_EDITADO",
   "CONFIGURACION_CAMBIADA",
+  /** Sincronización con el espejo pedida a mano desde el Dashboard; las automáticas no se auditan. */
+  "ESPEJO_SINCRONIZADO",
 ]);
 export type AccionAuditoria = z.infer<typeof AccionAuditoriaSchema>;
 export const AccionAuditoria = AccionAuditoriaSchema.enum;
@@ -68,6 +70,7 @@ export const TipoEntidadAuditadaSchema = z.enum([
   "METODO_PAGO",
   "CODIGO_AUTORIZACION",
   "TRABAJO_IMPRESION",
+  "ESPEJO",
 ]);
 export type TipoEntidadAuditada = z.infer<typeof TipoEntidadAuditadaSchema>;
 export const TipoEntidadAuditada = TipoEntidadAuditadaSchema.enum;

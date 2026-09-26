@@ -120,6 +120,7 @@ const ticket = resultado.data;
 | `auditoria.ts` | `RegistroAuditoria`, `AccionAuditoria`, `CodigoAutorizacion` | RN-42, RN-46, §23 |
 | `comprobantes.ts` | `TrabajoImpresion` | RN-38, RN-39, §20.5 |
 | `configuracion.ts` | `ConfiguracionGlobal` | RN-43, §26 |
+| `espejo.ts` | `ResumenDia`, `ResumenTurno` y sus filas de Postgres, `EstadoEspejo` (estado de la sincronización) | ADR-06, RN-45, RF-60, RF-61 |
 | `api.ts` | `RUTAS`, cuerpos de entrada y respuesta de la API local, `CABECERA_IDEMPOTENCIA`, `RespuestaError`: autenticación, turnos, alquileres, tienda, anulación y reportes | Planos §11, RF-59, §25 |
 
 ### Estados
@@ -160,7 +161,6 @@ if (rango.nombre === "Administrador") { … }
   interfaz calcula precio ni tiempo (§28.1).
 - **Rutas de limpieza, administración y caja manual:** se agregan a `api.ts` cuando se construyan esos endpoints.
 - **Credenciales de usuario:** nunca salen del backend.
-- **Resumen sincronizado (espejo en la nube):** el SRS aún no define sus campos.
 
 ---
 
@@ -253,6 +253,21 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     términos y series fiscales que el resto del comprobante. Mientras el sistema no emita comprobantes
     electrónicos, un texto como "Boleta" seguiría imitando uno fiscal. `datosAdicionales` queda para la
     dirección del local o un mensaje breve.
+22. **Contenido del espejo en la nube** (`espejo.ts`; ADR-06, RN-45, RF-60). El SRS no define los campos del
+    "resumen sincronizado"; los fijó el proyecto con los mismos cálculos de los reportes locales:
+    - `ResumenDia`: por cada día de Lima, las ventas vigentes (total, por origen y por método de pago con su
+      nombre), los cobros del día que hoy están anulados, y la ocupación por habitación de los alquileres que
+      ingresaron ese día.
+    - `ResumenTurno`: el arqueo de cada turno **cerrado**, con el nombre del cajero y el comentario de cierre
+      recortado a 200 caracteres. Los turnos abiertos no viajan: su esperado es secreto hasta el cierre (RN-34).
+    - **Ocupación es histórica, nunca en vivo.** RN-45 dice que la propietaria no quiere ver el tablero desde
+      fuera: no se sincroniza el estado de las habitaciones ni cuáles están ocupadas ahora. No hay "% de
+      ocupación": el SRS no define su denominador.
+    - **Nunca salen del local:** clientes, tickets individuales, productos, auditoría, usuarios ni
+      configuración (RIE-08).
+    - **Autenticación remota:** RNF-SEG-06 pide "la misma autenticación que el sistema local"; ADR-06 elige
+      Supabase Auth. Se interpreta como la misma exigencia (credenciales individuales, nunca acceso anónimo),
+      no las mismas credenciales: las cuentas remotas son aparte y solo leen el resumen.
 
 ## Decisiones pendientes que afectan el contrato
 

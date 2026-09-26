@@ -54,6 +54,7 @@ export const RUTAS = {
   generarCodigoAutorizacion: "/codigos-autorizacion",
   anularTicket: "/tickets/:id/anulacion",
   reimprimirTicket: "/tickets/:id/reimpresion",
+  tickets: "/tickets",
   reporteVentas: "/reportes/ventas",
   reporteArqueos: "/reportes/arqueos",
   reporteOcupacion: "/reportes/ocupacion",
@@ -545,6 +546,28 @@ export const AuditoriaRespuestaSchema = z
   .object({ registros: z.array(RegistroAuditoriaSchema), siguiente: IdSchema.nullable() })
   .strict();
 export type AuditoriaRespuesta = z.infer<typeof AuditoriaRespuestaSchema>;
+
+// --- Consulta de tickets (para reimprimir, CU-22) ---
+
+export const LIMITE_TICKETS_MAXIMO = 100;
+
+/**
+ * Busca tickets ya emitidos: por número exacto, o los de un periodo [desde, hasta), del más reciente al más
+ * antiguo. Es solo lectura: sirve para encontrar el comprobante que se quiere reimprimir.
+ */
+export const TicketsConsultaSchema = z
+  .object({
+    numero: z.coerce.number().int().positive().optional(),
+    desde: FechaISOSchema.optional(),
+    hasta: FechaISOSchema.optional(),
+    limite: z.coerce.number().int().min(1).max(LIMITE_TICKETS_MAXIMO).default(50),
+  })
+  .strict()
+  .refine((c) => c.desde === undefined || c.hasta === undefined || Date.parse(c.desde) < Date.parse(c.hasta), {
+    path: ["hasta"],
+    message: "hasta debe ser posterior a desde.",
+  });
+export type TicketsConsulta = z.infer<typeof TicketsConsultaSchema>;
 
 // --- Reimpresión (CU-22, RF-44) ---
 

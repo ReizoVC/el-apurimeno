@@ -17,8 +17,8 @@ import { Aviso, Encabezado } from "../src/componentes/comunes";
 import { useSesion } from "../src/componentes/Shell";
 import { useCarga } from "../src/lib/carga";
 import { nombresDeUsuarios } from "../src/lib/nombres";
-import { diaLima, periodoDeDias } from "../src/lib/fechas";
-import { fechaHora, hora, soles } from "../src/lib/formato";
+import { diaLima, periodoDeDias } from "@apurimeno/formato";
+import { fechaHora, hora, soles } from "@apurimeno/formato";
 import { ORIGEN_TICKET } from "../src/lib/rotulos";
 import { servidor } from "../src/lib/servidor";
 

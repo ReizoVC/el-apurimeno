@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Aviso, Encabezado } from "../../src/componentes/comunes";
-import { hora } from "../../src/lib/formato";
+import { hora } from "@apurimeno/formato";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 
 /**

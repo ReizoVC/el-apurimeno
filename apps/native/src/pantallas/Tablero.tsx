@@ -3,7 +3,8 @@ import type { Tablero as TableroApi } from "@apurimeno/contracts";
 import { calcularEstadoTemporal } from "@apurimeno/domain";
 import { Badge } from "@apurimeno/ui/components/badge";
 import { ESTADO_HABITACION, ESTADO_TEMPORAL } from "../componentes/estados";
-import { duracion, hora, pisoDe } from "../lib/formato";
+import { duracion, hora } from "@apurimeno/formato";
+import { pisoDe } from "../lib/formato";
 import { useAhoraServidor } from "../lib/reloj";
 
 export type HabitacionEnTablero = TableroApi["habitaciones"][number];

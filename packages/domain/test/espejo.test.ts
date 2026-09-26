@@ -1,4 +1,4 @@
-import { ResumenDiaSchema, desdeFilaResumenDia, desdeFilaResumenTurno, aFilaResumenDia, aFilaResumenTurno, type Ticket } from "@apurimeno/contracts";
+import { ResumenDiaSchema, type ResumenDia, desdeFilaResumenDia, desdeFilaResumenTurno, aFilaResumenDia, aFilaResumenTurno, type Ticket } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
 import {
   anularTicket,
@@ -9,8 +9,10 @@ import {
   pagoSinVuelto,
   periodoDelDia,
   resumirDia,
+  estaDesactualizado,
+  resumirArqueosEspejo,
   resumirTurno,
-  sumarDias,
+  sumarResumenesDia,
   type Cotizacion,
 } from "../src/index.js";
 import { EFECTIVO, PARAMETROS, YAPE, alquiler, contexto, en, habitacion, producto, turnoAbierto, turnoCerrado } from "./fixtures.js";
@@ -43,11 +45,6 @@ const anular = (ticket: Ticket, ahora: string) =>
 describe("Días de Lima para el espejo", () => {
   it("un día de Lima va de las 05:00 UTC a las 05:00 UTC del día siguiente", () => {
     expect(periodoDelDia("2026-09-23")).toEqual({ desde: "2026-09-23T05:00:00.000Z", hasta: "2026-09-24T05:00:00.000Z" });
-  });
-
-  it("suma y resta días cruzando meses y años", () => {
-    expect(sumarDias("2026-09-30", 1)).toBe("2026-10-01");
-    expect(sumarDias("2027-01-01", -1)).toBe("2026-12-31");
   });
 
   it("rechaza un día mal escrito", () => {
@@ -170,5 +167,104 @@ describe("Resumen de un turno (RN-34)", () => {
     const r = resumirTurno(faltante, "ana", [delTurno]);
     const fila = { ...aFilaResumenTurno(r, en("20:00")), abierto_en: "2026-09-23T08:00:00+00:00", cerrado_en: "2026-09-23T20:00:00+00:00" };
     expect(desdeFilaResumenTurno(fila)).toEqual(r);
+  });
+});
+
+describe("Lectura del resumen en la vista remota", () => {
+  const dia = (d: string, extra: Partial<ResumenDia> = {}, detalle: Partial<ResumenDia["detalle"]> = {}): ResumenDia => ({
+    dia: d,
+    totalVentas: 0,
+    cantidadCobros: 0,
+    anuladosCantidad: 0,
+    anuladosTotal: 0,
+    alquileres: 0,
+    horasVendidas: 0,
+    detalle: { porOrigen: [], porMetodoPago: [], ocupacion: [], ...detalle },
+    version: 1,
+    ...extra,
+  });
+  const hab = (id: string, numero: string, alquileres: number, horasVendidas: number, ingresos: number) => ({ habitacionId: id, numero, alquileres, horasVendidas, ingresos });
+
+  it("suma los días del periodo, sin importar el orden en que llegan", () => {
+    const d24 = dia(
+      "2026-09-24",
+      { totalVentas: 4000, cantidadCobros: 2, alquileres: 1, horasVendidas: 8 },
+      {
+        porOrigen: [{ origen: "VENTA_TIENDA", total: 1000 }, { origen: "INGRESO_ALQUILER", total: 3000 }],
+        porMetodoPago: [{ metodoPagoId: "efectivo", nombre: "Efectivo", total: 4000 }],
+        ocupacion: [hab("h-101", "101", 0, 0, 0), hab("h-205", "205", 1, 8, 3000)],
+      },
+    );
+    const d23 = dia(
+      "2026-09-23",
+      { totalVentas: 7000, cantidadCobros: 3, anuladosCantidad: 1, anuladosTotal: 2500, alquileres: 2, horasVendidas: 17 },
+      {
+        porOrigen: [{ origen: "INGRESO_ALQUILER", total: 6200 }, { origen: "HORA_ADICIONAL", total: 800 }],
+        porMetodoPago: [
+          { metodoPagoId: "efectivo", nombre: "Efectivo", total: 3000 },
+          { metodoPagoId: "yape", nombre: "Yape", total: 4000 },
+        ],
+        ocupacion: [hab("h-205", "205", 1, 9, 3800), hab("h-101", "101", 1, 8, 2500)],
+      },
+    );
+    const t = sumarResumenesDia([d24, d23]);
+    expect(t).toMatchObject({ totalVentas: 11000, cantidadCobros: 5, anuladosCantidad: 1, anuladosTotal: 2500, alquileres: 3, horasVendidas: 25 });
+    expect(t.porOrigen).toEqual([
+      { origen: "INGRESO_ALQUILER", total: 9200 },
+      { origen: "HORA_ADICIONAL", total: 800 },
+      { origen: "VENTA_TIENDA", total: 1000 },
+    ]);
+    expect(t.porMetodoPago).toEqual([
+      { metodoPagoId: "efectivo", nombre: "Efectivo", total: 7000 },
+      { metodoPagoId: "yape", nombre: "Yape", total: 4000 },
+    ]);
+    expect(t.porDia).toEqual([
+      { dia: "2026-09-23", total: 7000, cantidadCobros: 3 },
+      { dia: "2026-09-24", total: 4000, cantidadCobros: 2 },
+    ]);
+    expect(t.ocupacion).toEqual([hab("h-101", "101", 1, 8, 2500), hab("h-205", "205", 2, 17, 6800)]);
+    // Los totales cuadran con sus desgloses.
+    expect(t.porOrigen.reduce((s, o) => s + o.total, 0)).toBe(t.totalVentas);
+    expect(t.porMetodoPago.reduce((s, m) => s + m.total, 0)).toBe(t.totalVentas);
+  });
+
+  it("un método renombrado toma el nombre del día más reciente", () => {
+    const t = sumarResumenesDia([
+      dia("2026-09-24", {}, { porMetodoPago: [{ metodoPagoId: "m", nombre: "Tarjeta POS", total: 100 }] }),
+      dia("2026-09-23", {}, { porMetodoPago: [{ metodoPagoId: "m", nombre: "Tarjeta", total: 100 }] }),
+    ]);
+    expect(t.porMetodoPago).toEqual([{ metodoPagoId: "m", nombre: "Tarjeta POS", total: 200 }]);
+  });
+
+  it("sin días, todo en cero", () => {
+    expect(sumarResumenesDia([])).toEqual({
+      totalVentas: 0,
+      cantidadCobros: 0,
+      anuladosCantidad: 0,
+      anuladosTotal: 0,
+      alquileres: 0,
+      horasVendidas: 0,
+      porOrigen: [],
+      porMetodoPago: [],
+      porDia: [],
+      ocupacion: [],
+    });
+  });
+
+  it("arqueos del periodo en orden de cierre, con la suma de diferencias", () => {
+    const base = resumirTurno({ ...turnoCerrado, id: "t-a", efectivoContado: 9500, diferencia: -500, comentarioCierre: "faltó" }, "ana", []);
+    const cuadrado = { ...base, turnoId: "t-b", cerradoEn: en("19:00"), diferencia: 0, efectivoContado: 10000 };
+    const sinConteo = { ...base, turnoId: "t-c", cerradoEn: en("21:00"), cierreForzado: true, diferencia: null, efectivoContado: null };
+    const r = resumirArqueosEspejo([sinConteo, base, cuadrado]);
+    expect(r.turnos.map((t) => t.turnoId)).toEqual(["t-b", "t-a", "t-c"]);
+    expect(r).toMatchObject({ diferenciaTotal: -500, turnosConDiferencia: 1 });
+  });
+
+  it("desactualizado: más de dos intervalos sin publicar", () => {
+    const ahora = new Date("2026-09-26T15:00:00.000Z");
+    expect(estaDesactualizado("2026-09-26T14:01:00.000Z", 30, ahora)).toBe(false);
+    expect(estaDesactualizado("2026-09-26T14:00:00.000Z", 30, ahora)).toBe(false);
+    expect(estaDesactualizado("2026-09-26T13:59:00.000Z", 30, ahora)).toBe(true);
+    expect(estaDesactualizado(null, 30, ahora)).toBe(false);
   });
 });

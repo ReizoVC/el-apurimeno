@@ -27,8 +27,8 @@ import {
   type Dias,
 } from "../../src/componentes/Periodo";
 import { useCarga } from "../../src/lib/carga";
-import { periodoDeDias } from "../../src/lib/fechas";
-import { fechaHora, soles } from "../../src/lib/formato";
+import { periodoDeDias } from "@apurimeno/formato";
+import { fechaHora, soles } from "@apurimeno/formato";
 import { ORIGEN_TICKET } from "../../src/lib/rotulos";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 

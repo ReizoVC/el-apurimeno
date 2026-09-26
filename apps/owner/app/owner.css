@@ -1,0 +1,6 @@
+/* Fuente del sistema del celular: sin fuentes descargadas (más rápido y sin pedir nada fuera de este sitio). */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

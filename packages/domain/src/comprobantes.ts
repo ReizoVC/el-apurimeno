@@ -5,7 +5,7 @@ import type {
   Ticket,
 } from "@apurimeno/contracts";
 import { ms } from "./interno.js";
-import { ZONA_HORARIA_NEGOCIO } from "./reportes.js";
+import { fechaHora, soles } from "@apurimeno/formato";
 
 // Contenido del comprobante impreso (§13, RN-38, RN-39, RF-44, RF-55): texto plano en líneas del ancho del
 // papel. Convertirlo a comandos ESC/POS y enviarlo a la impresora es trabajo del servidor (ADR-05).
@@ -15,21 +15,6 @@ export function columnasPorAncho(
   anchoPapelMm: ConfiguracionImpresora["anchoPapelMm"],
 ): number {
   return anchoPapelMm === 80 ? 48 : 32;
-}
-
-const formatoFecha = new Intl.DateTimeFormat("es-PE", {
-  timeZone: ZONA_HORARIA_NEGOCIO,
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-function soles(centimos: number): string {
-  const signo = centimos < 0 ? "-" : "";
-  return `${signo}S/ ${(Math.abs(centimos) / 100).toFixed(2)}`;
 }
 
 /**
@@ -132,7 +117,7 @@ export function componerLineasComprobante(
   agregar(
     fila(
       `Ticket ${ticket.numero}`,
-      formatoFecha.format(new Date(ms(ticket.creadoEn))),
+      fechaHora(new Date(ms(ticket.creadoEn))),
       ancho,
     ),
   );

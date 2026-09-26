@@ -24,7 +24,7 @@ import {
 import { Aviso, Campo, Encabezado } from "../../../src/componentes/comunes";
 import { tienePermiso, useSesion } from "../../../src/componentes/Shell";
 import { useCarga } from "../../../src/lib/carga";
-import { aTextoSoles, leerSoles, soles } from "../../../src/lib/formato";
+import { aTextoSoles, leerSoles, soles } from "@apurimeno/formato";
 import { mensajeDe, servidor } from "../../../src/lib/servidor";
 
 const ESTADO: Record<EstadoHabitacion, { etiqueta: string; clase: string }> = {

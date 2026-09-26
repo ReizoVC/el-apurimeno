@@ -25,7 +25,7 @@ import {
   Encabezado,
 } from "../../src/componentes/comunes";
 import { useCarga } from "../../src/lib/carga";
-import { aTextoSoles, leerSoles } from "../../src/lib/formato";
+import { aTextoSoles, leerSoles } from "@apurimeno/formato";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 
 /** Borrador del formulario: números y montos como texto, tal como se escriben. */

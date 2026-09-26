@@ -1,0 +1,19 @@
+{
+  "name": "@apurimeno/formato",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@apurimeno/typescript-config": "workspace:*",
+    "typescript": "5.5.4",
+    "vitest": "^3.2.4"
+  }
+}

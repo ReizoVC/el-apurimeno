@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@apurimeno/contracts": "workspace:^",
+    "@apurimeno/formato": "workspace:*",
     "@apurimeno/domain": "workspace:^",
     "@apurimeno/ui": "workspace:^",
     "@tauri-apps/api": "^2",

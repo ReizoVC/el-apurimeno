@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@apurimeno/contracts": "workspace:*"
+    "@apurimeno/contracts": "workspace:*",
+    "@apurimeno/formato": "workspace:*"
   },
   "devDependencies": {
     "@apurimeno/typescript-config": "workspace:*",

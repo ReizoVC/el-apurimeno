@@ -27,7 +27,7 @@ import { AjustePuntual } from "../componentes/AjustePuntual";
 import { Aviso } from "../componentes/Aviso";
 import { Campo } from "../componentes/Campo";
 import { SelectorPago } from "../componentes/SelectorPago";
-import { soles } from "../lib/formato";
+import { soles } from "@apurimeno/formato";
 import { useClaveIdempotencia } from "../lib/idempotencia";
 import { mensajeDe, servidor } from "../lib/servidor";
 import { tienePermiso, type Sesion } from "../lib/sesion";

@@ -1,5 +1,6 @@
 import { aFilaResumenDia, aFilaResumenTurno, type DiaCalendario } from "@apurimeno/contracts";
-import { diaLocal, periodoDelDia, resumirDia, resumirTurno, sumarDias } from "@apurimeno/domain";
+import { diaLocal, periodoDelDia, resumirDia, resumirTurno } from "@apurimeno/domain";
+import { sumarDias } from "@apurimeno/formato";
 import type { PrismaClient } from "../db.js";
 import { INCLUIR_TICKET, aAlquiler, aHabitacion, aHoraAdicional, aMetodoPago, aTicket, aTurno } from "../mapeo.js";
 import type { TransporteEspejo } from "./transporte.js";

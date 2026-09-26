@@ -34,6 +34,56 @@ que ya esté definido en el entorno tiene prioridad, y un valor vacío cuenta co
 | `RESPALDO_CARPETA_EXTERNA` | — | Ruta completa de la carpeta que se sincroniza con la nube (Google Drive, OneDrive). Debe existir. Sin ella, no hay copia externa y el Dashboard lo advierte. |
 | `RESPALDO_CLAVE_PUBLICA` | — | Clave **pública** de cifrado (`apr-publica-…`, de `pnpm clave-respaldo`). La privada nunca va aquí: el servidor la rechaza. |
 
+## Servicio de Windows (arranque automático)
+
+En el PC del local, el servidor corre como servicio de Windows con [NSSM](https://nssm.cc/): arranca solo al encender
+el equipo (aunque nadie inicie sesión) y se reinicia solo si se cae. Lo instala `scripts/instalar-servicio.ps1`, que:
+
+1. descarga NSSM 2.24-101 del sitio oficial (la versión recomendada para Windows 10 y 11), verifica su SHA-256 y lo
+   deja en `C:\Program Files\NSSM\nssm.exe`;
+2. crea el servicio `ApurimenoServidor` ("El Apurimeño - servidor local"): `node.exe` con tsx en `apps/server`, igual
+   que `pnpm start` (lee `apps/server/.env`), cuenta `LocalSystem`, arranque automático, reinicio a los 5 s si el
+   proceso termina (y Windows reintenta el servicio a los 5 s, 5 s y 30 s), registro en `datos/logs/servidor.log`
+   rotado cada 10 MB;
+3. lo inicia y comprueba que responde en `/health`.
+
+**Antes:** `pnpm install` en la raíz, y en `apps/server` el `.env`, `pnpm migrate` y, la primera vez, `pnpm seed`.
+
+**Instalación**, en una PowerShell **abierta como administrador** (crear un servicio lo exige), en la raíz del
+repositorio:
+
+```powershell
+# PC del local: NODE_ENV=production (exige JWT_SECRET en apps/server/.env; CORS solo con CORS_ORIGINS)
+powershell -NoProfile -ExecutionPolicy Bypass -File apps\server\scripts\instalar-servicio.ps1 -Produccion
+# Equipo de desarrollo
+powershell -NoProfile -ExecutionPolicy Bypass -File apps\server\scripts\instalar-servicio.ps1
+```
+
+Así se instaló el 26/09/2026 en el equipo de desarrollo, desde una PowerShell sin permisos de administrador (abre el
+aviso de Control de cuentas de usuario y deja el registro de la instalación en `datos/logs`):
+
+```powershell
+Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass',
+  '-File','"D:\dev\el-apurimeno\apps\server\scripts\instalar-servicio.ps1"',
+  '-Registro','"D:\dev\el-apurimeno\apps\server\datos\logs\instalacion-servicio.log"')
+```
+
+Volver a correr el script actualiza el servicio existente. `-Desinstalar` lo elimina (no toca la base ni las copias).
+
+**Uso diario** (como administrador): `nssm status|stop|start|restart ApurimenoServidor`, o desde "Servicios" de
+Windows. Ver la configuración: `nssm dump ApurimenoServidor`. Registro: `apps/server/datos/logs/servidor.log`.
+
+**Actualizar el sistema:** detener el servicio (con él corriendo, `pnpm install` no puede reemplazar los archivos de
+la base SQLite en uso), hacer una copia con "Copiar ahora" antes (RNF-DEPL-02), `git pull`, `pnpm install`,
+`pnpm migrate` en `apps/server`, y volver a iniciar el servicio.
+
+**A tener en cuenta:**
+- Corre como `LocalSystem`: puede escribir en `datos/` y en la carpeta sincronizada del perfil de la propietaria.
+  Drive u OneDrive tienen que estar iniciados con su sesión para subir las copias.
+- Sin `-Produccion`, `JWT_SECRET` vacío genera uno nuevo en cada arranque: tras un reinicio hay que volver a iniciar
+  sesión en el POS y el Dashboard. En el PC del local se usa `-Produccion` con un `JWT_SECRET` fijo.
+- El equipo no debe suspenderse: las copias, el espejo y la impresión corren dentro del servicio.
+
 ## Endpoints
 
 Los cuerpos de entrada y salida están en `@apurimeno/contracts` (`api.ts`, constante `RUTAS`). Todos

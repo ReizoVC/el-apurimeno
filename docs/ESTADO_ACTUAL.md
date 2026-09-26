@@ -50,8 +50,9 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 4. **Instalación en el PC del local:**
    - Node 22.9 o posterior, el servidor con su `.env` de producción (`JWT_SECRET` propio, base en una carpeta
      fija, `ESPEJO_*` del proyecto de producción, `IMPRESORA_*`).
-   - Que el servidor arranque solo al encender el equipo (servicio de Windows o tarea programada): hoy se
-     inicia a mano con `pnpm start`.
+   - El servidor como servicio de Windows, que arranca solo y se reinicia si se cae: listo con NSSM
+     (`apps/server/scripts/instalar-servicio.ps1 -Produccion`, ver "Servicio de Windows" en `apps/server/README.md`).
+     Instalado y probado en el equipo de desarrollo; falta correrlo en el PC del local.
    - Que el equipo no se suspenda (la sincronización y la impresión corren en el servidor).
    - IP fija en la red del local y `CORS_ORIGINS` con las direcciones del Dashboard y de la app de limpieza.
    - El instalador del POS (Tauri) compilado en un equipo con Visual Studio "Desarrollo para el escritorio con
@@ -71,7 +72,7 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | Transferencia bancaria (P-04) | Creada pero desactivada | ¿Se activa desde el inicio? Se cambia en el Dashboard, sin código |
 | Vigencia del código de anulación (RF-65) | 5 minutos | ¿Está bien? Configurable en el Dashboard |
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
-| Arranque del servidor en el PC | A mano | ¿Servicio de Windows o tarea programada? ¿Quién enciende el equipo? |
+| Encendido del equipo | El servidor arranca solo como servicio de Windows (NSSM) | ¿Quién enciende el equipo cada día, o queda siempre encendido? |
 | Logotipo en el comprobante | Sin logotipo | La RED-E803 lo soporta; ¿se quiere? Se decide con la impresora conectada |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
 

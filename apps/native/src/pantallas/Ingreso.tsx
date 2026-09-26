@@ -22,7 +22,7 @@ import { AjustePuntual } from "../componentes/AjustePuntual";
 import { Aviso } from "../componentes/Aviso";
 import { SelectorCliente } from "../componentes/SelectorCliente";
 import { SelectorPago } from "../componentes/SelectorPago";
-import { hora, soles } from "../lib/formato";
+import { hora, soles } from "@apurimeno/formato";
 import { useClaveIdempotencia } from "../lib/idempotencia";
 import { mensajeDe, servidor } from "../lib/servidor";
 import { tienePermiso, type Sesion } from "../lib/sesion";

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { AjusteEntrada } from "@apurimeno/contracts";
 import { Button } from "@apurimeno/ui/components/button";
 import { Input } from "@apurimeno/ui/components/input";
-import { leerSoles, soles } from "../lib/formato";
+import { leerSoles, soles } from "@apurimeno/formato";
 import { Campo } from "./Campo";
 
 interface Props {

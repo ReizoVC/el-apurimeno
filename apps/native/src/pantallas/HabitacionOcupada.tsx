@@ -26,7 +26,7 @@ import { Aviso } from "../componentes/Aviso";
 import { Campo } from "../componentes/Campo";
 import { ESTADO_TEMPORAL } from "../componentes/estados";
 import { SelectorPago } from "../componentes/SelectorPago";
-import { duracion, hora, soles } from "../lib/formato";
+import { duracion, hora, soles } from "@apurimeno/formato";
 import { useClaveIdempotencia } from "../lib/idempotencia";
 import { useAhoraServidor } from "../lib/reloj";
 import { ErrorApi, mensajeDe, servidor } from "../lib/servidor";

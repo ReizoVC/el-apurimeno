@@ -72,6 +72,9 @@ importers:
       '@apurimeno/domain':
         specifier: workspace:^
         version: link:../../packages/domain
+      '@apurimeno/formato':
+        specifier: workspace:*
+        version: link:../../packages/formato
       '@apurimeno/ui':
         specifier: workspace:^
         version: link:../../packages/ui
@@ -127,6 +130,9 @@ importers:
       '@apurimeno/domain':
         specifier: workspace:^
         version: link:../../packages/domain
+      '@apurimeno/formato':
+        specifier: workspace:^
+        version: link:../../packages/formato
       '@fastify/cors':
         specifier: ^11.3.0
         version: 11.3.0
@@ -228,6 +234,9 @@ importers:
       '@apurimeno/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@apurimeno/formato':
+        specifier: workspace:*
+        version: link:../../packages/formato
       '@apurimeno/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -290,6 +299,9 @@ importers:
       '@apurimeno/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@apurimeno/formato':
+        specifier: workspace:*
+        version: link:../formato
     devDependencies:
       '@apurimeno/typescript-config':
         specifier: workspace:*
@@ -336,6 +348,18 @@ importers:
       typescript-eslint:
         specifier: ^8.15.0
         version: 8.15.0(eslint@9.15.0(jiti@2.7.0))(typescript@5.5.4)
+
+  packages/formato:
+    devDependencies:
+      '@apurimeno/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: 5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@20.17.6)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   packages/typescript-config: {}
 
@@ -1036,9 +1060,6 @@ packages:
   '@jridgewell/set-array@1.2.1':
     resolution: {integrity: sha512-R8gLRTZeyp03ymzP/6Lil/28tGeGEzhx1q2k703KGWRAI1VdvPIXdG70VJc2pAMw3NA6JKL5hhFu1sJX0Mnn/A==}
     engines: {node: '>=6.0.0'}
-
-  '@jridgewell/sourcemap-codec@1.5.0':
-    resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
 
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
@@ -4287,7 +4308,7 @@ snapshots:
       '@babel/traverse': 7.26.5
       '@babel/types': 7.26.5
       convert-source-map: 2.0.0
-      debug: 4.3.7
+      debug: 4.4.3
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -4382,7 +4403,7 @@ snapshots:
       '@babel/parser': 7.26.5
       '@babel/template': 7.25.9
       '@babel/types': 7.26.5
-      debug: 4.3.7
+      debug: 4.4.3
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -4580,7 +4601,7 @@ snapshots:
   '@eslint/config-array@0.19.0':
     dependencies:
       '@eslint/object-schema': 2.1.4
-      debug: 4.3.7
+      debug: 4.4.3
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -4590,7 +4611,7 @@ snapshots:
   '@eslint/eslintrc@3.2.0':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.7
+      debug: 4.4.3
       espree: 10.3.0
       globals: 14.0.0
       ignore: 5.3.2
@@ -4747,14 +4768,12 @@ snapshots:
   '@jridgewell/gen-mapping@0.3.8':
     dependencies:
       '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.5.0
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@jridgewell/trace-mapping': 0.3.25
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
   '@jridgewell/set-array@1.2.1': {}
-
-  '@jridgewell/sourcemap-codec@1.5.0': {}
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
@@ -5287,7 +5306,7 @@ snapshots:
       '@typescript-eslint/types': 8.15.0
       '@typescript-eslint/typescript-estree': 8.15.0(typescript@5.5.4)
       '@typescript-eslint/visitor-keys': 8.15.0
-      debug: 4.3.7
+      debug: 4.4.3
       eslint: 9.15.0(jiti@2.7.0)
     optionalDependencies:
       typescript: 5.5.4
@@ -5303,7 +5322,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 8.15.0(typescript@5.5.4)
       '@typescript-eslint/utils': 8.15.0(eslint@9.15.0(jiti@2.7.0))(typescript@5.5.4)
-      debug: 4.3.7
+      debug: 4.4.3
       eslint: 9.15.0(jiti@2.7.0)
       ts-api-utils: 1.4.0(typescript@5.5.4)
     optionalDependencies:
@@ -5317,7 +5336,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.15.0
       '@typescript-eslint/visitor-keys': 8.15.0
-      debug: 4.3.7
+      debug: 4.4.3
       fast-glob: 3.3.2
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -5497,7 +5516,7 @@ snapshots:
 
   agent-base@7.1.1:
     dependencies:
-      debug: 4.3.7
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -6696,14 +6715,14 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.1
-      debug: 4.3.7
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
   https-proxy-agent@7.0.5:
     dependencies:
       agent-base: 7.1.1
-      debug: 4.3.7
+      debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
 
@@ -7281,7 +7300,7 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.1
-      debug: 4.3.7
+      debug: 4.4.3
       get-uri: 6.0.3
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.5
@@ -7483,7 +7502,7 @@ snapshots:
   proxy-agent@6.4.0:
     dependencies:
       agent-base: 7.1.1
-      debug: 4.3.7
+      debug: 4.4.3
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.5
       lru-cache: 7.18.3
@@ -7802,7 +7821,7 @@ snapshots:
   socks-proxy-agent@8.0.4:
     dependencies:
       agent-base: 7.1.1
-      debug: 4.3.7
+      debug: 4.4.3
       socks: 2.8.3
     transitivePeerDependencies:
       - supports-color

@@ -27,8 +27,8 @@ import {
   Encabezado,
 } from "../../src/componentes/comunes";
 import { tienePermiso, useSesion } from "../../src/componentes/Shell";
-import { periodoDeDias } from "../../src/lib/fechas";
-import { fechaHora } from "../../src/lib/formato";
+import { periodoDeDias } from "@apurimeno/formato";
+import { fechaHora } from "@apurimeno/formato";
 import { ACCION, ENTIDAD } from "../../src/lib/rotulos";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 

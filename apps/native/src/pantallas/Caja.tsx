@@ -16,7 +16,7 @@ import {
 import { Input } from "@apurimeno/ui/components/input";
 import { Aviso } from "../componentes/Aviso";
 import { Campo } from "../componentes/Campo";
-import { fechaHora, hora, leerSoles, soles } from "../lib/formato";
+import { fechaHoraCorta, hora, leerSoles, soles } from "@apurimeno/formato";
 import { useClaveIdempotencia } from "../lib/idempotencia";
 import { ErrorApi, mensajeDe, servidor } from "../lib/servidor";
 
@@ -105,7 +105,7 @@ export function Caja({ turno, onCerrado }: Props) {
         <CardHeader>
           <CardTitle>Turno abierto</CardTitle>
           <CardDescription>
-            Desde {fechaHora(turno.abiertoEn)} · efectivo inicial{" "}
+            Desde {fechaHoraCorta(turno.abiertoEn)} · efectivo inicial{" "}
             {soles(turno.efectivoInicial)}
           </CardDescription>
         </CardHeader>
@@ -323,7 +323,7 @@ function ResultadoCierre({
         <CardTitle>Turno cerrado</CardTitle>
         <CardDescription>
           {turno.cerradoEn !== null
-            ? `Cerrado ${fechaHora(turno.cerradoEn)}`
+            ? `Cerrado ${fechaHoraCorta(turno.cerradoEn)}`
             : ""}
         </CardDescription>
       </CardHeader>

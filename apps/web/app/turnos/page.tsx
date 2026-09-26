@@ -24,7 +24,7 @@ import {
 import { Aviso, Campo, Encabezado } from "../../src/componentes/comunes";
 import { useSesion } from "../../src/componentes/Shell";
 import { useCarga } from "../../src/lib/carga";
-import { fechaHora, leerSoles, soles } from "../../src/lib/formato";
+import { fechaHora, leerSoles, soles } from "@apurimeno/formato";
 import { nombresDeUsuarios } from "../../src/lib/nombres";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 

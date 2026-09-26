@@ -13,7 +13,7 @@ import {
 } from "@apurimeno/ui/components/card";
 import { Aviso } from "../componentes/Aviso";
 import { ESTADO_HABITACION } from "../componentes/estados";
-import { fechaHora } from "../lib/formato";
+import { fechaHoraCorta } from "@apurimeno/formato";
 import { sincronizarReloj } from "../lib/reloj";
 import { mensajeDe, servidor } from "../lib/servidor";
 import type { Sesion } from "../lib/sesion";
@@ -139,7 +139,7 @@ export function Principal({ sesion, onSalir }: Props) {
         <div className="flex items-center gap-3 text-sm">
           {turno.tipo === "abierto" && (
             <span className="text-muted-foreground">
-              Turno desde {fechaHora(turno.turno.abiertoEn)}
+              Turno desde {fechaHoraCorta(turno.turno.abiertoEn)}
             </span>
           )}
           <span className="text-muted-foreground">

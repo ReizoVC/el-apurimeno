@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@apurimeno/contracts": "workspace:*",
+    "@apurimeno/formato": "workspace:*",
     "@apurimeno/domain": "workspace:*",
     "@apurimeno/ui": "workspace:*",
     "next": "^15.1.0",

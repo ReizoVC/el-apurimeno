@@ -36,7 +36,7 @@ import {
   fechaHora,
   leerSoles,
   soles,
-} from "../../../src/lib/formato";
+} from "@apurimeno/formato";
 import { mensajeDe, servidor } from "../../../src/lib/servidor";
 
 type AvisoEstado = { tipo: "error" | "exito"; texto: string } | null;

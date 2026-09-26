@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { EstadoEspejo } from "@apurimeno/contracts";
+import { estaDesactualizado } from "@apurimeno/domain";
 import {
   Alert,
   AlertDescription,
@@ -19,31 +19,9 @@ import {
 } from "@apurimeno/ui/components/card";
 import { Aviso, Encabezado } from "../../src/componentes/comunes";
 import { useCarga } from "../../src/lib/carga";
-import { fechaHora, hora } from "../../src/lib/formato";
+import { fechaHora, hace, hora } from "@apurimeno/formato";
 import { ERROR_ESPEJO } from "../../src/lib/rotulos";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
-
-/** "hace 5 min", "hace 2 h 10 min", según el reloj de este equipo: es solo una orientación. */
-function hace(iso: string): string {
-  const minutos = Math.max(
-    0,
-    Math.round((Date.now() - Date.parse(iso)) / 60_000),
-  );
-  if (minutos < 1) return "hace menos de un minuto";
-  if (minutos < 60) return `hace ${minutos} min`;
-  const horas = Math.floor(minutos / 60);
-  if (horas < 48)
-    return `hace ${horas} h${minutos % 60 === 0 ? "" : ` ${minutos % 60} min`}`;
-  return `hace ${Math.floor(horas / 24)} días`;
-}
-
-/** Desactualizado si pasaron más de dos intervalos sin una sincronización correcta. */
-function desactualizado(e: EstadoEspejo): boolean {
-  return (
-    e.ultimoExitoEn !== null &&
-    Date.now() - Date.parse(e.ultimoExitoEn) > 2 * e.intervaloMinutos * 60_000
-  );
-}
 
 type Resultado = { tipo: "exito" | "error"; texto: string } | null;
 
@@ -121,7 +99,11 @@ export default function Espejo() {
                 {e.sincronizando && (
                   <Badge variant="outline">Sincronizando…</Badge>
                 )}
-                {desactualizado(e) && (
+                {estaDesactualizado(
+                  e.ultimoExitoEn,
+                  e.intervaloMinutos,
+                  new Date(),
+                ) && (
                   <Badge className="bg-amber-500 text-white">
                     Desactualizado
                   </Badge>

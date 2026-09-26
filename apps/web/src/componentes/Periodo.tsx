@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@apurimeno/ui/components/button";
 import { Input } from "@apurimeno/ui/components/input";
-import { diaLima, sumarDias } from "../lib/fechas";
+import { diaLima, sumarDias } from "@apurimeno/formato";
 import { Campo } from "./comunes";
 
 export interface Dias {

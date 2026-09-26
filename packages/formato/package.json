@@ -1,5 +1,5 @@
 {
-  "name": "@apurimeno/domain",
+  "name": "@apurimeno/formato",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,10 +10,6 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "@apurimeno/contracts": "workspace:*",
-    "@apurimeno/formato": "workspace:*"
   },
   "devDependencies": {
     "@apurimeno/typescript-config": "workspace:*",

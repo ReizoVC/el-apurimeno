@@ -9,21 +9,15 @@ import type {
   Ticket,
   Turno,
 } from "@apurimeno/contracts";
+import { ZONA_NEGOCIO, diaLima } from "@apurimeno/formato";
 import { ms } from "./interno.js";
 
 /** El negocio opera en Perú (UTC−5, sin horario de verano). Los días de los reportes son días de Lima. */
-export const ZONA_HORARIA_NEGOCIO = "America/Lima";
-
-const formatoDia = new Intl.DateTimeFormat("en-CA", {
-  timeZone: ZONA_HORARIA_NEGOCIO,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+export const ZONA_HORARIA_NEGOCIO = ZONA_NEGOCIO;
 
 /** Día calendario en la hora de Lima ("AAAA-MM-DD") de un instante UTC. */
 export function diaLocal(fecha: string): string {
-  return formatoDia.format(new Date(ms(fecha)));
+  return diaLima(new Date(ms(fecha)));
 }
 
 /** Un ticket vigente es un cobro no anulado (RF-47). Los compensatorios no cuentan: su cobro original ya no cuenta. */

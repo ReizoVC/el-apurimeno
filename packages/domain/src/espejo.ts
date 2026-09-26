@@ -6,6 +6,7 @@ import {
   type Alquiler,
   type DiaCalendario,
   type Habitacion,
+  type OrigenTicket,
   type HoraAdicional,
   type MetodoPago,
   type PeriodoConsulta,
@@ -14,28 +15,15 @@ import {
   type Ticket,
   type Turno,
 } from "@apurimeno/contracts";
+import { periodoDeDias } from "@apurimeno/formato";
 import { diaLocal, resumirOcupacion, resumirVentas } from "./reportes.js";
 
 // Resumen para el espejo en la nube (ADR-06, RN-45). Reutiliza los mismos cálculos de los reportes locales:
 // lo que ve la propietaria desde lejos cuadra con lo que ve en el Dashboard del local.
 
-/** Lima está en UTC−5 todo el año (sin horario de verano): un día de Lima empieza a las 05:00 UTC. */
-const DESFASE_LIMA = "-05:00";
-
 /** Periodo [inicio, fin) de un día de Lima, en UTC. */
 export function periodoDelDia(dia: DiaCalendario): PeriodoConsulta {
-  const desde = new Date(`${dia}T00:00:00.000${DESFASE_LIMA}`);
-  if (!Number.isFinite(desde.getTime())) throw new RangeError(`Día inválido: ${dia}`);
-  const hasta = new Date(desde.getTime() + 24 * 3_600_000);
-  return { desde: desde.toISOString(), hasta: hasta.toISOString() };
-}
-
-/** Suma (o resta) días a un día de Lima. */
-export function sumarDias(dia: DiaCalendario, dias: number): DiaCalendario {
-  const fecha = new Date(`${dia}T12:00:00.000Z`);
-  if (!Number.isFinite(fecha.getTime())) throw new RangeError(`Día inválido: ${dia}`);
-  fecha.setUTCDate(fecha.getUTCDate() + dias);
-  return fecha.toISOString().slice(0, 10);
+  return periodoDeDias(dia, dia);
 }
 
 export interface DatosDia {
@@ -117,4 +105,85 @@ export function resumirTurno(turno: Turno, cajero: string, tickets: readonly Tic
     comentario: recortar(turno.comentarioCierre),
     version: VERSION_RESUMEN_ESPEJO,
   });
+}
+
+// --- Lectura del resumen (vista remota de la propietaria) ---
+
+/**
+ * ¿El espejo está desactualizado? Sí, si pasaron más de dos intervalos de sincronización desde la última
+ * publicación correcta. Mismo criterio en el Dashboard del local y en la vista de la propietaria.
+ */
+export function estaDesactualizado(ultimaSincronizacion: string | null, intervaloMinutos: number, ahora: Date): boolean {
+  if (ultimaSincronizacion === null) return false;
+  return ahora.getTime() - Date.parse(ultimaSincronizacion) > 2 * intervaloMinutos * 60_000;
+}
+
+export interface TotalesEspejo {
+  totalVentas: number;
+  cantidadCobros: number;
+  anuladosCantidad: number;
+  anuladosTotal: number;
+  alquileres: number;
+  horasVendidas: number;
+  porOrigen: { origen: OrigenTicket; total: number }[];
+  /** De mayor a menor total. El nombre es el del día más reciente en que aparece. */
+  porMetodoPago: { metodoPagoId: string; nombre: string; total: number }[];
+  /** Solo los días publicados, en orden. */
+  porDia: { dia: DiaCalendario; total: number; cantidadCobros: number }[];
+  /** Todas las habitaciones que aparecen en el periodo, en orden de número. */
+  ocupacion: ResumenDia["detalle"]["ocupacion"];
+}
+
+const ORDEN_ORIGEN: readonly OrigenTicket[] = ["INGRESO_ALQUILER", "HORA_ADICIONAL", "VENTA_TIENDA"];
+
+/** Suma los resúmenes de varios días (un periodo de la vista remota). Sin días, todo en cero. */
+export function sumarResumenesDia(resumenes: readonly ResumenDia[]): TotalesEspejo {
+  const dias = [...resumenes].sort((a, b) => a.dia.localeCompare(b.dia));
+  const porOrigen = new Map<OrigenTicket, number>();
+  const porMetodo = new Map<string, { nombre: string; total: number }>();
+  const ocupacion = new Map<string, TotalesEspejo["ocupacion"][number]>();
+  const suma = { totalVentas: 0, cantidadCobros: 0, anuladosCantidad: 0, anuladosTotal: 0, alquileres: 0, horasVendidas: 0 };
+
+  for (const d of dias) {
+    suma.totalVentas += d.totalVentas;
+    suma.cantidadCobros += d.cantidadCobros;
+    suma.anuladosCantidad += d.anuladosCantidad;
+    suma.anuladosTotal += d.anuladosTotal;
+    suma.alquileres += d.alquileres;
+    suma.horasVendidas += d.horasVendidas;
+    for (const o of d.detalle.porOrigen) porOrigen.set(o.origen, (porOrigen.get(o.origen) ?? 0) + o.total);
+    for (const m of d.detalle.porMetodoPago) {
+      porMetodo.set(m.metodoPagoId, { nombre: m.nombre, total: (porMetodo.get(m.metodoPagoId)?.total ?? 0) + m.total });
+    }
+    for (const h of d.detalle.ocupacion) {
+      const previo = ocupacion.get(h.habitacionId);
+      ocupacion.set(h.habitacionId, {
+        habitacionId: h.habitacionId,
+        numero: h.numero,
+        alquileres: (previo?.alquileres ?? 0) + h.alquileres,
+        horasVendidas: (previo?.horasVendidas ?? 0) + h.horasVendidas,
+        ingresos: (previo?.ingresos ?? 0) + h.ingresos,
+      });
+    }
+  }
+
+  return {
+    ...suma,
+    porOrigen: ORDEN_ORIGEN.filter((o) => porOrigen.has(o)).map((origen) => ({ origen, total: porOrigen.get(origen) ?? 0 })),
+    porMetodoPago: [...porMetodo]
+      .map(([metodoPagoId, m]) => ({ metodoPagoId, ...m }))
+      .sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre)),
+    porDia: dias.map((d) => ({ dia: d.dia, total: d.totalVentas, cantidadCobros: d.cantidadCobros })),
+    ocupacion: [...ocupacion.values()].sort((a, b) => a.numero.localeCompare(b.numero, "es", { numeric: true })),
+  };
+}
+
+/** Arqueos de un periodo en la vista remota: en orden de cierre, con la suma de diferencias (como §25). */
+export function resumirArqueosEspejo(turnos: readonly ResumenTurno[]) {
+  const ordenados = [...turnos].sort((a, b) => Date.parse(a.cerradoEn) - Date.parse(b.cerradoEn));
+  return {
+    turnos: ordenados,
+    diferenciaTotal: ordenados.reduce((suma, t) => suma + (t.diferencia ?? 0), 0),
+    turnosConDiferencia: ordenados.filter((t) => t.diferencia !== null && t.diferencia !== 0).length,
+  };
 }

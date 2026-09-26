@@ -27,7 +27,7 @@ pantalla de productos e inventario.
 | Espejo en la nube | El servidor publica cada 30 min ventas, anulados, ocupación por día y arqueos por turno; nunca clientes, tickets ni el estado en vivo | Contra el proyecto `apurimeno-prueba`: primera sincronización, cambios, anulación de días anteriores, sin internet y vuelta, re-sincronización completa |
 | `apps/owner` | Resumen remoto para la propietaria: contraseña + TOTP obligatorio, franja "Datos al…", Hoy/Ayer/7 días/Mes, ventas, arqueos y ocupación | De punta a punta en Chrome de celular contra `apurimeno-prueba`, servida con las cabeceras reales de Cloudflare Pages; cifras iguales a lo publicado |
 | Respaldos | Copia local consistente cada 15 min (24 h), externa diaria a las 04:00 comprimida y cifrada con clave pública (30 días), `pnpm restaurar` y pantalla con "Desactualizado" | Pruebas contra SQLite real; en Chrome contra el servidor real; restauración de punta a punta con el servidor real y copias reales cada 15 min, en el mismo equipo y en un "PC nuevo" (`docs/RESPALDO_Y_RESTAURACION.md`) |
-| `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; la primera migración también aplicada y verificada en `apurimeno-prueba` |
+| `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; las dos migraciones aplicadas en `apurimeno-prueba` y verificadas el 26/09 con la cuenta lectora: con solo la contraseña, con un autenticador sin verificar, o con TOTP registrado pero sin el código en la sesión, no lee nada (ni por la API directa) ni puede escribir; con el código (aal2) lee el resumen |
 
 `pnpm check-types`, `pnpm lint` y `pnpm test` pasan en todo el monorepo (466 pruebas). Todas las apps compilan.
 
@@ -42,16 +42,12 @@ pantalla de productos e inventario.
 
 ### Puesta en marcha
 
-2. **Verificar en `apurimeno-prueba` que la migración `20260926090000_lector_requiere_aal2.sql` rige**: la
-   propietaria ya la aplicó; falta correr la verificación (una lectora sin TOTP verificado no lee nada) con una
-   cuenta lectora cuyas credenciales Supabase acepte. Las que se usaron el 26/09 fueron rechazadas
-   (`invalid_credentials`).
-3. **Proyecto de Supabase de producción**, siguiendo `supabase/README.md`: aplicar las dos migraciones en orden,
+2. **Proyecto de Supabase de producción**, siguiendo `supabase/README.md`: aplicar las dos migraciones en orden,
    cerrar el registro público, verificar que TOTP esté habilitado, crear la cuenta del servidor (contraseña
    larga) y las de la propietaria y su hija.
-4. **Publicar `apps/owner` en Cloudflare Pages** con las credenciales de producción (pasos exactos en
+3. **Publicar `apps/owner` en Cloudflare Pages** con las credenciales de producción (pasos exactos en
    `apps/owner/README.md`).
-5. **Instalación en el PC del local:**
+4. **Instalación en el PC del local:**
    - Node 22.9 o posterior, el servidor con su `.env` de producción (`JWT_SECRET` propio, base en una carpeta
      fija, `ESPEJO_*` del proyecto de producción, `IMPRESORA_*`).
    - Que el servidor arranque solo al encender el equipo (servicio de Windows o tarea programada): hoy se
@@ -62,10 +58,10 @@ pantalla de productos e inventario.
      C++".
    - Respaldos: la clave pública y la carpeta sincronizada en `apps/server/.env`, y comprobar en el Dashboard que
      salen las dos copias (`docs/RESPALDO_Y_RESTAURACION.md`, "Configuración").
-6. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, productos (desde el
+5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, productos (desde el
    Dashboard → Productos), las cuentas del personal con sus rangos, y el nombre, la dirección y la leyenda del
    comprobante.
-7. **Piloto en paralelo con el cuaderno** (E4 de los Planos): 1 a 2 semanas usando ambos, con capacitación al
+6. **Piloto en paralelo con el cuaderno** (E4 de los Planos): 1 a 2 semanas usando ambos, con capacitación al
    personal, comparando cada cierre de turno con el cuaderno antes de dejarlo.
 
 ## Decisiones que necesitan tu respuesta

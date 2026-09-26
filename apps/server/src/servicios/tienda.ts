@@ -20,6 +20,7 @@ import { exigir } from "../auth.js";
 import { auditar } from "../auditoria.js";
 import { ErrorApi, esViolacionUnica } from "../errores.js";
 import { INCLUIR_TICKET, aCategoria, aMovimientoInventario, aProducto, aTicket, datosTicket } from "../mapeo.js";
+import { encolarComprobante } from "../impresion/cola.js";
 import { construirPagos, siguienteNumeroTicket, unaSolaVez } from "./cobros.js";
 import { contextoDominio, noEncontrado, parametrosVigentes, type ContextoServicio } from "./contexto.js";
 import { turnoAbiertoDe } from "./turnos.js";
@@ -77,6 +78,7 @@ export async function registrarVentaServicio(ctx: ContextoServicio, entrada: Reg
         );
 
         await tx.ticket.create({ data: datosTicket(ticket, clave) });
+        await encolarComprobante(tx, ticket.id, false, ctx.ahora, randomUUID());
         for (const producto of inventario.productos) {
           const anterior = productos.get(producto.id);
           const { count } = await tx.producto.updateMany({

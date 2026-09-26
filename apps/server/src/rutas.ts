@@ -31,6 +31,8 @@ import {
   ReposicionRespuestaSchema,
   SalidaRespuestaSchema,
   SalidaSinPagoEntradaSchema,
+  TableroSchema,
+  TurnoActualRespuestaSchema,
   TurnoRespuestaSchema,
 } from "@apurimeno/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -64,7 +66,9 @@ import {
   forzarCierreTurnoServicio,
   listarTurnosAbiertos,
   registrarMovimientoCajaServicio,
+  turnoActualServicio,
 } from "./servicios/turnos.js";
+import { tableroServicio } from "./servicios/tablero.js";
 
 type ConId = FastifyRequest<{ Params: { id: string } }>;
 
@@ -85,10 +89,19 @@ export function registrarRutas(
   prisma: PrismaClient,
   ahora: () => Date,
   secretoCodigos: SecretoCodigos,
+  imprimir: (ticketId: string) => void = () => undefined,
 ): void {
-  const ctx = creadorContexto(prisma, ahora);
+  const ctx = creadorContexto(prisma, ahora, imprimir);
 
   app.get(RUTAS.salud, { config: { publica: true } }, async () => ({ estado: "ok" }));
+
+  app.get(RUTAS.tablero, { config: { operacion: "CONSULTAR_TABLERO" } }, async (request) =>
+    TableroSchema.parse(await tableroServicio(ctx(request))),
+  );
+
+  app.get(RUTAS.turnoActual, { config: { operacion: ["ABRIR_TURNO", "CERRAR_TURNO"] } }, async (request) =>
+    TurnoActualRespuestaSchema.parse({ turno: await turnoActualServicio(ctx(request)) }),
+  );
 
   app.post(RUTAS.abrirTurno, { config: { operacion: "ABRIR_TURNO" } }, async (request, reply) => {
     const turno = await abrirTurno(ctx(request), validar(AbrirTurnoEntradaSchema, request.body));
@@ -128,6 +141,7 @@ export function registrarRutas(
     const clave = claveIdempotencia(request);
     const entrada = validar(RegistrarIngresoEntradaSchema, request.body);
     const r = await registrarIngresoServicio(ctx(request), entrada, clave);
+    if (!r.repetido) imprimir(r.resultado.ticket.id);
     return RegistrarIngresoRespuestaSchema.parse(responderCobro(reply, r));
   });
 
@@ -139,6 +153,7 @@ export function registrarRutas(
     const clave = claveIdempotencia(request);
     const entrada = validar(RegistrarHoraAdicionalEntradaSchema, request.body);
     const r = await registrarHoraAdicionalServicio(ctx(request), request.params.id, entrada, clave);
+    if (!r.repetido) imprimir(r.resultado.ticket.id);
     return RegistrarHoraAdicionalRespuestaSchema.parse(responderCobro(reply, r));
   });
 
@@ -187,6 +202,7 @@ export function registrarRutas(
     const clave = claveIdempotencia(request);
     const entrada = validar(RegistrarVentaEntradaSchema, request.body);
     const r = await registrarVentaServicio(ctx(request), entrada, clave);
+    if (!r.repetido) imprimir(r.resultado.id);
     return RegistrarVentaRespuestaSchema.parse(responderCobro(reply, r));
   });
 
@@ -213,6 +229,7 @@ export function registrarRutas(
   // Reimpresión (CU-22): una copia marcada como tal. Pulsar dos veces imprime dos copias, como en papel.
   app.post(RUTAS.reimprimirTicket, { config: { operacion: "REIMPRIMIR_COMPROBANTE" } }, async (request: ConId, reply) => {
     const r = await reimprimirTicketServicio(ctx(request), request.params.id);
+    imprimir(r.trabajo.ticketId);
     void reply.status(201);
     return ReimpresionRespuestaSchema.parse(r);
   });

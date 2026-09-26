@@ -28,6 +28,12 @@ export async function turnoAbiertoDe(tx: Transaccion, usuarioId: string): Promis
   return aTurno(fila);
 }
 
+/** Turno abierto de quien consulta, o null (el POS lo pide al iniciar). */
+export async function turnoActualServicio(ctx: ContextoServicio): Promise<Turno | null> {
+  const fila = await ctx.prisma.turno.findFirst({ where: { usuarioId: ctx.usuario.id, estado: "ABIERTO" } });
+  return fila === null ? null : aTurno(fila);
+}
+
 /** Abre el turno del cajero (CU-02, RF-32). Un solo turno abierto por usuario: índice único parcial. */
 export async function abrirTurno(ctx: ContextoServicio, entrada: AbrirTurnoEntrada): Promise<Turno> {
   const turno = TurnoSchema.parse({

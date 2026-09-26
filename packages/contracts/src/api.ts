@@ -35,9 +35,11 @@ import { RangoSchema, UsuarioSchema } from "./usuarios.js";
 export const RUTAS = {
   login: "/auth/login",
   abrirTurno: "/turnos",
+  turnoActual: "/turnos/actual",
   cerrarTurno: "/turnos/actual/cierre",
   turnosAbiertos: "/turnos/abiertos",
   forzarCierreTurno: "/turnos/:id/cierre-forzado",
+  tablero: "/tablero",
   cotizarIngreso: "/alquileres/cotizacion",
   registrarIngreso: "/alquileres",
   cotizarHoraAdicional: "/alquileres/:id/hora-adicional/cotizacion",
@@ -160,6 +162,10 @@ export type CerrarTurnoEntrada = z.infer<typeof CerrarTurnoEntradaSchema>;
 
 export const TurnoRespuestaSchema = TurnoSchema;
 
+/** Turno abierto de quien consulta, o null si no tiene: el POS lo pide al iniciar (RN-32). */
+export const TurnoActualRespuestaSchema = z.object({ turno: TurnoSchema.nullable() }).strict();
+export type TurnoActualRespuesta = z.infer<typeof TurnoActualRespuestaSchema>;
+
 /**
  * Cierre forzado de un turno ajeno (CU-20, RF-43), p. ej. un turno abandonado. El conteo es opcional: si
  * el Administrador cuenta el cajón, queda registrada la diferencia; si no, solo el esperado.
@@ -229,6 +235,26 @@ export const RegistrarHoraAdicionalRespuestaSchema = z
   .object({ alquiler: AlquilerSchema, horaAdicional: HoraAdicionalSchema, ticket: TicketSchema })
   .strict();
 export type RegistrarHoraAdicionalRespuesta = z.infer<typeof RegistrarHoraAdicionalRespuestaSchema>;
+
+/**
+ * Tablero del POS (Planos §11.2 `/rooms/board`): cada habitación con su alquiler abierto, si lo tiene. El
+ * estado temporal lo calcula el servidor con su hora (`ahora`, RF-07, RN-11); el POS usa `ahora` para
+ * corregir su reloj entre una consulta y la siguiente. `tickets` son los del alquiler, para anular (CU-21).
+ */
+export const AlquilerEnTableroSchema = z
+  .object({ alquiler: AlquilerSchema, estadoTemporal: EstadoTemporalAlquilerSchema, tickets: z.array(TicketSchema) })
+  .strict();
+export type AlquilerEnTablero = z.infer<typeof AlquilerEnTableroSchema>;
+
+export const TableroSchema = z
+  .object({
+    ahora: FechaISOSchema,
+    habitaciones: z.array(
+      z.object({ habitacion: HabitacionSchema, alquiler: AlquilerEnTableroSchema.nullable() }).strict(),
+    ),
+  })
+  .strict();
+export type Tablero = z.infer<typeof TableroSchema>;
 
 export const SalidaSinPagoEntradaSchema = z.object({ motivo: z.string() }).strict();
 export type SalidaSinPagoEntrada = z.infer<typeof SalidaSinPagoEntradaSchema>;

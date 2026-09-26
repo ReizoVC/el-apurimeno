@@ -4,7 +4,6 @@ import {
 } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
 import {
-  LEYENDA_NO_FISCAL,
   anularTicket,
   armarTicketCobro,
   componerComprobante,
@@ -25,6 +24,7 @@ import {
 const datos: DatosComprobante = {
   nombreNegocio: "El Apurimeño",
   datosAdicionales: "Av. Siempre Viva 123",
+  leyenda: "Documento interno sin valor tributario.",
 };
 const opciones = {
   datos,
@@ -81,12 +81,17 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
     );
   });
 
-  it("siempre declara que no es tributario y no usa términos ni series fiscales (RN-39)", () => {
+  it("siempre termina con la leyenda configurada y no usa términos ni series fiscales (RN-39)", () => {
     const sinDatos = componerComprobante(venta(), {
       ...opciones,
-      datos: { nombreNegocio: "El Apurimeño", datosAdicionales: null },
+      datos: { ...datos, datosAdicionales: null },
     });
-    expect(sinDatos.at(-1)?.trim()).toBe(LEYENDA_NO_FISCAL);
+    expect(sinDatos.at(-1)?.trim()).toBe("Documento interno sin valor tributario.");
+    const reformulada = componerComprobante(venta(), {
+      ...opciones,
+      datos: { ...datos, leyenda: "Comprobante interno, no válido como documento tributario." },
+    });
+    expect(reformulada.slice(-2).map((l) => l.trim())).toEqual(["Comprobante interno, no válido como documento", "tributario."]);
     const texto = sinDatos.join("\n");
     expect(PATRONES_FISCALES_PROHIBIDOS.some((p) => p.test(texto))).toBe(false);
   });
@@ -95,6 +100,7 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
     const largo = {
       nombreNegocio: "Hospedaje El Apurimeño de la Avenida Principal",
       datosAdicionales: null,
+      leyenda: datos.leyenda,
     };
     const texto = componerComprobante(venta(), {
       ...opciones,

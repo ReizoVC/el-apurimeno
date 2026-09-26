@@ -23,6 +23,8 @@ Variables de entorno (ver `.env.example`):
 | `JWT_SECRET` | aleatorio por arranque | **Obligatorio en producción** (`NODE_ENV=production`), al menos 32 caracteres. En desarrollo, las sesiones se invalidan al reiniciar. |
 | `HOST` / `PORT` | `0.0.0.0` / `3001` | Escucha en la red local para el POS, el Dashboard y la app de limpieza (RES-04). |
 | `CORS_ORIGINS` | en desarrollo, `http://localhost` y `http://127.0.0.1` en los puertos 3000, 3002 y 3003; en producción, ninguno | Orígenes de navegador que pueden llamar a la API, separados por comas y exactos (esquema, host y puerto). No admite `*`: el servidor no arranca con un comodín o un origen mal formado. Para el celular de limpieza en la red del local: `CORS_ORIGINS=http://192.168.1.50:3002` (la IP de la máquina que sirve la app). |
+| `IMPRESORA_DISPOSITIVO` | — | Ruta a la que se escriben los comprobantes ESC/POS, p. ej. `/dev/usb/lp0` en Linux. Sin ella, quedan en cola (`PENDIENTE`). |
+| `IMPRESORA_PAGINA_CODIGOS` | `PC850` | `PC850` o `WPC1252`, según la página de prueba (`pnpm prueba-impresora`). |
 | `SEED_ADMIN_USER` / `SEED_ADMIN_PASSWORD` | `admin` / — | Solo para `pnpm seed`. |
 
 ## Endpoints
@@ -192,8 +194,21 @@ El periodo es `[desde, hasta)` en UTC. La agregación es de `@apurimeno/domain` 
 prueba-impresora prueba.bin` genera una página con la misma línea en PC850 y WPC1252, el tamaño doble y
 una regla de 48 columnas), que `GS V 1` corte, y cuántas líneas de avance hacen falta antes del corte.
 
-**Parte 2, pendiente (con el hardware):** el transporte USB/Bluetooth, la cola de `TrabajoImpresion` con
-reintentos que nunca revierten el cobro (RF-56), y encolar el original de cada cobro.
+**Contenido configurable (CU-27):** nombre del negocio, dato adicional (dirección o mensaje) y la leyenda
+al pie (decisión 21 de contracts). La migración `leyenda_comprobante_configurable` completa las bases
+existentes con la leyenda que antes estaba fija, y quita la frase repetida que dejaba la semilla anterior
+como dato adicional.
+
+**Conectado a los cobros:** el ingreso, la hora adicional y la venta crean su `TrabajoImpresion` original
+en la misma transacción que el cobro, así ningún cobro queda sin comprobante; la reimpresión crea la copia.
+Después de responder, `impresion/cola.ts` compone el comprobante, lo convierte con `escpos.ts` y lo pasa al
+transporte, un envío a la vez. Si la impresora falla, el trabajo queda en `ERROR` y el cobro sigue firme
+(RF-56); sin `IMPRESORA_DISPOSITIVO`, queda `PENDIENTE`. Los tickets compensatorios de una anulación no
+se imprimen: CU-21 no lo pide.
+
+**Parte 2, pendiente (con el hardware):** hoy el único transporte escribe los bytes en una ruta
+(`transporteArchivo`, pensado para `/dev/usb/lp0`) y no se ha probado con la impresora. Falta probarlo con
+la RED-E803, Bluetooth, la impresora en Windows y reintentar los trabajos en `ERROR` o `PENDIENTE`.
 
 ### Respuestas de error
 

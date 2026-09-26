@@ -9,9 +9,12 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "clean": "rm -rf dist",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@apurimeno/contracts": "workspace:^",
+    "@apurimeno/domain": "workspace:^",
     "@apurimeno/ui": "workspace:^",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",

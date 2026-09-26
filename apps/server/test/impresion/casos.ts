@@ -25,7 +25,11 @@ import type { PaginaCodigos } from "../../src/impresion/escpos.js";
 const EFECTIVO: MetodoPago = { id: "efectivo", nombre: "Efectivo", afectaCaja: true, requiereReferencia: false, activo: true };
 const YAPE: MetodoPago = { id: "yape", nombre: "Yape", afectaCaja: false, requiereReferencia: true, activo: true };
 
-const DATOS: DatosComprobante = { nombreNegocio: "Hospedaje El Apurimeño", datosAdicionales: "Jr. Ñaupa 123 — Andahuaylas" };
+const DATOS: DatosComprobante = {
+  nombreNegocio: "Hospedaje El Apurimeño",
+  datosAdicionales: "Jr. Ñaupa 123 — Andahuaylas",
+  leyenda: "Documento interno sin valor tributario.",
+};
 
 const TURNO: Turno = {
   id: "turno-1",

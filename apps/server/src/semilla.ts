@@ -1,5 +1,6 @@
 import {
   ConfiguracionGlobalSchema,
+  LEYENDA_COMPROBANTE_POR_DEFECTO,
   PARAMETROS_TIEMPO_PRECIO_INICIALES,
   RANGOS_INICIALES,
 } from "@apurimeno/contracts";
@@ -43,7 +44,12 @@ export const ID_RANGO = {
 
 const CONFIGURACION = ConfiguracionGlobalSchema.parse({
   parametrosAlquiler: PARAMETROS_TIEMPO_PRECIO_INICIALES,
-  comprobante: { nombreNegocio: "El Apurimeño", datosAdicionales: "Documento interno sin valor tributario" },
+  // La dirección del local se configura desde el Dashboard; la semilla deja un mensaje breve.
+  comprobante: {
+    nombreNegocio: "El Apurimeño",
+    datosAdicionales: "Gracias por su preferencia.",
+    leyenda: LEYENDA_COMPROBANTE_POR_DEFECTO,
+  },
   impresora: { anchoPapelMm: 80, conexion: "USB" },
   permitirStockNegativo: false,
   // RF-65 pide "algunos minutos" sin fijar un valor: 5 es un valor inicial ajustable desde la configuración.

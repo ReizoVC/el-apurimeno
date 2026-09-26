@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { construirApp } from "./app.js";
 import { leerOrigenesPermitidos } from "./cors.js";
+import { transporteArchivo } from "./impresion/transporte.js";
 import { crearPrisma } from "./db.js";
 
 const produccion = process.env["NODE_ENV"] === "production";
@@ -15,7 +16,11 @@ if (jwtSecret === undefined) {
 
 const prisma = crearPrisma(url);
 const origenesPermitidos = leerOrigenesPermitidos(process.env["CORS_ORIGINS"], produccion);
-const app = await construirApp({ prisma, jwtSecret, logger: true, origenesPermitidos });
+const dispositivo = process.env["IMPRESORA_DISPOSITIVO"];
+const paginaCodigos = process.env["IMPRESORA_PAGINA_CODIGOS"] === "WPC1252" ? "WPC1252" : "PC850";
+const impresora = dispositivo === undefined || dispositivo === "" ? null : transporteArchivo(dispositivo);
+const app = await construirApp({ prisma, jwtSecret, logger: true, origenesPermitidos, impresora, paginaCodigos });
+app.log.info({ impresora: impresora?.descripcion ?? "sin configurar", paginaCodigos }, "Impresora de comprobantes");
 app.log.info({ origenesPermitidos }, "Orígenes permitidos (CORS)");
 
 const cerrar = async () => {

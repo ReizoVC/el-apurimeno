@@ -11,11 +11,17 @@ export interface ContextoServicio {
   usuario: UsuarioAutenticado;
   /** Hora del servidor (RF-07, §21): nunca la del dispositivo cliente. */
   ahora: Date;
+  /** Envía a la impresora los comprobantes en cola de un ticket, sin esperar ni fallar (RF-56). */
+  imprimir: (ticketId: string) => void;
 }
 
 /** Contexto de cada solicitud: el usuario que autenticó el middleware y la hora del servidor en ese momento. */
-export function creadorContexto(prisma: PrismaClient, ahora: () => Date): (request: FastifyRequest) => ContextoServicio {
-  return (request) => ({ prisma, usuario: usuarioDe(request), ahora: ahora() });
+export function creadorContexto(
+  prisma: PrismaClient,
+  ahora: () => Date,
+  imprimir: (ticketId: string) => void = () => undefined,
+): (request: FastifyRequest) => ContextoServicio {
+  return (request) => ({ prisma, usuario: usuarioDe(request), ahora: ahora(), imprimir });
 }
 
 export function contextoDominio(ahora: Date): Contexto {

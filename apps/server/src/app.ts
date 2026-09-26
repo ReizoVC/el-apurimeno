@@ -6,11 +6,21 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { manejarError } from "./errores.js";
+import { despacharPendientes } from "./impresion/cola.js";
+import { OPCIONES_ESCPOS_POR_DEFECTO, type PaginaCodigos } from "./impresion/escpos.js";
+import type { TransporteImpresora } from "./impresion/transporte.js";
 import { registrarRutas } from "./rutas.js";
 import { registrarRutasClientes } from "./rutas-clientes.js";
 import { registrarRutasConfiguracion } from "./rutas-configuracion.js";
 import { registrarRutasHabitaciones } from "./rutas-habitaciones.js";
 import { registrarRutasUsuarios } from "./rutas-usuarios.js";
+
+declare module "fastify" {
+  interface FastifyInstance {
+    /** Promesa del último envío a la impresora: las pruebas la esperan antes de revisar el resultado. */
+    colaImpresion: () => Promise<void>;
+  }
+}
 
 export interface OpcionesApp {
   prisma: PrismaClient;
@@ -23,6 +33,10 @@ export interface OpcionesApp {
   costoBcrypt?: number;
   /** Lista blanca de orígenes de navegador (CORS); ver cors.ts. Por defecto, ninguno. */
   origenesPermitidos?: readonly string[];
+  /** Transporte a la impresora (ADR-05). Sin él, los comprobantes quedan en cola (PENDIENTE). */
+  impresora?: TransporteImpresora | null;
+  /** Página de códigos de la impresora; por defecto PC850. */
+  paginaCodigos?: PaginaCodigos;
 }
 
 export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstance> {
@@ -43,7 +57,16 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   registrarAutenticacion(app, opciones.prisma, ahora);
   // Secreto de los códigos de autorización, derivado del de JWT para no exigir otra variable de entorno.
   const secretoCodigos = createHmac("sha256", opciones.jwtSecret).update("codigos-autorizacion").digest();
-  registrarRutas(app, opciones.prisma, ahora, secretoCodigos);
+  // Un envío a la vez: dos cobros casi simultáneos no deben mezclar sus bytes en la misma impresora.
+  const opcionesEscPos = { ...OPCIONES_ESCPOS_POR_DEFECTO, paginaCodigos: opciones.paginaCodigos ?? OPCIONES_ESCPOS_POR_DEFECTO.paginaCodigos };
+  let cola: Promise<void> = Promise.resolve();
+  const imprimir = (ticketId: string) => {
+    cola = cola
+      .then(() => despacharPendientes(opciones.prisma, opciones.impresora ?? null, ticketId, app.log, opcionesEscPos))
+      .catch((err: unknown) => app.log.error({ err, ticketId }, "Error en la cola de impresión"));
+  };
+  app.decorate("colaImpresion", () => cola);
+  registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir);
   registrarRutasHabitaciones(app, opciones.prisma, ahora);
   registrarRutasClientes(app, opciones.prisma, ahora);
   registrarRutasConfiguracion(app, opciones.prisma, ahora);

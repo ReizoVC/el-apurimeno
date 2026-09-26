@@ -96,7 +96,10 @@ export function HabitacionOcupada({
                 pago (RN-12).
               </Aviso>
             )}
-            <ListaTickets tickets={tickets} />
+            <ListaTickets
+              tickets={tickets}
+              puedeReimprimir={tienePermiso(sesion, "tickets.reprint")}
+            />
           </CardContent>
           <CardFooter className="grid grid-cols-2 gap-2">
             <Button onClick={() => setVista("hora")}>Hora adicional</Button>
@@ -154,23 +157,70 @@ export function HabitacionOcupada({
   );
 }
 
-function ListaTickets({ tickets }: { tickets: readonly Ticket[] }) {
+/** Cobros del alquiler; quien tiene `tickets.reprint` puede reimprimir uno, marcado como COPIA (CU-22). */
+function ListaTickets({
+  tickets,
+  puedeReimprimir,
+}: {
+  tickets: readonly Ticket[];
+  puedeReimprimir: boolean;
+}) {
+  const [aviso, setAviso] = useState<string | null>(null);
+  const reimprimir = async (ticket: Ticket) => {
+    try {
+      await servidor.reimprimir(ticket.id);
+      setAviso(`Copia del ticket #${ticket.numero} enviada a la impresora.`);
+    } catch (e) {
+      setAviso(mensajeDe(e));
+    }
+  };
   return (
-    <ul className="flex flex-col divide-y rounded-md border bg-background">
-      {tickets.map((t) => (
-        <li
-          key={t.id}
-          className={`flex justify-between px-3 py-2 ${t.estado === "ANULADO" ? "text-muted-foreground line-through" : ""}`}
-        >
-          <span>
-            #{t.numero} ·{" "}
-            {t.tipo === "COMPENSATORIO" ? "Anulación" : ORIGEN[t.origen]} ·{" "}
-            {hora(t.creadoEn)}
-          </span>
-          <span>{soles(t.total)}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      {aviso !== null && (
+        <p className="text-xs text-muted-foreground">{aviso}</p>
+      )}
+      <ul className="flex flex-col divide-y rounded-md border bg-background">
+        {tickets.map((t) => (
+          <li
+            key={t.id}
+            className="flex items-center justify-between gap-2 px-3 py-2"
+          >
+            <span
+              className={
+                t.estado === "ANULADO"
+                  ? "text-muted-foreground line-through"
+                  : ""
+              }
+            >
+              #{t.numero} ·{" "}
+              {t.tipo === "COMPENSATORIO" ? "Anulación" : ORIGEN[t.origen]} ·{" "}
+              {hora(t.creadoEn)}
+            </span>
+            <span className="flex items-center gap-2">
+              <span
+                className={
+                  t.estado === "ANULADO"
+                    ? "text-muted-foreground line-through"
+                    : ""
+                }
+              >
+                {soles(t.total)}
+              </span>
+              {puedeReimprimir && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Reimprimir ticket ${t.numero}`}
+                  onClick={() => void reimprimir(t)}
+                >
+                  Reimprimir
+                </Button>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

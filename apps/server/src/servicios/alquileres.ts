@@ -40,6 +40,7 @@ import {
   datosTicket,
   fecha,
 } from "../mapeo.js";
+import { encolarComprobante } from "../impresion/cola.js";
 import { construirPagos, siguienteNumeroTicket, unaSolaVez } from "./cobros.js";
 import { contextoDominio, noEncontrado, parametrosVigentes, type ContextoServicio } from "./contexto.js";
 import { turnoAbiertoDe } from "./turnos.js";
@@ -162,6 +163,7 @@ export async function registrarIngresoServicio(
           if (ocupada.count === 0) throw new ErrorNegocio("ROOM_NOT_AVAILABLE");
           await tx.alquiler.create({ data: datosAlquiler(ingreso.alquiler) });
           await tx.ticket.create({ data: datosTicket(ticket, clave) });
+          await encolarComprobante(tx, ticket.id, false, ctx.ahora, randomUUID());
 
           await auditar(
             tx,
@@ -288,6 +290,7 @@ export async function registrarHoraAdicionalServicio(
           throw new ErrorNegocio("INVALID_STATE_TRANSITION", "El alquiler cambió mientras se cobraba; vuelva a cotizar.");
         }
         await tx.ticket.create({ data: datosTicket(ticket, clave) });
+        await encolarComprobante(tx, ticket.id, false, ctx.ahora, randomUUID());
         await tx.horaAdicional.create({
           data: {
             ...horaAdicional,

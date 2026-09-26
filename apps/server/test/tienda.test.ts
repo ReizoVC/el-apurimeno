@@ -30,6 +30,7 @@ beforeEach(async () => {
     prisma: e.prisma,
     usuario: { id: "usuario-cajero", nombreUsuario: "cajero", permisos: ["sales.sell", "store.manual_adjustment"] },
     ahora: e.reloj.ahora,
+    imprimir: () => undefined,
   };
 });
 afterEach(() => e.cerrar());

@@ -89,8 +89,9 @@ export function registrarRutas(
   prisma: PrismaClient,
   ahora: () => Date,
   secretoCodigos: SecretoCodigos,
+  imprimir: (ticketId: string) => void = () => undefined,
 ): void {
-  const ctx = creadorContexto(prisma, ahora);
+  const ctx = creadorContexto(prisma, ahora, imprimir);
 
   app.get(RUTAS.salud, { config: { publica: true } }, async () => ({ estado: "ok" }));
 
@@ -140,6 +141,7 @@ export function registrarRutas(
     const clave = claveIdempotencia(request);
     const entrada = validar(RegistrarIngresoEntradaSchema, request.body);
     const r = await registrarIngresoServicio(ctx(request), entrada, clave);
+    if (!r.repetido) imprimir(r.resultado.ticket.id);
     return RegistrarIngresoRespuestaSchema.parse(responderCobro(reply, r));
   });
 
@@ -151,6 +153,7 @@ export function registrarRutas(
     const clave = claveIdempotencia(request);
     const entrada = validar(RegistrarHoraAdicionalEntradaSchema, request.body);
     const r = await registrarHoraAdicionalServicio(ctx(request), request.params.id, entrada, clave);
+    if (!r.repetido) imprimir(r.resultado.ticket.id);
     return RegistrarHoraAdicionalRespuestaSchema.parse(responderCobro(reply, r));
   });
 
@@ -199,6 +202,7 @@ export function registrarRutas(
     const clave = claveIdempotencia(request);
     const entrada = validar(RegistrarVentaEntradaSchema, request.body);
     const r = await registrarVentaServicio(ctx(request), entrada, clave);
+    if (!r.repetido) imprimir(r.resultado.id);
     return RegistrarVentaRespuestaSchema.parse(responderCobro(reply, r));
   });
 
@@ -225,6 +229,7 @@ export function registrarRutas(
   // Reimpresión (CU-22): una copia marcada como tal. Pulsar dos veces imprime dos copias, como en papel.
   app.post(RUTAS.reimprimirTicket, { config: { operacion: "REIMPRIMIR_COMPROBANTE" } }, async (request: ConId, reply) => {
     const r = await reimprimirTicketServicio(ctx(request), request.params.id);
+    imprimir(r.trabajo.ticketId);
     void reply.status(201);
     return ReimpresionRespuestaSchema.parse(r);
   });

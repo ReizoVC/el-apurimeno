@@ -88,6 +88,9 @@ export const RUTAS = {
   // Espejo en la nube (ADR-06): estado y "sincronizar ahora" desde el Dashboard.
   estadoEspejo: "/espejo",
   sincronizarEspejo: "/espejo/sincronizacion",
+  // Respaldos de la base (Planos §14.3): estado y "copiar ahora" desde el Dashboard.
+  estadoRespaldos: "/respaldos",
+  respaldar: "/respaldos/copia",
   salud: "/health",
 } as const;
 
@@ -106,6 +109,10 @@ export const CodigoErrorApiSchema = z.enum([
   "ESPEJO_NO_CONFIGURADO",
   /** Ya hay una sincronización con el espejo en marcha. */
   "SINCRONIZACION_EN_CURSO",
+  /** Falta configurar ese respaldo (la copia externa necesita carpeta y clave pública). */
+  "RESPALDO_NO_CONFIGURADO",
+  /** Ya hay una copia en marcha. */
+  "RESPALDO_EN_CURSO",
   "ERROR_INTERNO",
 ]);
 export type CodigoErrorApi = z.infer<typeof CodigoErrorApiSchema>;
@@ -289,8 +296,20 @@ export const ProductoEntradaSchema = z
   .strict();
 export type ProductoEntrada = z.infer<typeof ProductoEntradaSchema>;
 
-/** Filtro del catálogo: `codigoBarras` es lo que lee el scanner USB. */
-export const ProductosConsultaSchema = z.object({ codigoBarras: TextoRequeridoSchema.optional() }).strict();
+/**
+ * Filtro del catálogo: `codigoBarras` es lo que lee el scanner USB. Sin `incluirInactivos`, solo los activos (lo que
+ * se vende). `incluirInactivos=true` es para la gestión del catálogo en el Dashboard y exige `inventory.manage`:
+ * sin él, un producto desactivado no se podría volver a activar.
+ */
+export const ProductosConsultaSchema = z
+  .object({
+    codigoBarras: TextoRequeridoSchema.optional(),
+    incluirInactivos: z
+      .enum(["true", "false"])
+      .transform((v) => v === "true")
+      .optional(),
+  })
+  .strict();
 export type ProductosConsulta = z.infer<typeof ProductosConsultaSchema>;
 
 /** Ingreso de mercadería (RN-25, RF-35). */

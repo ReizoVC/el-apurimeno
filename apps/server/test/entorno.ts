@@ -9,6 +9,7 @@ import type { z } from "zod";
 import { construirApp, type OpcionesApp } from "../src/app.js";
 import { hashContrasena } from "../src/auth.js";
 import { crearPrisma, type PrismaClient } from "../src/db.js";
+import type { ConfiguracionRespaldos } from "../src/respaldo/configuracion.js";
 import { ID_RANGO, sembrar } from "../src/semilla.js";
 
 const MIGRACIONES = fileURLToPath(new URL("../prisma/migrations", import.meta.url));
@@ -43,7 +44,7 @@ export const CONTRASENA = "contrasena-de-prueba";
 /** Base SQLite real en un archivo temporal, migrada y sembrada, con la app lista para recibir solicitudes. */
 export async function prepararEntorno(
   inicio = "2026-09-23T14:00:00.000Z",
-  extra: Pick<OpcionesApp, "espejo"> = {},
+  extra: Pick<OpcionesApp, "espejo"> & { respaldos?: (rutaBase: string) => ConfiguracionRespaldos } = {},
 ): Promise<Entorno> {
   const dir = mkdtempSync(join(tmpdir(), "apurimeno-"));
   const ruta = join(dir, "prueba.db");
@@ -57,7 +58,14 @@ export async function prepararEntorno(
       this.ahora = new Date(this.ahora.getTime() + minutos * 60_000);
     },
   };
-  const app = await construirApp({ prisma, jwtSecret: "s".repeat(32), ahora: () => reloj.ahora, costoBcrypt: 4, ...extra });
+  const app = await construirApp({
+    prisma,
+    jwtSecret: "s".repeat(32),
+    ahora: () => reloj.ahora,
+    costoBcrypt: 4,
+    espejo: extra.espejo,
+    respaldos: extra.respaldos?.(ruta),
+  });
 
   const entorno: Entorno = {
     app,

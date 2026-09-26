@@ -47,6 +47,8 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
   `node_modules/.pnpm/better-sqlite3@12.*/node_modules/better-sqlite3`.
 - **Tauri (`apps/native/src-tauri`)** necesita Visual Studio con "Desarrollo para el escritorio con C++" y el
   Windows SDK; sin eso, `cargo` falla con `LNK1104: msvcrt.lib`.
+- **Rutas largas:** `pnpm install` en una carpeta de ruta muy larga (p. ej. dentro de `%TEMP%\claude\…`) falla con
+  `ELIFECYCLE -4058` por el límite de 260 caracteres de Windows. Para un clon de prueba, usar una ruta corta.
 - **Finales de línea:** el repositorio guarda LF y git en Windows convierte a CRLF al extraer. Prettier escribe
   LF, así que formatear carpetas enteras marca como modificados archivos que no cambiaron: formatear solo los
   archivos tocados, o restaurar con `git checkout -- <archivo>` los que solo cambiaron de final de línea.
@@ -59,6 +61,9 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
   `apurimeno-prueba` es el proyecto de pruebas; el de producción lo configura la propietaria.
 - **Nunca apuntar un servidor de desarrollo o de prueba al espejo de producción:** cada sincronización reemplaza
   los días que publica, y una base de prueba publicaría días vacíos sobre los reales (ver `supabase/README.md`).
+- **Respaldos:** la clave **privada** de respaldo no se escribe en ningún archivo (ni `.env`, ni el repositorio, ni la
+  carpeta de las copias): la guarda la propietaria. El servidor solo tiene `RESPALDO_CLAVE_PUBLICA`. Las pruebas
+  generan claves de prueba al momento. Procedimiento: `docs/RESPALDO_Y_RESTAURACION.md`.
 - Las cuentas de prueba (lectora, sincronizador) no se escriben en ningún archivo del repositorio: se pasan por
   variables de entorno a los scripts de prueba. Una prueba que da de alta un autenticador TOTP debe quitarlo al
   terminar.

@@ -82,6 +82,12 @@ const SECCIONES: {
     grupo: "Administración",
   },
   {
+    href: "/administracion/productos",
+    etiqueta: "Productos",
+    permiso: "inventory.manage",
+    grupo: "Administración",
+  },
+  {
     href: "/administracion/usuarios",
     etiqueta: "Usuarios",
     permiso: "users.manage",
@@ -108,6 +114,12 @@ const SECCIONES: {
   {
     href: "/espejo",
     etiqueta: "Espejo en la nube",
+    permiso: "settings.manage",
+    grupo: "Sistema",
+  },
+  {
+    href: "/respaldos",
+    etiqueta: "Respaldos",
     permiso: "settings.manage",
     grupo: "Sistema",
   },

@@ -38,6 +38,7 @@ import {
   TurnoRespuestaSchema,
 } from "@apurimeno/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { exigir } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { validar } from "./errores.js";
 import {
@@ -182,8 +183,10 @@ export function registrarRutas(
   });
 
   app.get(RUTAS.productos, { config: { operacion: ["VENDER", "GESTIONAR_PRODUCTOS"] } }, async (request) => {
-    const { codigoBarras } = validar(ProductosConsultaSchema, request.query);
-    return ProductoSchema.array().parse(await listarProductos(ctx(request), codigoBarras));
+    const { codigoBarras, incluirInactivos = false } = validar(ProductosConsultaSchema, request.query);
+    const c = ctx(request);
+    if (incluirInactivos) exigir(c.usuario, "GESTIONAR_PRODUCTOS");
+    return ProductoSchema.array().parse(await listarProductos(c, codigoBarras, incluirInactivos));
   });
 
   app.post(RUTAS.productos, { config: { operacion: "GESTIONAR_PRODUCTOS" } }, async (request, reply) => {

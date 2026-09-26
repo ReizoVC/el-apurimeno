@@ -130,6 +130,7 @@ enum AccionAuditoria {
   RANGO_EDITADO
   CONFIGURACION_CAMBIADA
   ESPEJO_SINCRONIZADO
+  RESPALDO_MANUAL
 }
 
 enum TipoEntidadAuditada {
@@ -151,6 +152,7 @@ enum TipoEntidadAuditada {
   CODIGO_AUTORIZACION
   TRABAJO_IMPRESION
   ESPEJO
+  RESPALDO
 }
 
 model Habitacion {

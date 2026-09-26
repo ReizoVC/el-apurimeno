@@ -1,19 +1,24 @@
 import {
   AuditoriaRespuestaSchema,
+  CategoriaProductoSchema,
   ClienteSchema,
   ConfiguracionRespuestaSchema,
   EstadoEspejoSchema,
+  EstadoRespaldosSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
   HabitacionSchema,
   LoginRespuestaSchema,
   MetodoPagoRespuestaSchema,
   PrecioEspecialRespuestaSchema,
+  ProductoSchema,
   RUTAS,
   RangoRespuestaSchema,
   ReimpresionRespuestaSchema,
   ReporteArqueosSchema,
   ReporteOcupacionSchema,
   ReporteVentasSchema,
+  ReposicionRespuestaSchema,
+  RespaldoRespuestaSchema,
   RespuestaErrorSchema,
   SincronizacionEspejoRespuestaSchema,
   TableroSchema,
@@ -23,12 +28,14 @@ import {
   type AuditoriaConsulta,
   type ClienteEntrada,
   type ConfiguracionGlobal,
+  type DestinoRespaldo,
   type CrearUsuarioEntrada,
   type EditarUsuarioEntrada,
   type ForzarCierreTurnoEntrada,
   type HabitacionEntrada,
   type MetodoPagoEntrada,
   type PeriodoConsulta,
+  type ProductoEntrada,
   type RangoEntrada,
 } from "@apurimeno/contracts";
 import type { Sesion } from "./sesion";
@@ -223,6 +230,34 @@ export const servidor = {
       SIN_CUERPO,
     ),
 
+  // Productos e inventario (RF-53, CU-12, CU-29)
+  categoriasProducto: () =>
+    llamar("GET", RUTAS.categoriasProducto, CategoriaProductoSchema.array()),
+  crearCategoriaProducto: (nombre: string) =>
+    llamar("POST", RUTAS.categoriasProducto, CategoriaProductoSchema, {
+      nombre,
+    }),
+  /** Todos los productos, también los inactivos: es la vista de gestión. */
+  productos: () =>
+    llamar(
+      "GET",
+      `${RUTAS.productos}${query({ incluirInactivos: "true" })}`,
+      ProductoSchema.array(),
+    ),
+  crearProducto: (e: ProductoEntrada) =>
+    llamar("POST", RUTAS.productos, ProductoSchema, e),
+  editarProducto: (id: string, e: ProductoEntrada) =>
+    llamar("PUT", conId(RUTAS.producto, id), ProductoSchema, e),
+  reponerProducto: (id: string, cantidad: number) =>
+    llamar(
+      "POST",
+      conId(RUTAS.reponerProducto, id),
+      ReposicionRespuestaSchema,
+      {
+        cantidad,
+      },
+    ),
+
   // Usuarios y rangos
   usuarios: () => llamar("GET", RUTAS.usuarios, UsuarioRespuestaSchema.array()),
   crearUsuario: (e: CrearUsuarioEntrada) =>
@@ -269,6 +304,11 @@ export const servidor = {
       SincronizacionEspejoRespuestaSchema,
       { completo },
     ),
+  estadoRespaldos: () =>
+    llamar("GET", RUTAS.estadoRespaldos, EstadoRespaldosSchema),
+  /** Espera a que termine la copia: devuelve el resultado, o el error en el estado del destino. */
+  respaldar: (destino: DestinoRespaldo) =>
+    llamar("POST", RUTAS.respaldar, RespaldoRespuestaSchema, { destino }),
   generarCodigoAutorizacion: () =>
     llamar(
       "POST",

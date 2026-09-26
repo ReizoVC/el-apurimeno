@@ -2,7 +2,8 @@
 
 Panel del Administrador (Next.js 15, App Router, solo componentes de cliente). Consulta y administra contra
 `apps/server`: vista del día, reportes, habitaciones, clientes y precios especiales, usuarios y rangos,
-configuración, métodos de pago, auditoría, turnos abiertos, códigos de anulación y reimpresión. No tiene reglas de negocio propias:
+productos e inventario, configuración, métodos de pago, espejo en la nube, respaldos, auditoría, turnos abiertos,
+códigos de anulación y reimpresión. No tiene reglas de negocio propias:
 los tipos y esquemas vienen de `@apurimeno/contracts`, los componentes de `@apurimeno/ui`, y la vista previa
 del comprobante usa `componerLineasComprobante` de `@apurimeno/domain`, la misma función que imprime el
 servidor.
@@ -33,11 +34,13 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 | Reportes | `reports.view` | Ventas, arqueos y ocupación de un periodo. |
 | Habitaciones | `rooms.manage` | Alta, edición, bloqueo con motivo (`rooms.maintenance`) y reactivación. |
 | Clientes y precios | `client_pricing.manage` | Búsqueda, alta y edición de clientes; precios especiales por habitación. |
+| Productos | `inventory.manage` | Categorías, alta y edición de productos con sus dos precios, activar y desactivar, y reposición de stock. |
 | Usuarios | `users.manage` | Alta, edición, desactivación, rangos y cambio de contraseña. |
 | Rangos | `users.manage` | Alta y edición de la combinación de permisos. |
 | Configuración | `settings.manage` | Parámetros de alquiler, comprobante, impresora y tienda. |
 | Métodos de pago | `settings.manage` | Alta, edición y habilitación. |
 | Espejo en la nube | `settings.manage` | Hora de la última publicación del resumen para la propietaria, el error si lo hay, "Sincronizar ahora" y "Re-sincronizar todo". |
+| Respaldos | `settings.manage` | Última copia local (cada 15 min) y externa (diaria, cifrada), el error si lo hay y "Copiar ahora". |
 | Auditoría | `audit.view` | Registros filtrables y paginados, con valor previo y nuevo. |
 | Turnos abiertos | `shifts.force_close` | Turnos sin cerrar y cierre forzado. |
 | Códigos de anulación | `tickets.void` | Generar un código de un solo uso para que un cajero anule un cobro (RF-65). |
@@ -82,6 +85,15 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
   servidor, aclarando que el local sigue funcionando. "Re-sincronizar todo" pide confirmación, porque tarda más
   y solo hace falta si el espejo quedó desfasado. Sin las variables `ESPEJO_*`, la pantalla dice qué falta en
   vez de mostrar botones. El estado se refresca cada 30 s para ver las vueltas automáticas.
+- **Productos:** el stock no se edita: un producto nuevo empieza en 0 y "Reponer" suma unidades (el servidor
+  lo registra en el kardex). La búsqueda acepta nombre o código de barras, así que se puede escanear el
+  producto para encontrarlo; el Enter del lector no envía nada. Un producto inactivo sale del POS y aquí queda
+  oculto salvo con "Mostrar inactivos", para reactivarlo. "Sin stock" va en rojo si es 0 o negativo. "Nuevo
+  producto" espera a que exista una categoría.
+- **Respaldos:** el mismo patrón que el espejo: la hora de la última copia en grande, "Desactualizado" en
+  ámbar y el error del último intento con su causa. Si la copia externa no está configurada, se muestra en
+  rojo, porque sin ella una falla del disco se lleva la base y sus copias locales. Restaurar no se hace desde
+  aquí: exige detener el servidor.
 - **Códigos de anulación:** un botón y nada más. El código se muestra grande, una sola vez, con su hora de
   vencimiento y la advertencia de que no se puede volver a ver: el servidor solo guarda su hash y el
   Dashboard no lo guarda en el navegador (recargar o salir lo borra de la pantalla).

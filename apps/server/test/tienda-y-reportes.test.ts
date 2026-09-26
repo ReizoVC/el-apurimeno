@@ -62,6 +62,19 @@ describe("Tienda por HTTP (CU-11, CU-12, CU-29)", () => {
     expect((await e.llamar("GET", `${RUTAS.productos}?codigoBarras=000`, cajero)).json()).toEqual([]);
   });
 
+  it("un producto desactivado sale del catálogo de venta, pero la gestión lo sigue viendo para reactivarlo", async () => {
+    const productoId = await prepararCatalogo();
+    const categoriaId = (await e.prisma.categoriaProducto.findFirstOrThrow()).id;
+    await e.llamar("PUT", ruta(RUTAS.producto, productoId), admin, nuevoProducto({ categoriaId, activo: false }));
+    expect((await e.llamar("GET", RUTAS.productos, cajero)).json()).toEqual([]);
+    expect((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=false`, admin)).json()).toEqual([]);
+    const todos = ProductoSchema.array().parse((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=true`, admin)).json());
+    expect(todos).toMatchObject([{ id: productoId, activo: false, stock: 24 }]);
+    // Quien solo vende no ve los inactivos.
+    expect((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=true`, cajero)).statusCode).toBe(403);
+    expect((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=si`, admin)).statusCode).toBe(400);
+  });
+
   it("el Cajero no gestiona el catálogo ni repone (RN-25)", async () => {
     const productoId = await prepararCatalogo();
     expect((await e.llamar("POST", RUTAS.productos, cajero, nuevoProducto())).statusCode).toBe(403);

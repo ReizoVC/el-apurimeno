@@ -12,6 +12,8 @@ export const AccionAuditoriaSchema = z.enum([
   "TURNO_ABIERTO",
   "TURNO_CERRADO",
   "TURNO_CIERRE_FORZADO",
+  /** Intento de cierre del turno propio rechazado por diferencia sin comentario, con el monto contado. */
+  "CIERRE_TURNO_RECHAZADO",
   "MOVIMIENTO_CAJA_REGISTRADO",
   "INGRESO_REGISTRADO",
   "HORA_ADICIONAL_COBRADA",
@@ -131,8 +133,10 @@ export const CodigoAutorizacionSchema = z
     expiraEn: FechaISOSchema,
     usadoEn: FechaISOSchema.nullable(),
     usadoPorId: IdSchema.nullable(),
-    /** Ticket anulado con este código. */
+    /** Ticket anulado con este código (`ANULAR_TICKET`). */
     ticketId: IdSchema.nullable(),
+    /** Turno en cuyo cierre se usó (`REINTENTAR_CIERRE_TURNO`). */
+    turnoId: IdSchema.nullable(),
   })
   .strict()
   .superRefine((c, ctx) => {
@@ -141,9 +145,15 @@ export const CodigoAutorizacionSchema = z
     if (generado !== null && expira !== null && expira <= generado) {
       problema(ctx, ["expiraEn"], "expiraEn debe ser posterior a generadoEn.");
     }
-    const usado = [c.usadoEn, c.usadoPorId, c.ticketId].map((v) => v !== null);
+    // El uso se registra junto: quién, cuándo y sobre qué (el ticket anulado o el turno cuyo cierre habilitó).
+    const destino = c.operacion === "ANULAR_TICKET" ? c.ticketId : c.turnoId;
+    const otro = c.operacion === "ANULAR_TICKET" ? c.turnoId : c.ticketId;
+    const usado = [c.usadoEn, c.usadoPorId, destino].map((v) => v !== null);
     if (usado.some(Boolean) && !usado.every(Boolean)) {
-      problema(ctx, ["usadoEn"], "usadoEn, usadoPorId y ticketId se registran juntos.");
+      problema(ctx, ["usadoEn"], `usadoEn, usadoPorId y ${c.operacion === "ANULAR_TICKET" ? "ticketId" : "turnoId"} se registran juntos.`);
+    }
+    if (otro !== null) {
+      problema(ctx, [c.operacion === "ANULAR_TICKET" ? "turnoId" : "ticketId"], `Un código ${c.operacion} no se usa sobre esa entidad.`);
     }
     const uso = c.usadoEn === null ? null : milisegundos(c.usadoEn);
     if (uso !== null && generado !== null && expira !== null && (uso < generado || uso > expira)) {

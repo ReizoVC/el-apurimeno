@@ -1,4 +1,5 @@
 import {
+  MAX_CIERRES_RECHAZADOS_SIN_CODIGO,
   MetodoPagoSchema,
   TurnoSchema,
   type Centimos,
@@ -13,6 +14,18 @@ import {
 } from "@apurimeno/contracts";
 import { ErrorNegocio } from "./errores.js";
 import { asegurarCentimos, asegurarEnteroPositivo, motivoRequerido } from "./interno.js";
+
+/**
+ * ¿El próximo intento de cierre del turno propio exige un código de autorización (decisión 25)? Sí, cuando ya hubo
+ * `MAX_CIERRES_RECHAZADOS_SIN_CODIGO` intentos rechazados por diferencia sin comentario. Cada intento desde ahí
+ * consume un código: el "no coincide" no puede servir para adivinar el esperado probando montos (RN-34).
+ */
+export function cierreExigeCodigo(rechazosPrevios: number): boolean {
+  if (!Number.isSafeInteger(rechazosPrevios) || rechazosPrevios < 0) {
+    throw new RangeError(`Cantidad de rechazos inválida: ${rechazosPrevios}`);
+  }
+  return rechazosPrevios >= MAX_CIERRES_RECHAZADOS_SIN_CODIGO;
+}
 
 /** Ningún cobro ni movimiento de caja sin turno abierto (RN-32). */
 export function asegurarTurnoAbierto(turno: Pick<Turno, "estado">): void {

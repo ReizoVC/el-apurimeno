@@ -293,6 +293,20 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     también los inactivos, o un producto desactivado no se podría volver a activar; los pide con
     `incluirInactivos=true`, que exige `inventory.manage`.
 
+25. **El aviso de diferencia del arqueo ciego no sirve para adivinar el esperado** (RN-34; lo pidió el negocio tras
+    la auditoría del 26/09). Si lo contado no coincide, el servidor responde `REASON_REQUIRED` sin decir por cuánto;
+    sin más control, alguien podía probar montos por la API hasta que un cierre se aceptara sin comentario.
+    - **Cada intento de cierre del turno propio queda en la auditoría con el monto contado y la hora:** el aceptado
+      como `TURNO_CERRADO` (con `cierresRechazados`), el rechazado como `CIERRE_TURNO_RECHAZADO` y el que llega sin
+      un código válido cuando hace falta como `ACCESO_DENEGADO`.
+    - **Tras `MAX_CIERRES_RECHAZADOS_SIN_CODIGO` (3) rechazos, cada intento consume un código** de autorización de
+      un Administrador, con el mismo mecanismo de las anulaciones (RN-46): 6 dígitos, un solo uso, vigencia
+      configurable y bloqueo tras 5 códigos incorrectos en 15 minutos. El código es de la operación
+      `REINTENTAR_CIERRE_TURNO` y registra el turno en `CodigoAutorizacion.turnoId`; uno de anulación no sirve.
+    - El código se consume aunque el intento vuelva a rechazarse: el rechazo se confirma en la transacción y el error
+      se responde después.
+    - El cierre forzado de un turno ajeno (CU-20) no cambia.
+
 ## Decisiones pendientes que afectan el contrato
 
 | ID | Tema | Estado en el contrato |

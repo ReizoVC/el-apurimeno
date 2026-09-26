@@ -2,6 +2,7 @@ import type {
   AccionAuditoria,
   CodigoErrorEspejo,
   CodigoErrorRespaldo,
+  OperacionAutorizable,
   OrigenTicket,
   Permiso,
   TipoEntidadAuditada,
@@ -52,6 +53,8 @@ export const ACCION: Record<AccionAuditoria, string> = {
   TURNO_ABIERTO: "Turno abierto",
   TURNO_CERRADO: "Turno cerrado",
   TURNO_CIERRE_FORZADO: "Cierre forzado de turno",
+  CIERRE_TURNO_RECHAZADO:
+    "Cierre de turno rechazado (diferencia sin comentario)",
   MOVIMIENTO_CAJA_REGISTRADO: "Movimiento de caja",
   INGRESO_REGISTRADO: "Ingreso",
   HORA_ADICIONAL_COBRADA: "Hora adicional",
@@ -118,4 +121,21 @@ export const ERROR_RESPALDO: Record<CodigoErrorRespaldo, string> = {
   SIN_ESPACIO: "No queda espacio en el disco",
   COPIA_INVALIDA: "La copia no pasó la verificación",
   ERROR_INTERNO: "Error interno del servidor",
+};
+
+/** Para qué sirve cada código de autorización. */
+export const OPERACION_AUTORIZABLE: Record<
+  OperacionAutorizable,
+  { etiqueta: string; descripcion: string }
+> = {
+  ANULAR_TICKET: {
+    etiqueta: "Anular un cobro",
+    descripcion:
+      "Para que un cajero sin permiso de anular pueda anular un cobro desde el POS.",
+  },
+  REINTENTAR_CIERRE_TURNO: {
+    etiqueta: "Reintentar un cierre de turno",
+    descripcion:
+      "Tras 3 intentos de cierre con diferencia, el cajero necesita un código por cada intento más. Antes de darlo, conviene hablar con el cajero: el conteo no coincide con lo esperado.",
+  },
 };

@@ -15,6 +15,7 @@ import { ConfiguracionGlobalSchema } from "./configuracion.js";
 import { CodigoErrorNegocioSchema } from "./errores.js";
 import {
   EstadoTemporalAlquilerSchema,
+  OperacionAutorizableSchema,
   OrigenPrecioAlquilerSchema,
   OrigenTicketSchema,
   TipoHoraAdicionalSchema,
@@ -169,9 +170,23 @@ export type CotizacionApi = z.infer<typeof CotizacionSchema>;
 export const AbrirTurnoEntradaSchema = z.object({ efectivoInicial: CentimosSchema }).strict();
 export type AbrirTurnoEntrada = z.infer<typeof AbrirTurnoEntradaSchema>;
 
-/** Arqueo ciego (RN-34): el cajero envía lo contado; el esperado solo se revela en la respuesta. */
+/**
+ * Intentos de cierre rechazados por diferencia sin comentario que se permiten sin código. Desde el siguiente, cada
+ * intento exige un código de autorización `REINTENTAR_CIERRE_TURNO` (decisión 25): el aviso de "no coincide" no
+ * debe servir para adivinar el esperado probando montos.
+ */
+export const MAX_CIERRES_RECHAZADOS_SIN_CODIGO = 3;
+
+/**
+ * Arqueo ciego (RN-34): el cajero envía lo contado; el esperado solo se revela en la respuesta. Tras
+ * `MAX_CIERRES_RECHAZADOS_SIN_CODIGO` rechazos, `codigoAutorizacion` es obligatorio (decisión 25).
+ */
 export const CerrarTurnoEntradaSchema = z
-  .object({ efectivoContado: CentimosSchema, comentario: z.string().nullable() })
+  .object({
+    efectivoContado: CentimosSchema,
+    comentario: z.string().nullable(),
+    codigoAutorizacion: z.string().nullable().optional(),
+  })
   .strict();
 export type CerrarTurnoEntrada = z.infer<typeof CerrarTurnoEntradaSchema>;
 
@@ -353,8 +368,14 @@ export const RegistrarVentaRespuestaSchema = TicketSchema;
  * guarda su hash y no lo vuelve a listar.
  */
 export const GenerarCodigoAutorizacionRespuestaSchema = z
-  .object({ id: IdSchema, codigo: TextoRequeridoSchema, expiraEn: FechaISOSchema })
+  .object({ id: IdSchema, codigo: TextoRequeridoSchema, operacion: OperacionAutorizableSchema, expiraEn: FechaISOSchema })
   .strict();
+
+/** Para qué operación se genera el código. Sin cuerpo, para anular un cobro (como siempre). */
+export const GenerarCodigoAutorizacionEntradaSchema = z
+  .object({ operacion: OperacionAutorizableSchema.default("ANULAR_TICKET") })
+  .strict();
+export type GenerarCodigoAutorizacionEntrada = z.infer<typeof GenerarCodigoAutorizacionEntradaSchema>;
 export type GenerarCodigoAutorizacionRespuesta = z.infer<typeof GenerarCodigoAutorizacionRespuestaSchema>;
 
 /** `codigoAutorizacion` es obligatorio para quien no tiene `tickets.void` (RN-46). */

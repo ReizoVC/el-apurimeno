@@ -59,7 +59,7 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /productos`, `PUT /productos/:id` | `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos/:id/reposicion` | `REPONER_INVENTARIO` | — |
 | `POST /ventas` | `VENDER` | Sí |
-| `POST /codigos-autorizacion` | `GENERAR_CODIGO_AUTORIZACION` | — |
+| `POST /codigos-autorizacion` (cuerpo opcional `{ operacion }`: `ANULAR_TICKET` por defecto o `REINTENTAR_CIERRE_TURNO`) | `GENERAR_CODIGO_AUTORIZACION` | — |
 | `POST /tickets/:id/anulacion` | `ANULAR_TICKET` o `ANULAR_TICKET_CON_CODIGO` | Sí |
 | `GET /reportes/ventas?desde=&hasta=` | `CONSULTAR_REPORTES` | — |
 | `GET /reportes/arqueos?desde=&hasta=` | `CONSULTAR_REPORTES` | — |

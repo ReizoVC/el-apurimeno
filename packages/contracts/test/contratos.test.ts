@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CodigoAutorizacionSchema,
   AlquilerSchema,
   ClienteEntradaSchema,
   ClienteSchema,
@@ -460,5 +461,34 @@ describe("Leyenda del comprobante (RN-39, decisión 21)", () => {
     expect(con("   ")).toBe(false);
     expect(con("Boleta de venta electrónica")).toBe(false);
     expect(con("Serie B001-00000123")).toBe(false);
+  });
+});
+
+describe("CodigoAutorizacion: el uso queda sobre la entidad de su operación (decisión 25)", () => {
+  const base = {
+    id: "cod-1",
+    codigo: "hash",
+    generadoPorId: "admin-1",
+    generadoEn: "2026-09-26T15:00:00.000Z",
+    expiraEn: "2026-09-26T15:05:00.000Z",
+    usadoEn: "2026-09-26T15:02:00.000Z",
+    usadoPorId: "cajero-1",
+  };
+
+  it("anular un cobro registra el ticket; reintentar un cierre, el turno", () => {
+    expect(CodigoAutorizacionSchema.safeParse({ ...base, operacion: "ANULAR_TICKET", ticketId: "t-1", turnoId: null }).success).toBe(true);
+    expect(
+      CodigoAutorizacionSchema.safeParse({ ...base, operacion: "REINTENTAR_CIERRE_TURNO", ticketId: null, turnoId: "turno-1" }).success,
+    ).toBe(true);
+  });
+
+  it("no acepta el uso sobre la entidad equivocada ni a medias", () => {
+    expect(CodigoAutorizacionSchema.safeParse({ ...base, operacion: "REINTENTAR_CIERRE_TURNO", ticketId: "t-1", turnoId: null }).success).toBe(
+      false,
+    );
+    expect(CodigoAutorizacionSchema.safeParse({ ...base, operacion: "ANULAR_TICKET", ticketId: "t-1", turnoId: "turno-1" }).success).toBe(false);
+    expect(CodigoAutorizacionSchema.safeParse({ ...base, operacion: "REINTENTAR_CIERRE_TURNO", ticketId: null, turnoId: null }).success).toBe(
+      false,
+    );
   });
 });

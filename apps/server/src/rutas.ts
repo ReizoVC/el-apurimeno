@@ -9,6 +9,7 @@ import {
   CotizacionIngresoRespuestaSchema,
   CotizarIngresoEntradaSchema,
   ForzarCierreTurnoEntradaSchema,
+  GenerarCodigoAutorizacionEntradaSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
   MovimientoCajaEntradaSchema,
   MovimientoCajaRespuestaSchema,
@@ -49,7 +50,8 @@ import {
   registrarSalidaServicio,
   registrarSalidaSinPagoServicio,
 } from "./servicios/alquileres.js";
-import { anularTicketServicio, generarCodigoServicio, type SecretoCodigos } from "./servicios/anulacion.js";
+import { anularTicketServicio } from "./servicios/anulacion.js";
+import { generarCodigoServicio, type SecretoCodigos } from "./servicios/codigos.js";
 import { claveIdempotencia } from "./servicios/cobros.js";
 import { reimprimirTicketServicio } from "./servicios/comprobantes.js";
 import { creadorContexto } from "./servicios/contexto.js";
@@ -114,7 +116,7 @@ export function registrarRutas(
   });
 
   app.post(RUTAS.cerrarTurno, { config: { operacion: "CERRAR_TURNO" } }, async (request) =>
-    TurnoRespuestaSchema.parse(await cerrarTurnoPropio(ctx(request), validar(CerrarTurnoEntradaSchema, request.body))),
+    TurnoRespuestaSchema.parse(await cerrarTurnoPropio(ctx(request), validar(CerrarTurnoEntradaSchema, request.body), secretoCodigos)),
   );
 
   app.get(RUTAS.turnosAbiertos, { config: { operacion: "FORZAR_CIERRE_TURNO" } }, async (request) =>
@@ -215,7 +217,8 @@ export function registrarRutas(
   // --- Anulación (CU-21) ---
 
   app.post(RUTAS.generarCodigoAutorizacion, { config: { operacion: "GENERAR_CODIGO_AUTORIZACION" } }, async (request, reply) => {
-    const codigo = await generarCodigoServicio(ctx(request), secretoCodigos);
+    const { operacion } = validar(GenerarCodigoAutorizacionEntradaSchema, request.body ?? {});
+    const codigo = await generarCodigoServicio(ctx(request), secretoCodigos, operacion);
     void reply.status(201);
     return GenerarCodigoAutorizacionRespuestaSchema.parse(codigo);
   });

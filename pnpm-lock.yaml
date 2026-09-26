@@ -256,6 +256,9 @@ importers:
       '@types/react-dom':
         specifier: 18.3.0
         version: 18.3.0
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.4.20(postcss@8.5.1)
       postcss:
         specifier: ^8.5.1
         version: 8.5.1

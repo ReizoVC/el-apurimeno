@@ -126,7 +126,10 @@ export function Principal({ sesion, onSalir }: Props) {
                 variant={pestana === p.id ? "secondary" : "ghost"}
                 size="sm"
                 aria-current={pestana === p.id ? "page" : undefined}
-                onClick={() => setPestana(p.id)}
+                onClick={() => {
+                  setExito(null);
+                  setPestana(p.id);
+                }}
               >
                 {p.etiqueta}
               </Button>

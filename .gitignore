@@ -36,3 +36,21 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Secretos y datos del negocio, en cualquier carpeta del repositorio. Las plantillas .env.example sí se suben.
+.env*
+!.env.example
+.dev.vars*
+*.key
+*clave*privada*
+# Bases SQLite (tienen clientes y cobros) y copias de respaldo, también fuera de apps/server/datos/.
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.cifrado
+# Estado local de la CLI de Supabase (proyecto enlazado).
+supabase/.temp/
+supabase/.branches/

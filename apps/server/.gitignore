@@ -1,2 +1,5 @@
 datos/
 src/generated/
+# Configuración con secretos (JWT, espejo, respaldo): solo .env.example se sube.
+.env*
+!.env.example

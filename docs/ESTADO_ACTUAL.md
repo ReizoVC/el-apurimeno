@@ -7,11 +7,11 @@ decisiones esperan a la propietaria. El detalle técnico de cada parte está en 
 falta es sobre todo puesta en marcha: Supabase de producción, instalación en el PC del local, datos reales y el piloto
 con el cuaderno.
 
-## Integrado y en curso
+## Integrado
 
-Los PR #12 (pantalla del espejo), #13 (`apps/owner`, `aal2`, `@apurimeno/formato`) y #14 (revisión y este documento)
-ya están en `main`. En la rama `claude/apps-owner`, sobre `main`: respaldos (local, externo cifrado y restauración) y la
-pantalla de productos e inventario.
+Todo está en `main`, hasta el PR #15 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
+`@apurimeno/formato` (#13), revisión y este documento (#14), y respaldos (local, externo cifrado y restauración) con la
+pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integrar.
 
 ## Completo y probado
 

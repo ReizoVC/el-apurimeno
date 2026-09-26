@@ -249,9 +249,14 @@ export const servidor = {
   editarProducto: (id: string, e: ProductoEntrada) =>
     llamar("PUT", conId(RUTAS.producto, id), ProductoSchema, e),
   reponerProducto: (id: string, cantidad: number) =>
-    llamar("POST", conId(RUTAS.reponerProducto, id), ReposicionRespuestaSchema, {
-      cantidad,
-    }),
+    llamar(
+      "POST",
+      conId(RUTAS.reponerProducto, id),
+      ReposicionRespuestaSchema,
+      {
+        cantidad,
+      },
+    ),
 
   // Usuarios y rangos
   usuarios: () => llamar("GET", RUTAS.usuarios, UsuarioRespuestaSchema.array()),

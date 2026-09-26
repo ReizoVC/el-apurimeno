@@ -30,6 +30,9 @@ que ya esté definido en el entorno tiene prioridad, y un valor vacío cuenta co
 | `ESPEJO_SUPABASE_URL`, `ESPEJO_SUPABASE_ANON_KEY` | — | Proyecto de Supabase del espejo en la nube y su clave **publicable**. Una clave secreta o `service_role` se rechaza. Ver "Espejo en la nube". |
 | `ESPEJO_SYNC_EMAIL` / `ESPEJO_SYNC_PASSWORD` | — | Cuenta de Supabase Auth con rol `sincronizador` (`supabase/README.md`). |
 | `ESPEJO_INTERVALO_MINUTOS` | `30` | Minutos entre sincronizaciones automáticas, de 5 a 1440. |
+| `RESPALDO_CARPETA_LOCAL` | `respaldos/` junto a la base | Copias locales cada 15 minutos. Ver "Respaldos". |
+| `RESPALDO_CARPETA_EXTERNA` | — | Ruta completa de la carpeta que se sincroniza con la nube (Google Drive, OneDrive). Debe existir. Sin ella, no hay copia externa y el Dashboard lo advierte. |
+| `RESPALDO_CLAVE_PUBLICA` | — | Clave **pública** de cifrado (`apr-publica-…`, de `pnpm clave-respaldo`). La privada nunca va aquí: el servidor la rechaza. |
 
 ## Endpoints
 
@@ -52,7 +55,7 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /alquileres/:id/salida-sin-pago` | `REGISTRAR_SALIDA_SIN_PAGO` | — |
 | `GET /categorias-producto` | `VENDER` o `GESTIONAR_PRODUCTOS` | — |
 | `POST /categorias-producto` | `GESTIONAR_PRODUCTOS` | — |
-| `GET /productos?codigoBarras=` | `VENDER` o `GESTIONAR_PRODUCTOS` | — |
+| `GET /productos?codigoBarras=&incluirInactivos=` | `VENDER` o `GESTIONAR_PRODUCTOS`; `incluirInactivos=true` exige `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos`, `PUT /productos/:id` | `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos/:id/reposicion` | `REPONER_INVENTARIO` | — |
 | `POST /ventas` | `VENDER` | Sí |
@@ -86,6 +89,8 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `GET /tickets?numero=&desde=&hasta=&limite=` | `REIMPRIMIR_COMPROBANTE` o `CONSULTAR_REPORTES` | — |
 | `GET /espejo` | `CONSULTAR_ESTADO_ESPEJO` | — |
 | `POST /espejo/sincronizacion` | `SINCRONIZAR_ESPEJO` | — (una a la vez) |
+| `GET /respaldos` | `CONSULTAR_ESTADO_RESPALDOS` | — |
+| `POST /respaldos/copia` | `RESPALDAR` | — (una a la vez por destino) |
 
 Todavía falta **el envío real a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803,
 la impresora en Windows y reintentar los trabajos en `ERROR` o `PENDIENTE` (RF-56). Ver "Impresión".
@@ -135,6 +140,37 @@ productos, auditoría ni el estado de las habitaciones en vivo (RN-45, RIE-08).
   el espejo queda apagado y `GET /espejo` dice qué falta (`problemaConfiguracion`); el servidor arranca
   igual.
 - El equipo del local no debe suspenderse: la sincronización corre dentro del servidor.
+
+### Respaldos (Planos §14.3, RNF-BKP-01)
+
+Copias completas y restaurables de la base, distintas del espejo (que solo tiene totales). Frecuencia, destino,
+retención, hora y cifrado los decidió la propietaria (decisión 23 de contracts). Configuración y restauración paso a
+paso: `docs/RESPALDO_Y_RESTAURACION.md`.
+
+| | Local | Externa |
+|---|---|---|
+| Cuándo | 10 s después de arrancar y cada 15 min (contando desde la última copia, también tras un reinicio) | A las 04:00 de Lima; si el servidor estaba apagado a esa hora, apenas enciende. Si falla, reintenta cada 15 min |
+| Dónde | `RESPALDO_CARPETA_LOCAL` (por defecto `datos/respaldos/`) | `RESPALDO_CARPETA_EXTERNA`, que la propietaria sincroniza con la nube |
+| Formato | `apurimeno-AAAAMMDDTHHMMSSZ.db`: una base SQLite lista para usar | `apurimeno-AAAAMMDDTHHMMSSZ.db.gz.cifrado`: gzip + X25519/AES-256-GCM |
+| Retención | 24 horas | 30 días |
+
+- **Consistente sin detener nada:** `VACUUM INTO` toma una foto en una sola transacción de lectura (en WAL no
+  bloquea a quien escribe) e incluye lo que todavía está en el WAL. La copia se verifica (`integrity_check` y
+  tablas del sistema) antes de tomar su nombre final: un archivo con nombre de copia siempre está sano.
+- **Cifrado de clave pública:** el servidor solo tiene la pública, que cifra pero no descifra. La privada está en
+  el gestor de contraseñas de la propietaria y solo hace falta para restaurar. La foto sin cifrar de la copia
+  externa se toma en la carpeta local y se borra al terminar: por la carpeta sincronizada solo pasa lo cifrado.
+- **Retención:** solo borra archivos con nombre de copia; la más reciente nunca se borra, aunque sea vieja, para
+  que la carpeta no quede vacía si las copias dejan de hacerse.
+- **Si falla** (carpeta desconectada, sin permiso, disco lleno), el local sigue igual: el error queda en
+  `GET /respaldos` y el Dashboard marca "Desactualizado" (locales: más de 30 min sin copia; externa: más de 1 h
+  después de las 04:00 sin la copia del día). "Copiar ahora" (`POST /respaldos/copia`) se audita como
+  `RESPALDO_MANUAL`.
+- **Restaurar:** `pnpm restaurar` (lista), `pnpm restaurar ultima` o `pnpm restaurar <archivo>`, con el servidor
+  detenido. Verifica la copia completa antes de tocar la base; la actual queda apartada en `reemplazada-…`, y
+  aplica las migraciones que falten.
+- **Claves:** `pnpm clave-respaldo` genera un par sin escribir nada en disco; `pnpm clave-respaldo publica`
+  deriva la pública de la privada, para configurar otro equipo.
 
 ### Auditoría y reimpresión
 

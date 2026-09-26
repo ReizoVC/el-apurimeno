@@ -28,7 +28,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@apurimeno/ui/components/card";
-import { diaLima, fechaHora, fechaHoraCorta, hace, hora } from "@apurimeno/formato";
+import {
+  diaLima,
+  fechaHora,
+  fechaHoraCorta,
+  hace,
+  hora,
+} from "@apurimeno/formato";
 import { Aviso, Encabezado } from "../../src/componentes/comunes";
 import { useCarga } from "../../src/lib/carga";
 import { ERROR_RESPALDO } from "../../src/lib/rotulos";
@@ -141,7 +147,8 @@ export default function Respaldos() {
 function proxima(proximaEn: string | null): string {
   if (proximaEn === null) return "—";
   const ahora = new Date();
-  if (Date.parse(proximaEn) - ahora.getTime() < 60_000) return "en unos segundos";
+  if (Date.parse(proximaEn) - ahora.getTime() < 60_000)
+    return "en unos segundos";
   return diaLima(proximaEn) === diaLima(ahora)
     ? `a las ${hora(proximaEn)}`
     : fechaHoraCorta(proximaEn);
@@ -211,9 +218,7 @@ function TarjetaCopia({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {copia.ultimoExitoEn === null ? (
-          <p className="text-lg font-semibold">
-            Todavía no hay ninguna copia.
-          </p>
+          <p className="text-lg font-semibold">Todavía no hay ninguna copia.</p>
         ) : (
           <div>
             <p className="text-sm text-muted-foreground">Última copia</p>
@@ -228,7 +233,8 @@ function TarjetaCopia({
         {copia.ultimoError !== null && (
           <Alert variant="destructive">
             <AlertTitle>
-              El último intento falló: {ERROR_RESPALDO[copia.ultimoError.codigo]}
+              El último intento falló:{" "}
+              {ERROR_RESPALDO[copia.ultimoError.codigo]}
             </AlertTitle>
             <AlertDescription>
               <p>{copia.ultimoError.mensaje}</p>
@@ -276,14 +282,14 @@ function ComoRestaurar() {
       </CardHeader>
       <CardContent className="flex flex-col gap-2 text-sm">
         <p>
-          Restaurar no se hace desde el Dashboard: hay que detener el servidor
-          y correr, en la carpeta apps/server, <code>pnpm restaurar</code>. El
+          Restaurar no se hace desde el Dashboard: hay que detener el servidor y
+          correr, en la carpeta apps/server, <code>pnpm restaurar</code>. El
           procedimiento completo está en docs/RESPALDO_Y_RESTAURACION.md.
         </p>
         <p className="text-muted-foreground">
           Las copias externas solo se abren con la clave privada de respaldo,
-          que está en el gestor de contraseñas de la propietaria. Este equipo
-          no la tiene.
+          que está en el gestor de contraseñas de la propietaria. Este equipo no
+          la tiene.
         </p>
       </CardContent>
     </Card>

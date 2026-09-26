@@ -121,6 +121,7 @@ const ticket = resultado.data;
 | `comprobantes.ts` | `TrabajoImpresion` | RN-38, RN-39, §20.5 |
 | `configuracion.ts` | `ConfiguracionGlobal` | RN-43, §26 |
 | `espejo.ts` | `ResumenDia`, `ResumenTurno` y sus filas de Postgres, `EstadoEspejo` (estado de la sincronización) | ADR-06, RN-45, RF-60, RF-61 |
+| `respaldo.ts` | Frecuencias y retención de los respaldos, `EstadoRespaldos`, `RespaldarEntrada` | Planos §14.3, RNF-BKP-01, RNF-REC-02 |
 | `api.ts` | `RUTAS`, cuerpos de entrada y respuesta de la API local, `CABECERA_IDEMPOTENCIA`, `RespuestaError`: autenticación, turnos, alquileres, tienda, anulación y reportes | Planos §11, RF-59, §25 |
 
 ### Estados
@@ -268,6 +269,29 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     - **Autenticación remota:** RNF-SEG-06 pide "la misma autenticación que el sistema local"; ADR-06 elige
       Supabase Auth. Se interpreta como la misma exigencia (credenciales individuales, nunca acceso anónimo),
       no las mismas credenciales: las cuentas remotas son aparte y solo leen el resumen.
+
+23. **Respaldos de la base** (`respaldo.ts`; Planos §14.3, RNF-BKP-01, RNF-REC-02). Los Planos piden una copia
+    local cada 15 minutos y una diaria fuera del equipo, pero no fijaban destino, retención, hora ni cifrado. Los
+    decidió la propietaria:
+    - **Local:** cada 15 minutos en el disco del equipo; se guardan 24 horas.
+    - **Externa:** una por día a las **04:00 de Lima**; si el servidor estaba apagado a esa hora, apenas vuelve a
+      encender. Va a **una carpeta local que la propietaria sincroniza con la nube** (Google Drive u OneDrive); no
+      hay soporte para discos USB. Se guardan **30 días**.
+    - **La copia externa va cifrada.** La clave privada se genera una vez, se muestra una sola vez y la guarda la
+      propietaria en su gestor de contraseñas: nunca en el repositorio ni junto a las copias. Por eso el cifrado es
+      de clave pública (el servidor solo tiene la pública, que no sirve para abrir las copias).
+    - **Si la copia externa falla**, el Dashboard lo muestra con el mismo "Desactualizado" del espejo.
+    - **Restauración:** procedimiento escrito (`docs/RESPALDO_Y_RESTAURACION.md`) y un comando que la automatiza
+      (`pnpm restaurar`).
+
+    Detalles fijados por el proyecto, que solo agregan protección: la copia más reciente nunca se borra por
+    retención (si las copias dejan de hacerse, la carpeta no queda vacía); si la externa falla, se reintenta cada
+    15 minutos; y "Desactualizado" aparece en las locales tras 30 minutos sin copia (dos intervalos, como el
+    espejo) y en la externa una hora después de las 04:00 sin la copia del día (`MARGEN_RESPALDO_EXTERNO_MINUTOS`).
+24. **El catálogo sin inactivos, salvo para gestionarlo** (`ProductosConsulta.incluirInactivos`). `GET /productos`
+    devuelve solo los productos activos: es lo que vende el POS. La pantalla de productos del Dashboard necesita
+    también los inactivos, o un producto desactivado no se podría volver a activar; los pide con
+    `incluirInactivos=true`, que exige `inventory.manage`.
 
 ## Decisiones pendientes que afectan el contrato
 

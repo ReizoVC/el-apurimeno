@@ -248,7 +248,10 @@ export default function Productos() {
                                 value={cantidad}
                                 onChange={(e) => setCantidad(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter" && cantidadValida(cantidad))
+                                  if (
+                                    e.key === "Enter" &&
+                                    cantidadValida(cantidad)
+                                  )
                                     void reponer(p);
                                 }}
                               />

@@ -17,11 +17,11 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 
 | Parte | Qué hace | Cómo se probó |
 |---|---|---|
-| `packages/contracts` | Tipos y esquemas de todo el sistema; 24 decisiones de interpretación del SRS documentadas | 43 pruebas |
-| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos | 235 pruebas, incluida la tabla de casos del SRS |
+| `packages/contracts` | Tipos y esquemas de todo el sistema; 25 decisiones de interpretación del SRS documentadas | 45 pruebas |
+| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno | 242 pruebas, incluida la tabla de casos del SRS |
 | `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
-| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos y restauración | 180 pruebas contra SQLite real; pruebas de concurrencia |
-| `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri se compiló en Linux; en este PC Windows falta el compilador de C++ (ver "Instalación") |
+| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore` | 226 pruebas contra SQLite real; pruebas de concurrencia |
+| `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
 | `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
 | Espejo en la nube | El servidor publica cada 30 min ventas, anulados, ocupación por día y arqueos por turno; nunca clientes, tickets ni el estado en vivo | Contra el proyecto `apurimeno-prueba`: primera sincronización, cambios, anulación de días anteriores, sin internet y vuelta, re-sincronización completa |
@@ -29,7 +29,7 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | Respaldos | Copia local consistente cada 15 min (24 h), externa diaria a las 04:00 comprimida y cifrada con clave pública (30 días), `pnpm restaurar` y pantalla con "Desactualizado" | Pruebas contra SQLite real; en Chrome contra el servidor real; restauración de punta a punta con el servidor real y copias reales cada 15 min, en el mismo equipo y en un "PC nuevo" (`docs/RESPALDO_Y_RESTAURACION.md`) |
 | `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; las dos migraciones aplicadas en `apurimeno-prueba` y verificadas el 26/09 con la cuenta lectora: con solo la contraseña, con un autenticador sin verificar, o con TOTP registrado pero sin el código en la sesión, no lee nada (ni por la API directa) ni puede escribir; con el código (aal2) lee el resumen |
 
-`pnpm check-types`, `pnpm lint` y `pnpm test` pasan en todo el monorepo (466 pruebas). Todas las apps compilan.
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (521 pruebas). Todas las apps compilan.
 
 ## Qué falta para reemplazar el cuaderno
 

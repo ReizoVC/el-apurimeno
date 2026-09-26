@@ -15,7 +15,8 @@ SEED_ADMIN_PASSWORD='...' pnpm seed # configuración, métodos de pago, rangos, 
 pnpm dev                            # migra y levanta el servidor en 0.0.0.0:3001 con recarga
 ```
 
-Variables de entorno (ver `.env.example`):
+Variables de entorno (ver `.env.example`). `pnpm start`, `pnpm dev` y `pnpm migrate` leen `apps/server/.env` si existe; lo
+que ya esté definido en el entorno tiene prioridad, y un valor vacío cuenta como no definido.
 
 | Variable | Por defecto | Nota |
 |---|---|---|
@@ -26,6 +27,9 @@ Variables de entorno (ver `.env.example`):
 | `IMPRESORA_DISPOSITIVO` | — | Ruta a la que se escriben los comprobantes ESC/POS, p. ej. `/dev/usb/lp0` en Linux. Sin ella, quedan en cola (`PENDIENTE`). |
 | `IMPRESORA_PAGINA_CODIGOS` | `PC850` | `PC850` o `WPC1252`, según la página de prueba (`pnpm prueba-impresora`). |
 | `SEED_ADMIN_USER` / `SEED_ADMIN_PASSWORD` | `admin` / — | Solo para `pnpm seed`. |
+| `ESPEJO_SUPABASE_URL`, `ESPEJO_SUPABASE_ANON_KEY` | — | Proyecto de Supabase del espejo en la nube y su clave **publicable**. Una clave secreta o `service_role` se rechaza. Ver "Espejo en la nube". |
+| `ESPEJO_SYNC_EMAIL` / `ESPEJO_SYNC_PASSWORD` | — | Cuenta de Supabase Auth con rol `sincronizador` (`supabase/README.md`). |
+| `ESPEJO_INTERVALO_MINUTOS` | `30` | Minutos entre sincronizaciones automáticas, de 5 a 1440. |
 
 ## Endpoints
 
@@ -78,6 +82,8 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `GET /auditoria?usuarioId=&accion=&tipoEntidad=&entidadId=&desde=&hasta=&limite=&despuesDe=` | `CONSULTAR_AUDITORIA` | — |
 | `POST /tickets/:id/reimpresion` | `REIMPRIMIR_COMPROBANTE` | — |
 | `GET /tickets?numero=&desde=&hasta=&limite=` | `REIMPRIMIR_COMPROBANTE` o `CONSULTAR_REPORTES` | — |
+| `GET /espejo` | `CONSULTAR_ESTADO_ESPEJO` | — |
+| `POST /espejo/sincronizacion` | `SINCRONIZAR_ESPEJO` | — (una a la vez) |
 
 Todavía faltan:
 - **El envío a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803, la cola con
@@ -98,6 +104,33 @@ Todavía faltan:
 - **Métodos de pago (RF-54):** alta, edición y habilitación; uno deshabilitado ya no se acepta al cobrar.
   `afectaCaja` no se edita (decisión 20 de contracts). Se auditan como `CONFIGURACION_CAMBIADA` con
   `tipoEntidad` `METODO_PAGO`, porque §23.1 no trae una acción propia.
+
+### Espejo en la nube (ADR-06, RF-60)
+
+El servidor publica en Supabase un **resumen** para que la propietaria lo vea desde fuera del local
+(la vista remota lee directo de Supabase, nunca de este servidor). Qué lleva y qué no: decisión 22 de contracts. Resumen:
+ventas, anulados y ocupación por día de Lima, y arqueos de turnos cerrados; nunca clientes, tickets,
+productos, auditoría ni el estado de las habitaciones en vivo (RN-45, RIE-08).
+
+- **Solo sale, nunca entra** (RNF-SYNC-01): nada que llegue del espejo se escribe en la base local. El
+  servidor solo guarda el estado de la sincronización (`EstadoEspejo`).
+- **Cuándo:** 10 s después de arrancar y luego cada `ESPEJO_INTERVALO_MINUTOS` (30), más el botón
+  "Sincronizar ahora" del Dashboard (`POST /espejo/sincronizacion`, auditado como `ESPEJO_SINCRONIZADO`).
+  Una vuelta a la vez: si hay una en curso, la manual responde 409 `SINCRONIZACION_EN_CURSO`.
+- **Qué publica cada vuelta:** hoy y ayer, más los días y turnos que cambiaron desde la última
+  sincronización correcta (con 5 minutos de margen). Una anulación vuelve a publicar el día del cobro
+  original y su turno; una hora adicional, el día en que ingresó el alquiler. La primera vez, o con
+  `{ "completo": true }`, publica todo el historial. Cada fila se reemplaza (upsert), así que repetir no
+  duplica nada.
+- **Si falla** (sin internet, credenciales, tablas faltantes), el local sigue igual (RNF-SYNC-02): el
+  error queda en `GET /espejo` y en el registro, y la siguiente vuelta vuelve a intentar lo mismo.
+- **Credenciales:** entra con la cuenta `sincronizador`, que solo puede insertar y actualizar las tablas
+  del resumen (row-level security). Nunca la clave secreta: daría acceso total al proyecto si se filtrara
+  del equipo del local. Tablas, políticas y cuentas: `supabase/README.md`.
+- **Sin las variables `ESPEJO_*`**, no hay espejo y el servidor funciona igual. Si están a medias o mal,
+  el espejo queda apagado y `GET /espejo` dice qué falta (`problemaConfiguracion`); el servidor arranca
+  igual.
+- El equipo del local no debe suspenderse: la sincronización corre dentro del servidor.
 
 ### Auditoría y reimpresión
 

@@ -6,7 +6,7 @@ import { CABECERA_IDEMPOTENCIA, RUTAS, type RangoSchema } from "@apurimeno/contr
 import Database from "better-sqlite3";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import type { z } from "zod";
-import { construirApp } from "../src/app.js";
+import { construirApp, type OpcionesApp } from "../src/app.js";
 import { hashContrasena } from "../src/auth.js";
 import { crearPrisma, type PrismaClient } from "../src/db.js";
 import { ID_RANGO, sembrar } from "../src/semilla.js";
@@ -41,7 +41,10 @@ export interface Entorno {
 export const CONTRASENA = "contrasena-de-prueba";
 
 /** Base SQLite real en un archivo temporal, migrada y sembrada, con la app lista para recibir solicitudes. */
-export async function prepararEntorno(inicio = "2026-09-23T14:00:00.000Z"): Promise<Entorno> {
+export async function prepararEntorno(
+  inicio = "2026-09-23T14:00:00.000Z",
+  extra: Pick<OpcionesApp, "espejo"> = {},
+): Promise<Entorno> {
   const dir = mkdtempSync(join(tmpdir(), "apurimeno-"));
   const ruta = join(dir, "prueba.db");
   aplicarMigraciones(ruta);
@@ -54,7 +57,7 @@ export async function prepararEntorno(inicio = "2026-09-23T14:00:00.000Z"): Prom
       this.ahora = new Date(this.ahora.getTime() + minutos * 60_000);
     },
   };
-  const app = await construirApp({ prisma, jwtSecret: "s".repeat(32), ahora: () => reloj.ahora, costoBcrypt: 4 });
+  const app = await construirApp({ prisma, jwtSecret: "s".repeat(32), ahora: () => reloj.ahora, costoBcrypt: 4, ...extra });
 
   const entorno: Entorno = {
     app,

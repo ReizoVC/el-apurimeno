@@ -36,8 +36,11 @@ import { mensajeDe, servidor } from "../../src/lib/servidor";
 
 type Resultado = { tipo: "exito" | "error"; texto: string } | null;
 
-const MB = (bytes: number) =>
-  `${(bytes / 1024 / 1024).toLocaleString("es-PE", { maximumFractionDigits: 1 })} MB`;
+/** "35 KB" o "12,4 MB". */
+const tamano = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / 1024 / 1024).toLocaleString("es-PE", { maximumFractionDigits: 1 })} MB`;
 
 /**
  * Respaldos de la base (Planos §14.3): cuándo se hizo la última copia local (cada 15 min) y la externa cifrada
@@ -244,7 +247,7 @@ function TarjetaCopia({
             {copia.copiasGuardadas}{" "}
             {copia.copiasGuardadas === 1 ? "copia" : "copias"}
             {copia.ultimoTamanoBytes !== null &&
-              ` · la última de ${MB(copia.ultimoTamanoBytes)}`}
+              ` · la última de ${tamano(copia.ultimoTamanoBytes)}`}
           </dd>
           <dt className="text-muted-foreground">Próxima</dt>
           <dd>{proxima(copia.proximaEn)}</dd>

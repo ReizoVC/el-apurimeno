@@ -296,8 +296,20 @@ export const ProductoEntradaSchema = z
   .strict();
 export type ProductoEntrada = z.infer<typeof ProductoEntradaSchema>;
 
-/** Filtro del catálogo: `codigoBarras` es lo que lee el scanner USB. */
-export const ProductosConsultaSchema = z.object({ codigoBarras: TextoRequeridoSchema.optional() }).strict();
+/**
+ * Filtro del catálogo: `codigoBarras` es lo que lee el scanner USB. Sin `incluirInactivos`, solo los activos (lo que
+ * se vende). `incluirInactivos=true` es para la gestión del catálogo en el Dashboard y exige `inventory.manage`:
+ * sin él, un producto desactivado no se podría volver a activar.
+ */
+export const ProductosConsultaSchema = z
+  .object({
+    codigoBarras: TextoRequeridoSchema.optional(),
+    incluirInactivos: z
+      .enum(["true", "false"])
+      .transform((v) => v === "true")
+      .optional(),
+  })
+  .strict();
 export type ProductosConsulta = z.infer<typeof ProductosConsultaSchema>;
 
 /** Ingreso de mercadería (RN-25, RF-35). */

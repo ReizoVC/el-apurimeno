@@ -82,6 +82,12 @@ const SECCIONES: {
     grupo: "Administración",
   },
   {
+    href: "/administracion/productos",
+    etiqueta: "Productos",
+    permiso: "inventory.manage",
+    grupo: "Administración",
+  },
+  {
     href: "/administracion/usuarios",
     etiqueta: "Usuarios",
     permiso: "users.manage",

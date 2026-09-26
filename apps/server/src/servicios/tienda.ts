@@ -124,10 +124,14 @@ export async function registrarVentaServicio(ctx: ContextoServicio, entrada: Reg
 
 // --- Catálogo (CU-29) e inventario (CU-12) ---
 
-/** Catálogo de venta: productos activos, opcionalmente por código de barras (scanner USB). */
-export async function listarProductos(ctx: ContextoServicio, codigoBarras: string | undefined): Promise<Producto[]> {
+/** Catálogo de venta: productos activos (o todos, para gestionarlos), opcionalmente por código de barras (scanner USB). */
+export async function listarProductos(
+  ctx: ContextoServicio,
+  codigoBarras: string | undefined,
+  incluirInactivos = false,
+): Promise<Producto[]> {
   const filas = await ctx.prisma.producto.findMany({
-    where: { activo: true, ...(codigoBarras === undefined ? {} : { codigoBarras }) },
+    where: { ...(incluirInactivos ? {} : { activo: true }), ...(codigoBarras === undefined ? {} : { codigoBarras }) },
     orderBy: { nombre: "asc" },
   });
   return filas.map(aProducto);

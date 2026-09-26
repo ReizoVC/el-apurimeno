@@ -76,9 +76,12 @@ Las sesiones de trabajo corren en el PC de la propietaria del repositorio, junto
   `apurimeno-prueba` es el proyecto de pruebas; el de producción lo configura la propietaria.
 - **Nunca apuntar un servidor de desarrollo o de prueba al espejo de producción:** cada sincronización reemplaza
   los días que publica, y una base de prueba publicaría días vacíos sobre los reales (ver `supabase/README.md`).
-- **Respaldos:** la clave **privada** de respaldo no se escribe en ningún archivo (ni `.env`, ni el repositorio, ni la
-  carpeta de las copias): la guarda la propietaria. El servidor solo tiene `RESPALDO_CLAVE_PUBLICA`. Las pruebas
-  generan claves de prueba al momento. Procedimiento: `docs/RESPALDO_Y_RESTAURACION.md`.
+- **Respaldos:** la clave **privada** de respaldo la guarda la propietaria en su gestor de contraseñas. Nunca va en
+  el repositorio, en un `.env` ni en la carpeta de las copias, y no se muestra en registros ni respuestas. La única
+  excepción es un archivo temporal **fuera del repositorio** y solo si la propietaria lo pide: `pnpm clave-respaldo
+  --privada-en <archivo>` la escribe sin mostrarla, para que ella la pase al gestor y borre el archivo. El servidor
+  solo tiene `RESPALDO_CLAVE_PUBLICA`. Las pruebas generan claves de prueba al momento. Procedimiento:
+  `docs/RESPALDO_Y_RESTAURACION.md`.
 - Las cuentas de prueba (lectora, sincronizador) no se escriben en ningún archivo del repositorio: se pasan por
   variables de entorno a los scripts de prueba. Una prueba que da de alta un autenticador TOTP debe quitarlo al
   terminar.

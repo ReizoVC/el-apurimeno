@@ -2,7 +2,7 @@
 
 Panel del Administrador (Next.js 15, App Router, solo componentes de cliente). Consulta y administra contra
 `apps/server`: vista del día, reportes, habitaciones, clientes y precios especiales, usuarios y rangos,
-configuración, métodos de pago, auditoría, turnos abiertos y reimpresión. No tiene reglas de negocio propias:
+configuración, métodos de pago, auditoría, turnos abiertos, códigos de anulación y reimpresión. No tiene reglas de negocio propias:
 los tipos y esquemas vienen de `@apurimeno/contracts`, los componentes de `@apurimeno/ui`, y la vista previa
 del comprobante usa `componerLineasComprobante` de `@apurimeno/domain`, la misma función que imprime el
 servidor.
@@ -39,6 +39,7 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 | Métodos de pago | `settings.manage` | Alta, edición y habilitación. |
 | Auditoría | `audit.view` | Registros filtrables y paginados, con valor previo y nuevo. |
 | Turnos abiertos | `shifts.force_close` | Turnos sin cerrar y cierre forzado. |
+| Códigos de anulación | `tickets.void` | Generar un código de un solo uso para que un cajero anule un cobro (RF-65). |
 | Reimpresión | `tickets.reprint` | Buscar un ticket y encolar su copia. |
 
 ## Decisiones de interfaz
@@ -74,6 +75,9 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 - **Reimpresión:** se busca por número exacto o por periodo. Antes de reimprimir se ve el detalle del ticket;
   después, el contenido exacto de la copia (con COPIA) y el estado del trabajo en la cola. No hay una ruta
   para seguir el trabajo hasta "impreso", así que se informa el estado con el que quedó encolado.
+- **Códigos de anulación:** un botón y nada más. El código se muestra grande, una sola vez, con su hora de
+  vencimiento y la advertencia de que no se puede volver a ver: el servidor solo guarda su hash y el
+  Dashboard no lo guarda en el navegador (recargar o salir lo borra de la pantalla).
 - **Nombres de usuario:** listarlos exige `users.manage`. Sin ese permiso las pantallas muestran el id en vez
   de fallar enteras.
 - **Colores de estado de habitación:** los mismos que el POS (libre verde, ocupada azul, por limpiar violeta,

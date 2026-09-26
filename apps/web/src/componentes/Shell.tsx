@@ -118,6 +118,12 @@ const SECCIONES: {
     grupo: "Control",
   },
   {
+    href: "/codigos-autorizacion",
+    etiqueta: "Códigos de anulación",
+    permiso: "tickets.void",
+    grupo: "Control",
+  },
+  {
     href: "/reimpresion",
     etiqueta: "Reimpresión",
     permiso: "tickets.reprint",

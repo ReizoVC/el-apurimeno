@@ -2,6 +2,7 @@ import {
   AuditoriaRespuestaSchema,
   ClienteSchema,
   ConfiguracionRespuestaSchema,
+  GenerarCodigoAutorizacionRespuestaSchema,
   HabitacionSchema,
   LoginRespuestaSchema,
   MetodoPagoRespuestaSchema,
@@ -257,6 +258,12 @@ export const servidor = {
     ),
   tickets: (c: { numero?: number; desde?: string; hasta?: string }) =>
     llamar("GET", `${RUTAS.tickets}${query(c)}`, TicketSchema.array()),
+  generarCodigoAutorizacion: () =>
+    llamar(
+      "POST",
+      RUTAS.generarCodigoAutorizacion,
+      GenerarCodigoAutorizacionRespuestaSchema,
+    ),
   reimprimir: (ticketId: string) =>
     llamar(
       "POST",

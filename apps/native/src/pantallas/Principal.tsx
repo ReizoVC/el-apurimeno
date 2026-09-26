@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import type { MetodoPago, Tablero as TableroApi } from "@apurimeno/contracts";
+import type {
+  MetodoPago,
+  Tablero as TableroApi,
+  Turno,
+} from "@apurimeno/contracts";
 import { Button } from "@apurimeno/ui/components/button";
 import {
   Card,
@@ -9,9 +13,11 @@ import {
 } from "@apurimeno/ui/components/card";
 import { Aviso } from "../componentes/Aviso";
 import { ESTADO_HABITACION } from "../componentes/estados";
+import { fechaHora } from "../lib/formato";
 import { sincronizarReloj } from "../lib/reloj";
 import { mensajeDe, servidor } from "../lib/servidor";
 import type { Sesion } from "../lib/sesion";
+import { AbrirTurno, Caja } from "./Caja";
 import { HabitacionOcupada } from "./HabitacionOcupada";
 import { Ingreso } from "./Ingreso";
 import { Tienda } from "./Tienda";
@@ -25,12 +31,19 @@ interface Props {
   onSalir: () => void;
 }
 
-type Pestana = "habitaciones" | "tienda";
+type Pestana = "habitaciones" | "tienda" | "caja";
 
 const PESTANAS: { id: Pestana; etiqueta: string }[] = [
   { id: "habitaciones", etiqueta: "Habitaciones" },
   { id: "tienda", etiqueta: "Tienda" },
+  { id: "caja", etiqueta: "Caja" },
 ];
+
+/** El turno se consulta al entrar y con cada recarga del tablero: si un Administrador lo cerró, se nota enseguida. */
+type EstadoTurno =
+  | { tipo: "consultando" }
+  | { tipo: "sin-turno"; aviso: string | null }
+  | { tipo: "abierto"; turno: Turno };
 
 /**
  * Pantalla de trabajo del cajero, en pestañas. Habitaciones: el tablero y, al elegir una habitación, su panel de
@@ -43,9 +56,24 @@ export function Principal({ sesion, onSalir }: Props) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
   const [pestana, setPestana] = useState<Pestana>("habitaciones");
+  const [turno, setTurno] = useState<EstadoTurno>({ tipo: "consultando" });
 
   const cargarTablero = useCallback(async () => {
     try {
+      const { turno: abierto } = await servidor.turnoActual();
+      setTurno((previo) =>
+        abierto !== null
+          ? { tipo: "abierto", turno: abierto }
+          : previo.tipo === "abierto"
+            ? {
+                tipo: "sin-turno",
+                aviso:
+                  "Su turno de caja fue cerrado. Abra uno nuevo para seguir cobrando.",
+              }
+            : previo.tipo === "sin-turno"
+              ? previo
+              : { tipo: "sin-turno", aviso: null },
+      );
       const t = await servidor.tablero();
       sincronizarReloj(t.ahora);
       setTablero(t);
@@ -87,7 +115,11 @@ export function Principal({ sesion, onSalir }: Props) {
       <header className="flex items-center justify-between gap-4 border-b bg-background px-4 py-2">
         <div className="flex items-center gap-4">
           <span className="font-semibold">El Apurimeño · POS</span>
-          <nav className="flex gap-1" aria-label="Secciones">
+          <nav
+            className="flex gap-1"
+            aria-label="Secciones"
+            hidden={turno.tipo !== "abierto"}
+          >
             {PESTANAS.map((p) => (
               <Button
                 key={p.id}
@@ -102,6 +134,11 @@ export function Principal({ sesion, onSalir }: Props) {
           </nav>
         </div>
         <div className="flex items-center gap-3 text-sm">
+          {turno.tipo === "abierto" && (
+            <span className="text-muted-foreground">
+              Turno desde {fechaHora(turno.turno.abiertoEn)}
+            </span>
+          )}
           <span className="text-muted-foreground">
             Cajero:{" "}
             <span className="font-medium text-foreground">
@@ -124,7 +161,30 @@ export function Principal({ sesion, onSalir }: Props) {
             {exito}
           </Aviso>
         )}
-        {pestana === "tienda" && (
+        {turno.tipo === "consultando" && (
+          <p className="text-sm text-muted-foreground">
+            Consultando el turno de caja…
+          </p>
+        )}
+        {turno.tipo === "sin-turno" && (
+          <AbrirTurno
+            aviso={turno.aviso}
+            onAbierto={(abierto) =>
+              setTurno({ tipo: "abierto", turno: abierto })
+            }
+          />
+        )}
+        {turno.tipo === "abierto" && pestana === "caja" && (
+          <Caja
+            key={turno.turno.id}
+            turno={turno.turno}
+            onCerrado={() => {
+              setTurno({ tipo: "sin-turno", aviso: null });
+              setPestana("habitaciones");
+            }}
+          />
+        )}
+        {turno.tipo === "abierto" && pestana === "tienda" && (
           <Tienda
             sesion={sesion}
             metodos={metodos}
@@ -135,7 +195,8 @@ export function Principal({ sesion, onSalir }: Props) {
             }
           />
         )}
-        {pestana === "habitaciones" &&
+        {turno.tipo === "abierto" &&
+          pestana === "habitaciones" &&
           (tablero === null ? (
             <p className="text-sm text-muted-foreground">
               Cargando habitaciones…

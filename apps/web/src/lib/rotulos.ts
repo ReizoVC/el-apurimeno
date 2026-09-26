@@ -1,5 +1,6 @@
 import type {
   AccionAuditoria,
+  CodigoErrorEspejo,
   OrigenTicket,
   Permiso,
   TipoEntidadAuditada,
@@ -98,4 +99,12 @@ export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
   CODIGO_AUTORIZACION: "Código de autorización",
   TRABAJO_IMPRESION: "Impresión",
   ESPEJO: "Espejo en la nube",
+};
+
+/** Por qué falló la última sincronización con el espejo en la nube. */
+export const ERROR_ESPEJO: Record<CodigoErrorEspejo, string> = {
+  SIN_CONEXION: "Sin conexión con Supabase",
+  CREDENCIALES_RECHAZADAS: "Supabase rechazó la cuenta de sincronización",
+  RECHAZADO_POR_EL_ESPEJO: "Supabase rechazó los datos",
+  ERROR_INTERNO: "Error interno del servidor",
 };

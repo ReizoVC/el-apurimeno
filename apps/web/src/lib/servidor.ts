@@ -2,6 +2,7 @@ import {
   AuditoriaRespuestaSchema,
   ClienteSchema,
   ConfiguracionRespuestaSchema,
+  EstadoEspejoSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
   HabitacionSchema,
   LoginRespuestaSchema,
@@ -14,6 +15,7 @@ import {
   ReporteOcupacionSchema,
   ReporteVentasSchema,
   RespuestaErrorSchema,
+  SincronizacionEspejoRespuestaSchema,
   TableroSchema,
   TicketSchema,
   TurnoRespuestaSchema,
@@ -258,6 +260,15 @@ export const servidor = {
     ),
   tickets: (c: { numero?: number; desde?: string; hasta?: string }) =>
     llamar("GET", `${RUTAS.tickets}${query(c)}`, TicketSchema.array()),
+  estadoEspejo: () => llamar("GET", RUTAS.estadoEspejo, EstadoEspejoSchema),
+  /** Espera a que termine la vuelta: devuelve el resultado, o el error en `estado.ultimoError`. */
+  sincronizarEspejo: (completo: boolean) =>
+    llamar(
+      "POST",
+      RUTAS.sincronizarEspejo,
+      SincronizacionEspejoRespuestaSchema,
+      { completo },
+    ),
   generarCodigoAutorizacion: () =>
     llamar(
       "POST",

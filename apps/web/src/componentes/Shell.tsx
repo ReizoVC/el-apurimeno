@@ -106,6 +106,12 @@ const SECCIONES: {
     grupo: "Sistema",
   },
   {
+    href: "/espejo",
+    etiqueta: "Espejo en la nube",
+    permiso: "settings.manage",
+    grupo: "Sistema",
+  },
+  {
     href: "/auditoria",
     etiqueta: "Auditoría",
     permiso: "audit.view",

@@ -37,6 +37,7 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 | Rangos | `users.manage` | Alta y edición de la combinación de permisos. |
 | Configuración | `settings.manage` | Parámetros de alquiler, comprobante, impresora y tienda. |
 | Métodos de pago | `settings.manage` | Alta, edición y habilitación. |
+| Espejo en la nube | `settings.manage` | Hora de la última publicación del resumen para la propietaria, el error si lo hay, "Sincronizar ahora" y "Re-sincronizar todo". |
 | Auditoría | `audit.view` | Registros filtrables y paginados, con valor previo y nuevo. |
 | Turnos abiertos | `shifts.force_close` | Turnos sin cerrar y cierre forzado. |
 | Códigos de anulación | `tickets.void` | Generar un código de un solo uso para que un cajero anule un cobro (RF-65). |
@@ -75,6 +76,12 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 - **Reimpresión:** se busca por número exacto o por periodo. Antes de reimprimir se ve el detalle del ticket;
   después, el contenido exacto de la copia (con COPIA) y el estado del trabajo en la cola. No hay una ruta
   para seguir el trabajo hasta "impreso", así que se informa el estado con el que quedó encolado.
+- **Espejo en la nube:** lo más grande es la hora de la última publicación correcta, porque es la que ve la
+  propietaria, con un "hace N min" orientativo. Si pasaron más de dos intervalos sin publicar, aparece
+  "Desactualizado". El error de la última vuelta se muestra con su causa en castellano y el mensaje del
+  servidor, aclarando que el local sigue funcionando. "Re-sincronizar todo" pide confirmación, porque tarda más
+  y solo hace falta si el espejo quedó desfasado. Sin las variables `ESPEJO_*`, la pantalla dice qué falta en
+  vez de mostrar botones. El estado se refresca cada 30 s para ver las vueltas automáticas.
 - **Códigos de anulación:** un botón y nada más. El código se muestra grande, una sola vez, con su hora de
   vencimiento y la advertencia de que no se puede volver a ver: el servidor solo guarda su hash y el
   Dashboard no lo guarda en el navegador (recargar o salir lo borra de la pantalla).

@@ -31,6 +31,8 @@ import {
   ReposicionRespuestaSchema,
   SalidaRespuestaSchema,
   SalidaSinPagoEntradaSchema,
+  TableroSchema,
+  TurnoActualRespuestaSchema,
   TurnoRespuestaSchema,
 } from "@apurimeno/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -64,7 +66,9 @@ import {
   forzarCierreTurnoServicio,
   listarTurnosAbiertos,
   registrarMovimientoCajaServicio,
+  turnoActualServicio,
 } from "./servicios/turnos.js";
+import { tableroServicio } from "./servicios/tablero.js";
 
 type ConId = FastifyRequest<{ Params: { id: string } }>;
 
@@ -89,6 +93,14 @@ export function registrarRutas(
   const ctx = creadorContexto(prisma, ahora);
 
   app.get(RUTAS.salud, { config: { publica: true } }, async () => ({ estado: "ok" }));
+
+  app.get(RUTAS.tablero, { config: { operacion: "CONSULTAR_TABLERO" } }, async (request) =>
+    TableroSchema.parse(await tableroServicio(ctx(request))),
+  );
+
+  app.get(RUTAS.turnoActual, { config: { operacion: ["ABRIR_TURNO", "CERRAR_TURNO"] } }, async (request) =>
+    TurnoActualRespuestaSchema.parse({ turno: await turnoActualServicio(ctx(request)) }),
+  );
 
   app.post(RUTAS.abrirTurno, { config: { operacion: "ABRIR_TURNO" } }, async (request, reply) => {
     const turno = await abrirTurno(ctx(request), validar(AbrirTurnoEntradaSchema, request.body));

@@ -15,11 +15,26 @@ describe("CORS_ORIGINS", () => {
     ).toEqual(["http://192.168.1.50:3002", "https://panel.local"]);
   });
 
-  it("sin la variable: localhost en desarrollo, ninguno en producción", () => {
+  it("sin la variable: localhost y el POS en desarrollo; en producción, solo el POS de escritorio (Tauri)", () => {
     expect(leerOrigenesPermitidos(undefined, false)).toEqual(
       ORIGENES_DESARROLLO,
     );
-    expect(leerOrigenesPermitidos(undefined, true)).toEqual([]);
+    expect(leerOrigenesPermitidos(undefined, false)).toContain(
+      "http://localhost:1420",
+    );
+    expect(leerOrigenesPermitidos(undefined, true)).toEqual([
+      "tauri://localhost",
+      "http://tauri.localhost",
+    ]);
+  });
+
+  it("acepta los orígenes de Tauri en la lista explícita; otro esquema no web, no", () => {
+    expect(
+      leerOrigenesPermitidos("tauri://localhost,http://tauri.localhost", true),
+    ).toEqual(["tauri://localhost", "http://tauri.localhost"]);
+    expect(() => leerOrigenesPermitidos("tauri://otro", true)).toThrow(
+      /CORS_ORIGINS/,
+    );
   });
 
   it.each([

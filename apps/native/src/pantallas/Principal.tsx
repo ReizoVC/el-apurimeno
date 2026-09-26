@@ -12,6 +12,7 @@ import { ESTADO_HABITACION } from "../componentes/estados";
 import { sincronizarReloj } from "../lib/reloj";
 import { mensajeDe, servidor } from "../lib/servidor";
 import type { Sesion } from "../lib/sesion";
+import { HabitacionOcupada } from "./HabitacionOcupada";
 import { Ingreso } from "./Ingreso";
 import { Tablero } from "./Tablero";
 
@@ -122,6 +123,16 @@ export function Principal({ sesion, onSalir }: Props) {
                     metodos={metodos}
                     onRegistrado={terminar}
                     onCancelar={() => setSeleccionada(null)}
+                  />
+                ) : elegida.alquiler !== null ? (
+                  <HabitacionOcupada
+                    key={elegida.alquiler.alquiler.id}
+                    habitacion={elegida.habitacion}
+                    ocupacion={elegida.alquiler}
+                    sesion={sesion}
+                    metodos={metodos}
+                    onTerminado={terminar}
+                    onCerrar={() => setSeleccionada(null)}
                   />
                 ) : (
                   <Card>

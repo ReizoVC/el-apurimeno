@@ -5,15 +5,18 @@ lee desde fuera. Qué contiene: decisión 22 de `packages/contracts/README.md`. 
 "Espejo en la nube" de `apps/server/README.md`.
 
 ```
-migrations/20260926063000_espejo.sql   tablas, row-level security y funciones de acceso
+migrations/20260926063000_espejo.sql                 tablas, row-level security y funciones de acceso
+migrations/20260926090000_lector_requiere_aal2.sql   las lectoras solo leen con verificación en dos pasos (aal2)
 ```
+
+Las migraciones se aplican **en orden** y todas; cada una se puede volver a ejecutar sin error.
 
 ## Quién puede qué
 
 | Cuenta | Rol en `privado.acceso_espejo` | Puede |
 |---|---|---|
 | Servidor del local | `sincronizador` | Insertar y actualizar `resumen_dia`, `resumen_turno` y `estado_espejo` (y leerlas, porque un upsert lo necesita). Nada más. |
-| Propietaria, hija | `lector` | Leer esas tres tablas. |
+| Propietaria, hija | `lector` | Leer esas tres tablas, **solo con la verificación en dos pasos hecha** (sesión `aal2`). Con solo la contraseña no ven nada. |
 | Cualquier otra cuenta, o sin sesión | — | Nada. |
 
 - Nadie tiene `DELETE`. `privado.acceso_espejo` no se expone por la API: solo se administra desde el editor SQL.
@@ -31,7 +34,7 @@ Se hace una vez por proyecto (prueba y producción), desde el panel de Supabase.
 ### 1. Aplicar el SQL
 
 **SQL Editor → New query**: pegar el contenido completo de `migrations/20260926063000_espejo.sql` y pulsar
-**Run**.
+**Run**. Luego, en una consulta nueva, lo mismo con `migrations/20260926090000_lector_requiere_aal2.sql`.
 
 - Resultado esperado: `Success. No rows returned`.
 - Se puede volver a ejecutar sin error: crea lo que falta y rehace las políticas.
@@ -70,6 +73,22 @@ group by 1, 2 order by 2;
 ```
 
 Esperado: 3 filas, todas de `authenticated` con `INSERT, SELECT, UPDATE`. Ninguna de `anon`.
+
+```sql
+select p.proname as funcion, pg_get_functiondef(p.oid) like '%aal2%' as exige_aal2
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where (n.nspname, p.proname) in (('privado', 'espejo_es_lector'), ('public', 'espejo_mi_rol'))
+order by 1;
+```
+
+Esperado: 2 filas: `espejo_es_lector` con `exige_aal2` = `true` y `espejo_mi_rol` con `false` (esa no lo exige a
+propósito: se consulta antes de pedir el código).
+
+### 1b. Verificación en dos pasos (TOTP)
+
+**Authentication → Multi-Factor** (o **Sign In / Providers → Multi-Factor Authentication**, según la versión del
+panel): **TOTP** debe estar habilitado (*Enabled*). Viene así por defecto en los proyectos nuevos. Si estuviera
+deshabilitado, la vista de la propietaria no puede dar de alta el autenticador y lo dice.
 
 ### 3. Cerrar el registro público
 
@@ -111,6 +130,11 @@ estaría en `acceso_espejo`; pero sin registro público ni siquiera puede crear 
 
 ### 5. Cuentas de lectura (propietaria e hija)
 
+Cada lectora da de alta su autenticador (Google Authenticator, Microsoft Authenticator…) la primera vez que
+entra a la vista de la propietaria: la app muestra el código QR. Si pierde el celular, se le quita el
+autenticador desde **Authentication → Users → (la cuenta) → Factors** (o borrando su fila de
+`auth.mfa_factors`) y lo vuelve a dar de alta al entrar.
+
 Igual que la del servidor, con el email real de cada una y `rol` = `lector`:
 
 1. **Authentication → Users → Add user → Create new user**, con su email y una contraseña inicial;
@@ -140,6 +164,14 @@ returning user_id, rol, activo;
 
 Para cambiar la contraseña de la cuenta del servidor: **Authentication → Users → (la cuenta) → Reset
 password** o eliminarla y crearla de nuevo (repitiendo el `insert`), y actualizar `ESPEJO_SYNC_PASSWORD`.
+
+## Un solo servidor por proyecto
+
+Cada sincronización **reemplaza** los días que publica con lo que hay en la base del servidor que sincroniza.
+Si se apunta a este proyecto un servidor con otra base (una de prueba, una recién instalada), sus días vacíos
+reemplazan a los reales. Por eso el proyecto de producción solo debe tener en su `.env` el servidor del local,
+y las pruebas usan un proyecto aparte. Si pasara, basta con una sincronización completa desde el servidor del
+local ("Re-sincronizar todo") para volver a publicar los datos correctos.
 
 ## Plan gratuito de Supabase
 

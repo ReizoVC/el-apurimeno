@@ -8,6 +8,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo clean",
     "check-types": "turbo check-types",
+    "test": "turbo test",
     "shadcn": "pnpm --filter @apurimeno/ui shadcn",
     "tauri": "pnpm --filter native tauri"
   },
@@ -18,6 +19,6 @@
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.9"
   }
 }

@@ -248,3 +248,23 @@ export const SincronizacionEspejoRespuestaSchema = z
   })
   .strict();
 export type SincronizacionEspejoRespuesta = z.infer<typeof SincronizacionEspejoRespuestaSchema>;
+
+// --- Claves de Supabase ---
+
+/**
+ * ¿Es una clave con acceso total al proyecto de Supabase? La secreta nueva (`sb_secret_…`) o la `service_role`
+ * heredada (un JWT). Ni el servidor del local ni la vista de la propietaria deben usarlas: ignoran row-level
+ * security. Solo la clave publicable (o la `anon` heredada) es aceptable fuera del panel de Supabase.
+ */
+export function esClaveSupabasePrivilegiada(clave: string): boolean {
+  if (clave.startsWith("sb_secret_")) return true;
+  const partes = clave.split(".");
+  if (partes.length !== 3 || partes[1] === undefined) return false;
+  try {
+    const base64 = partes[1].replace(/-/g, "+").replace(/_/g, "/");
+    const carga = JSON.parse(atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "="))) as { role?: unknown };
+    return carga.role === "service_role";
+  } catch {
+    return false;
+  }
+}

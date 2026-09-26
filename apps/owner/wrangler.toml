@@ -1,0 +1,5 @@
+# Cloudflare Pages: sitio estático, sin funciones. `pnpm publicar` sube la carpeta out/ que deja `pnpm build`.
+# Ver README.md, "Despliegue".
+name = "apurimeno-owner"
+pages_build_output_dir = "out"
+compatibility_date = "2026-09-01"

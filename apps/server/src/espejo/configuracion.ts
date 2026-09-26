@@ -1,3 +1,4 @@
+import { esClaveSupabasePrivilegiada } from "@apurimeno/contracts";
 import type { OpcionesSupabase } from "./supabase.js";
 
 export const INTERVALO_POR_DEFECTO_MINUTOS = 30;
@@ -17,19 +18,6 @@ export interface ConfiguracionEspejo {
   /** Qué está mal, para mostrarlo en el Dashboard; null si todo está bien o si no se configuró nada. */
   problema: string | null;
   intervaloMinutos: number;
-}
-
-/** ¿Es una clave que da acceso total al proyecto? La secreta nueva o la service_role heredada (un JWT). */
-function esClavePrivilegiada(clave: string): boolean {
-  if (clave.startsWith("sb_secret_")) return true;
-  const partes = clave.split(".");
-  if (partes.length !== 3 || partes[1] === undefined) return false;
-  try {
-    const carga = JSON.parse(Buffer.from(partes[1], "base64url").toString("utf8")) as { role?: unknown };
-    return carga.role === "service_role";
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -72,7 +60,7 @@ export function leerConfiguracionEspejo(env: NodeJS.ProcessEnv): ConfiguracionEs
   if (url.protocol !== "https:" && !(local && url.protocol === "http:")) {
     return sinEspejo("ESPEJO_SUPABASE_URL debe usar https: la contraseña de sincronización viaja en la solicitud.", intervalo);
   }
-  if (esClavePrivilegiada(valores.clavePublica)) {
+  if (esClaveSupabasePrivilegiada(valores.clavePublica)) {
     return sinEspejo(
       "ESPEJO_SUPABASE_ANON_KEY es una clave secreta (acceso total al proyecto): use la clave publicable. " +
         "La sincronización entra con la cuenta sincronizador, que solo puede escribir el resumen.",

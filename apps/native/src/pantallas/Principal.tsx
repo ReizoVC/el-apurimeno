@@ -14,6 +14,7 @@ import { mensajeDe, servidor } from "../lib/servidor";
 import type { Sesion } from "../lib/sesion";
 import { HabitacionOcupada } from "./HabitacionOcupada";
 import { Ingreso } from "./Ingreso";
+import { Tienda } from "./Tienda";
 import { Tablero } from "./Tablero";
 
 /** Cada cuánto se vuelve a pedir el tablero: las salidas y la limpieza cambian estados desde otros equipos. */
@@ -24,13 +25,24 @@ interface Props {
   onSalir: () => void;
 }
 
-/** Pantalla de trabajo del cajero: el tablero y, al elegir una habitación, su panel de acciones a la derecha. */
+type Pestana = "habitaciones" | "tienda";
+
+const PESTANAS: { id: Pestana; etiqueta: string }[] = [
+  { id: "habitaciones", etiqueta: "Habitaciones" },
+  { id: "tienda", etiqueta: "Tienda" },
+];
+
+/**
+ * Pantalla de trabajo del cajero, en pestañas. Habitaciones: el tablero y, al elegir una habitación, su panel de
+ * acciones a la derecha. Tienda: la venta de productos.
+ */
 export function Principal({ sesion, onSalir }: Props) {
   const [tablero, setTablero] = useState<TableroApi | null>(null);
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
   const [metodos, setMetodos] = useState<MetodoPago[]>([]);
   const [aviso, setAviso] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
+  const [pestana, setPestana] = useState<Pestana>("habitaciones");
 
   const cargarTablero = useCallback(async () => {
     try {
@@ -73,7 +85,22 @@ export function Principal({ sesion, onSalir }: Props) {
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
       <header className="flex items-center justify-between gap-4 border-b bg-background px-4 py-2">
-        <span className="font-semibold">El Apurimeño · POS</span>
+        <div className="flex items-center gap-4">
+          <span className="font-semibold">El Apurimeño · POS</span>
+          <nav className="flex gap-1" aria-label="Secciones">
+            {PESTANAS.map((p) => (
+              <Button
+                key={p.id}
+                variant={pestana === p.id ? "secondary" : "ghost"}
+                size="sm"
+                aria-current={pestana === p.id ? "page" : undefined}
+                onClick={() => setPestana(p.id)}
+              >
+                {p.etiqueta}
+              </Button>
+            ))}
+          </nav>
+        </div>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-muted-foreground">
             Cajero:{" "}
@@ -97,59 +124,74 @@ export function Principal({ sesion, onSalir }: Props) {
             {exito}
           </Aviso>
         )}
-        {tablero === null ? (
-          <p className="text-sm text-muted-foreground">
-            Cargando habitaciones…
-          </p>
-        ) : (
-          <div className="flex items-start gap-4">
-            <div className="min-w-0 flex-1">
-              <Tablero
-                tablero={tablero}
-                seleccionada={seleccionada}
-                onSeleccionar={(id) => {
-                  setExito(null);
-                  setSeleccionada(id);
-                }}
-              />
-            </div>
-            {elegida !== null && (
-              <aside className="sticky top-4 w-[26rem] shrink-0">
-                {elegida.habitacion.estado === "LIBRE" ? (
-                  <Ingreso
-                    key={elegida.habitacion.id}
-                    habitacion={elegida.habitacion}
-                    sesion={sesion}
-                    metodos={metodos}
-                    onRegistrado={terminar}
-                    onCancelar={() => setSeleccionada(null)}
-                  />
-                ) : elegida.alquiler !== null ? (
-                  <HabitacionOcupada
-                    key={elegida.alquiler.alquiler.id}
-                    habitacion={elegida.habitacion}
-                    ocupacion={elegida.alquiler}
-                    sesion={sesion}
-                    metodos={metodos}
-                    onTerminado={terminar}
-                    onCerrar={() => setSeleccionada(null)}
-                  />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>
-                        Habitación {elegida.habitacion.numero}
-                      </CardTitle>
-                      <CardDescription>
-                        {ESTADO_HABITACION[elegida.habitacion.estado].etiqueta}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                )}
-              </aside>
-            )}
-          </div>
+        {pestana === "tienda" && (
+          <Tienda
+            sesion={sesion}
+            metodos={metodos}
+            ocupadas={
+              tablero?.habitaciones
+                .filter((h) => h.alquiler !== null)
+                .map((h) => h.habitacion) ?? []
+            }
+          />
         )}
+        {pestana === "habitaciones" &&
+          (tablero === null ? (
+            <p className="text-sm text-muted-foreground">
+              Cargando habitaciones…
+            </p>
+          ) : (
+            <div className="flex items-start gap-4">
+              <div className="min-w-0 flex-1">
+                <Tablero
+                  tablero={tablero}
+                  seleccionada={seleccionada}
+                  onSeleccionar={(id) => {
+                    setExito(null);
+                    setSeleccionada(id);
+                  }}
+                />
+              </div>
+              {elegida !== null && (
+                <aside className="sticky top-4 w-[26rem] shrink-0">
+                  {elegida.habitacion.estado === "LIBRE" ? (
+                    <Ingreso
+                      key={elegida.habitacion.id}
+                      habitacion={elegida.habitacion}
+                      sesion={sesion}
+                      metodos={metodos}
+                      onRegistrado={terminar}
+                      onCancelar={() => setSeleccionada(null)}
+                    />
+                  ) : elegida.alquiler !== null ? (
+                    <HabitacionOcupada
+                      key={elegida.alquiler.alquiler.id}
+                      habitacion={elegida.habitacion}
+                      ocupacion={elegida.alquiler}
+                      sesion={sesion}
+                      metodos={metodos}
+                      onTerminado={terminar}
+                      onCerrar={() => setSeleccionada(null)}
+                    />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>
+                          Habitación {elegida.habitacion.numero}
+                        </CardTitle>
+                        <CardDescription>
+                          {
+                            ESTADO_HABITACION[elegida.habitacion.estado]
+                              .etiqueta
+                          }
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  )}
+                </aside>
+              )}
+            </div>
+          ))}
       </main>
     </div>
   );

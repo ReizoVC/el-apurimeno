@@ -8,6 +8,7 @@ import {
   CotizacionHoraAdicionalRespuestaSchema,
   CotizacionIngresoRespuestaSchema,
   CotizarIngresoEntradaSchema,
+  ForzarCierreTurnoEntradaSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
   MovimientoCajaEntradaSchema,
   MovimientoCajaRespuestaSchema,
@@ -22,6 +23,7 @@ import {
   RegistrarIngresoRespuestaSchema,
   RegistrarVentaEntradaSchema,
   RegistrarVentaRespuestaSchema,
+  ReimpresionRespuestaSchema,
   ReporteArqueosSchema,
   ReporteOcupacionSchema,
   ReporteVentasSchema,
@@ -44,6 +46,7 @@ import {
 } from "./servicios/alquileres.js";
 import { anularTicketServicio, generarCodigoServicio, type SecretoCodigos } from "./servicios/anulacion.js";
 import { claveIdempotencia } from "./servicios/cobros.js";
+import { reimprimirTicketServicio } from "./servicios/comprobantes.js";
 import { creadorContexto } from "./servicios/contexto.js";
 import { reporteArqueosServicio, reporteOcupacionServicio, reporteVentasServicio } from "./servicios/reportes.js";
 import {
@@ -55,7 +58,13 @@ import {
   registrarVentaServicio,
   reponerProducto,
 } from "./servicios/tienda.js";
-import { abrirTurno, cerrarTurnoPropio, registrarMovimientoCajaServicio } from "./servicios/turnos.js";
+import {
+  abrirTurno,
+  cerrarTurnoPropio,
+  forzarCierreTurnoServicio,
+  listarTurnosAbiertos,
+  registrarMovimientoCajaServicio,
+} from "./servicios/turnos.js";
 
 type ConId = FastifyRequest<{ Params: { id: string } }>;
 
@@ -89,6 +98,16 @@ export function registrarRutas(
 
   app.post(RUTAS.cerrarTurno, { config: { operacion: "CERRAR_TURNO" } }, async (request) =>
     TurnoRespuestaSchema.parse(await cerrarTurnoPropio(ctx(request), validar(CerrarTurnoEntradaSchema, request.body))),
+  );
+
+  app.get(RUTAS.turnosAbiertos, { config: { operacion: "FORZAR_CIERRE_TURNO" } }, async (request) =>
+    TurnoRespuestaSchema.array().parse(await listarTurnosAbiertos(ctx(request))),
+  );
+
+  app.post(RUTAS.forzarCierreTurno, { config: { operacion: "FORZAR_CIERRE_TURNO" } }, async (request: ConId) =>
+    TurnoRespuestaSchema.parse(
+      await forzarCierreTurnoServicio(ctx(request), request.params.id, validar(ForzarCierreTurnoEntradaSchema, request.body)),
+    ),
   );
 
   // Idempotente como un cobro (decisión 18 de contracts): un reintento no duplica el movimiento.
@@ -190,6 +209,13 @@ export function registrarRutas(
       return AnularTicketRespuestaSchema.parse(responderCobro(reply, r));
     },
   );
+
+  // Reimpresión (CU-22): una copia marcada como tal. Pulsar dos veces imprime dos copias, como en papel.
+  app.post(RUTAS.reimprimirTicket, { config: { operacion: "REIMPRIMIR_COMPROBANTE" } }, async (request: ConId, reply) => {
+    const r = await reimprimirTicketServicio(ctx(request), request.params.id);
+    void reply.status(201);
+    return ReimpresionRespuestaSchema.parse(r);
+  });
 
   // --- Reportes (§25) ---
 

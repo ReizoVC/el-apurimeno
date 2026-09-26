@@ -3,6 +3,7 @@ import {
   CategoriaProductoSchema,
   ClienteSchema,
   CodigoAutorizacionSchema,
+  ConfiguracionGlobalSchema,
   HabitacionSchema,
   HoraAdicionalSchema,
   MetodoPagoSchema,
@@ -13,13 +14,16 @@ import {
   PrecioEspecialClienteSchema,
   ProductoSchema,
   RangoSchema,
+  RegistroAuditoriaSchema,
   TicketSchema,
+  TrabajoImpresionSchema,
   TurnoSchema,
   UsuarioSchema,
   type Alquiler,
   type CategoriaProducto,
   type Cliente,
   type CodigoAutorizacion,
+  type ConfiguracionGlobal,
   type Habitacion,
   type HoraAdicional,
   type MetodoPago,
@@ -29,7 +33,9 @@ import {
   type PrecioEspecialCliente,
   type Producto,
   type Rango,
+  type RegistroAuditoria,
   type Ticket,
+  type TrabajoImpresion,
   type Turno,
   type Usuario,
 } from "@apurimeno/contracts";
@@ -316,5 +322,39 @@ export function aCodigoAutorizacion(fila: Db.CodigoAutorizacion): CodigoAutoriza
     usadoEn: isoONulo(fila.usadoEn),
     usadoPorId: fila.usadoPorId,
     ticketId: fila.ticketId,
+  });
+}
+
+export function aConfiguracion(fila: Db.ConfiguracionGlobal): ConfiguracionGlobal {
+  return ConfiguracionGlobalSchema.parse({
+    parametrosAlquiler: fila.parametrosAlquiler,
+    comprobante: fila.comprobante,
+    impresora: fila.impresora,
+    permitirStockNegativo: fila.permitirStockNegativo,
+    minutosVigenciaCodigoAutorizacion: fila.minutosVigenciaCodigoAutorizacion,
+  });
+}
+
+export function aRegistroAuditoria(fila: Db.RegistroAuditoria): RegistroAuditoria {
+  return RegistroAuditoriaSchema.parse({
+    id: fila.id,
+    ocurridoEn: iso(fila.ocurridoEn),
+    usuarioId: fila.usuarioId,
+    accion: fila.accion,
+    tipoEntidad: fila.tipoEntidad,
+    entidadId: fila.entidadId,
+    valorPrevio: fila.valorPrevio,
+    valorNuevo: fila.valorNuevo,
+    motivo: fila.motivo,
+  });
+}
+
+export function aTrabajoImpresion(fila: Db.TrabajoImpresion): TrabajoImpresion {
+  return TrabajoImpresionSchema.parse({
+    id: fila.id,
+    ticketId: fila.ticketId,
+    estado: fila.estado,
+    esCopia: fila.esCopia,
+    creadoEn: iso(fila.creadoEn),
   });
 }

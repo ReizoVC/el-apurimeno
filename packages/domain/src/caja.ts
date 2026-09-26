@@ -1,4 +1,5 @@
 import {
+  MetodoPagoSchema,
   TurnoSchema,
   type Centimos,
   type CentimosConSigno,
@@ -129,4 +130,20 @@ export function prepararMovimientoCaja(
   asegurarTurnoAbierto(turno);
   asegurarEnteroPositivo(monto, "monto");
   return { turnoId: turno.id, tipo, monto, motivo: motivoRequerido(motivo) };
+}
+
+/**
+ * Edición de un método de pago (RF-54): nombre, número de referencia y habilitación. `afectaCaja` no se
+ * cambia: el efectivo esperado de un turno abierto se calcula con el valor actual del método, así que
+ * cambiarlo alteraría arqueos ya en curso (RN-35). Para otro comportamiento se crea un método nuevo y se
+ * deshabilita el anterior (decisión 20 de contracts).
+ */
+export function editarMetodoPago(previo: MetodoPago, datos: Omit<MetodoPago, "id">): MetodoPago {
+  if (datos.afectaCaja !== previo.afectaCaja) {
+    throw new ErrorNegocio(
+      "INVALID_STATE_TRANSITION",
+      "No se puede cambiar si un método afecta la caja: cree un método nuevo y deshabilite este.",
+    );
+  }
+  return MetodoPagoSchema.parse({ id: previo.id, ...datos });
 }

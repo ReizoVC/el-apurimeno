@@ -22,6 +22,7 @@ Variables de entorno (ver `.env.example`):
 | `DATABASE_URL` | `file:./datos/apurimeno.db` | |
 | `JWT_SECRET` | aleatorio por arranque | **Obligatorio en producción** (`NODE_ENV=production`), al menos 32 caracteres. En desarrollo, las sesiones se invalidan al reiniciar. |
 | `HOST` / `PORT` | `0.0.0.0` / `3001` | Escucha en la red local para el POS, el Dashboard y la app de limpieza (RES-04). |
+| `CORS_ORIGINS` | en desarrollo, `http://localhost` y `http://127.0.0.1` en los puertos 3000, 3002 y 3003; en producción, ninguno | Orígenes de navegador que pueden llamar a la API, separados por comas y exactos (esquema, host y puerto). No admite `*`: el servidor no arranca con un comodín o un origen mal formado. Para el celular de limpieza en la red del local: `CORS_ORIGINS=http://192.168.1.50:3002` (la IP de la máquina que sirve la app). |
 | `SEED_ADMIN_USER` / `SEED_ADMIN_PASSWORD` | `admin` / — | Solo para `pnpm seed`. |
 
 ## Endpoints
@@ -65,10 +66,45 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `PUT`/`DELETE /clientes/:id/precios-especiales/:habitacionId` | `GESTIONAR_PRECIO_ESPECIAL` | — |
 | `GET /usuarios`, `POST /usuarios`, `PUT /usuarios/:id` | `GESTIONAR_USUARIOS` | — |
 | `PUT /usuarios/:id/contrasena` | `GESTIONAR_USUARIOS` | — |
-| `GET /rangos` | `GESTIONAR_USUARIOS` | — |
+| `GET /rangos` | `GESTIONAR_USUARIOS` o `GESTIONAR_RANGOS` | — |
+| `POST /rangos`, `PUT /rangos/:id` | `GESTIONAR_RANGOS` | — |
+| `GET /turnos/abiertos` | `FORZAR_CIERRE_TURNO` | — |
+| `POST /turnos/:id/cierre-forzado` | `FORZAR_CIERRE_TURNO` | — |
+| `GET /configuracion`, `PUT /configuracion` | `CONFIGURAR_PARAMETROS` | — |
+| `GET /metodos-pago` | `CONSULTAR_TABLERO` o `CONFIGURAR_METODOS_PAGO` | — |
+| `POST /metodos-pago`, `PUT /metodos-pago/:id` | `CONFIGURAR_METODOS_PAGO` | — |
+| `GET /auditoria?usuarioId=&accion=&tipoEntidad=&entidadId=&desde=&hasta=&limite=&despuesDe=` | `CONSULTAR_AUDITORIA` | — |
+| `POST /tickets/:id/reimpresion` | `REIMPRIMIR_COMPROBANTE` | — |
 
-Todavía faltan: gestión de rangos (CU-24), cierre forzado de turno (CU-20), configuración (CU-27),
-métodos de pago, auditoría (CU-25), reimpresión (CU-22) y el tablero con estado temporal (`/rooms/board`).
+Todavía faltan:
+- **El envío a la impresora** (ADR-05, parte 2): USB o Bluetooth hacia la REDPOS RED-E803, la cola con
+  reintentos (RF-56), y encolar el comprobante original de cada cobro. La parte 1 (contenido y bytes
+  ESC/POS) está hecha; ver "Impresión". Hoy la reimpresión deja el trabajo `PENDIENTE`.
+- El tablero con el estado temporal de cada alquiler (`/rooms/board`) y los avisos por WebSocket.
+
+### Rangos, cierre forzado, configuración y métodos de pago
+
+- **Rangos (CU-24):** alta y edición de combinaciones del catálogo fijo; el nombre es único. Editar un
+  rango rige de inmediato para quienes lo tienen (RF-63). Quien edita no puede quitarse `users.manage`
+  por esta vía (`SELF_LOCKOUT_FORBIDDEN`, decisión 19). No hay eliminación: el SRS no la pide.
+- **Cierre forzado (CU-20, RF-43):** el Administrador lista los turnos abiertos (sin el esperado, RN-34)
+  y cierra uno ajeno, contando el cajón o no. Queda `cierreForzado` y auditado como
+  `TURNO_CIERRE_FORZADO`. El propio turno se cierra por la vía normal.
+- **Configuración (CU-27):** se lee y se reemplaza completa, auditada con el valor previo. Los
+  parámetros rigen para los alquileres que empiecen después (RN-43).
+- **Métodos de pago (RF-54):** alta, edición y habilitación; uno deshabilitado ya no se acepta al cobrar.
+  `afectaCaja` no se edita (decisión 20 de contracts). Se auditan como `CONFIGURACION_CAMBIADA` con
+  `tipoEntidad` `METODO_PAGO`, porque §23.1 no trae una acción propia.
+
+### Auditoría y reimpresión
+
+- **Auditoría (CU-25, RF-46):** filtros combinables por usuario, acción, entidad y periodo `[desde, hasta)`.
+  Del más reciente al más antiguo, hasta 200 por página (50 por defecto), y `siguiente` para pedir la
+  siguiente página con `despuesDe`. Registros del mismo milisegundo se ordenan por id.
+- **Reimpresión (CU-22, RF-44):** encola una copia (`esCopia`) y responde el contenido compuesto por
+  `componerComprobante` del dominio: "COPIA" visible, sin datos del cliente (RN-38), con la leyenda de
+  documento no tributario (RN-39), a 48 o 32 columnas según el papel configurado. **Todavía no se
+  imprime**: el trabajo queda `PENDIENTE` hasta que exista el servicio de impresión.
 
 ### Limpieza (CU-15 a CU-17)
 
@@ -135,6 +171,29 @@ El periodo es `[desde, hasta)` en UTC. La agregación es de `@apurimeno/domain` 
 - **Arqueos:** turnos cerrados en el periodo, con la suma de diferencias.
 - **Ocupación:** alquileres ingresados en el periodo que no fueron anulados; horas vendidas e ingresos
   por habitación.
+
+### Impresión (ADR-05)
+
+**Parte 1, hecha y probada sin impresora:** `src/impresion/escpos.ts` convierte las líneas del comprobante
+(`componerLineasComprobante` del dominio, a 48 o 32 columnas) en los bytes exactos para la impresora:
+- `ESC @` (reinicio), `ESC t n` (página de códigos), negrita (`ESC E`) para el negocio y el total, y
+  negrita a doble alto (`GS ! 0x01`, no cambia el ancho) para "COPIA" y "ANULADO"; al final `ESC d 4` y
+  corte parcial `GS V 1`.
+- **Tildes y "ñ":** página PC850 (`ESC t 2`) por defecto, que incluye las mayúsculas con tilde; WPC1252
+  (`ESC t 16`) como alternativa. Los signos tipográficos se pasan a ASCII ("—" → "-"), otras letras con
+  acento pierden el acento, lo demás sale como "?". **Los caracteres de control se descartan**: un nombre
+  de producto no puede colar comandos a la impresora.
+- Pruebas byte a byte (`test/impresion`): los bytes esperados (`*.hex`) los genera
+  `generar_esperados.py` con los códecs cp850/cp1252 de Python, una implementación independiente. Si
+  cambia el diseño del comprobante: `pnpm exec tsx test/impresion/volcar-casos.ts && python3
+  test/impresion/generar_esperados.py`, y revisar el diff de los `.hex`.
+
+**Por confirmar con la impresora real:** qué página de códigos imprime bien las tildes (`pnpm
+prueba-impresora prueba.bin` genera una página con la misma línea en PC850 y WPC1252, el tamaño doble y
+una regla de 48 columnas), que `GS V 1` corte, y cuántas líneas de avance hacen falta antes del corte.
+
+**Parte 2, pendiente (con el hardware):** el transporte USB/Bluetooth, la cola de `TrabajoImpresion` con
+reintentos que nunca revierten el cobro (RF-56), y encolar el original de cada cobro.
 
 ### Respuestas de error
 
@@ -207,5 +266,7 @@ simular el paso del tiempo.
 - `limpieza-y-habitaciones`: la lista de limpieza (solo pendientes), marcar lista y reportar
   mantenimiento tal como los envía `apps/cleaning`, la carrera entre dos personas, y la administración
   de habitaciones.
+- `rangos`, `cierre-forzado`, `configuracion` (con métodos de pago), `auditoria` y `reimpresion`.
+- `cors`: la lista blanca de `CORS_ORIGINS` (sin comodines) y el preflight contra la API.
 - `administracion`: clientes, precios especiales aplicados en la cotización, usuarios (desactivación y
   rangos en caliente) y movimientos de caja (arqueo e idempotencia).

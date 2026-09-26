@@ -1,77 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { EstadoHabitacion, type Habitacion } from "@apurimeno/contracts";
-import { Button } from "@apurimeno/ui/components/button";
+import { useCallback, useEffect, useState } from "react";
+import { Login } from "../src/login";
+import { Pendientes } from "../src/pendientes";
 import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@apurimeno/ui/components/card";
-import {
-  marcarHabitacionLista,
-  obtenerHabitaciones,
-  reportarMantenimiento,
-} from "../src/api-mock";
+  borrarSesion,
+  guardarSesion,
+  leerSesion,
+  type Sesion,
+} from "../src/sesion";
+
+type Estado =
+  | { tipo: "cargando" }
+  | { tipo: "sin-sesion"; aviso: string | null }
+  | { tipo: "con-sesion"; sesion: Sesion };
 
 export default function CleaningPage() {
-  const [habitaciones, setHabitaciones] = useState<Habitacion[]>([]);
+  // La sesión se lee de localStorage después de montar, para que el HTML del servidor y el del
+  // navegador coincidan.
+  const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
 
   useEffect(() => {
-    obtenerHabitaciones().then((data) => {
-      setHabitaciones(
-        data.filter((h) => h.estado === EstadoHabitacion.PENDIENTE_LIMPIEZA),
-      );
-    });
+    const sesion = leerSesion();
+    setEstado(
+      sesion === null
+        ? { tipo: "sin-sesion", aviso: null }
+        : { tipo: "con-sesion", sesion },
+    );
   }, []);
 
-  const handleMarcarLista = (id: string) => {
-    setHabitaciones((prev) => prev.filter((h) => h.id !== id));
-    void marcarHabitacionLista(id);
-  };
+  const entrar = useCallback((sesion: Sesion) => {
+    guardarSesion(sesion);
+    setEstado({ tipo: "con-sesion", sesion });
+  }, []);
 
-  const handleReportarMantenimiento = (id: string) => {
-    setHabitaciones((prev) => prev.filter((h) => h.id !== id));
-    void reportarMantenimiento(id);
-  };
+  const salir = useCallback((aviso: string | null) => {
+    borrarSesion();
+    setEstado({ tipo: "sin-sesion", aviso });
+  }, []);
 
+  if (estado.tipo === "cargando") return null;
+  if (estado.tipo === "sin-sesion") {
+    return <Login avisoInicial={estado.aviso} onSesion={entrar} />;
+  }
   return (
-    <main className="container mx-auto max-w-4xl p-4">
-      {habitaciones.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          No hay habitaciones pendientes de limpieza.
-        </p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {habitaciones.map((habitacion) => (
-            <Card key={habitacion.id} className="flex flex-col justify-between">
-              <CardHeader>
-                <CardTitle>Habitación {habitacion.numero}</CardTitle>
-                {habitacion.descripcion !== null && (
-                  <CardDescription>{habitacion.descripcion}</CardDescription>
-                )}
-              </CardHeader>
-              <CardFooter className="flex flex-col gap-2">
-                <Button
-                  className="w-full"
-                  onClick={() => handleMarcarLista(habitacion.id)}
-                >
-                  Marcar lista
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => handleReportarMantenimiento(habitacion.id)}
-                >
-                  Reportar mantenimiento
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
-    </main>
+    <Pendientes
+      sesion={estado.sesion}
+      onSesionInvalida={salir}
+      onCerrarSesion={() => salir(null)}
+    />
   );
 }

@@ -7,6 +7,7 @@ import {
   EditarUsuarioEntradaSchema,
   HabitacionEntradaSchema,
   MovimientoCajaEntradaSchema,
+  RangoEntradaSchema,
   ReportarMantenimientoEntradaSchema,
   ConfiguracionGlobalSchema,
   HoraAdicionalSchema,
@@ -432,5 +433,14 @@ describe("API · limpieza, administración y caja", () => {
   it("un movimiento de caja exige monto positivo (RF-42)", () => {
     expect(MovimientoCajaEntradaSchema.safeParse({ tipo: "RETIRO", monto: 5000, motivo: "pago de agua" }).success).toBe(true);
     expect(MovimientoCajaEntradaSchema.safeParse({ tipo: "RETIRO", monto: 0, motivo: "x" }).success).toBe(false);
+  });
+});
+
+describe("API · rangos (CU-24)", () => {
+  it("permisos del catálogo fijo, sin repetir; nombre no vacío", () => {
+    expect(RangoEntradaSchema.safeParse({ nombre: "Recepción noche", permisos: ["pos.access", "sales.sell"] }).success).toBe(true);
+    expect(RangoEntradaSchema.safeParse({ nombre: "X", permisos: ["pos.access", "pos.access"] }).success).toBe(false);
+    expect(RangoEntradaSchema.safeParse({ nombre: "X", permisos: ["root.all"] }).success).toBe(false);
+    expect(RangoEntradaSchema.safeParse({ nombre: " ", permisos: [] }).success).toBe(false);
   });
 });

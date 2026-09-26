@@ -1,10 +1,10 @@
-import type { CrearUsuarioEntrada, EditarUsuarioEntrada, Rango, Usuario } from "@apurimeno/contracts";
+import type { CrearUsuarioEntrada, EditarUsuarioEntrada, Rango, RangoEntrada, Usuario } from "@apurimeno/contracts";
 import { validarEdicionPropia } from "@apurimeno/domain";
 import { hashContrasena } from "../auth.js";
 import { auditar } from "../auditoria.js";
 import type { Transaccion } from "../db.js";
 import { ErrorApi, esViolacionUnica } from "../errores.js";
-import { INCLUIR_USUARIO, aRango, aUsuario } from "../mapeo.js";
+import { INCLUIR_USUARIO, aRango, aRangos, aUsuario } from "../mapeo.js";
 import { contextoDominio, noEncontrado, type ContextoServicio } from "./contexto.js";
 
 // Gestión de cuentas (CU-23; RN-40, RF-45). La contraseña solo entra como texto para calcular su hash:
@@ -17,7 +17,7 @@ export async function listarUsuarios(ctx: ContextoServicio): Promise<Usuario[]> 
   return filas.map(aUsuario);
 }
 
-/** Rangos disponibles para asignar (CU-23). Crearlos y editarlos es CU-24, en otra entrega. */
+/** Rangos disponibles para asignar (CU-23) y administrar (CU-24). */
 export async function listarRangos(ctx: ContextoServicio): Promise<Rango[]> {
   const filas = await ctx.prisma.rango.findMany({ include: { permisos: true }, orderBy: { nombre: "asc" } });
   return filas.map(aRango);
@@ -134,4 +134,64 @@ export async function cambiarContrasenaServicio(ctx: ContextoServicio, id: strin
       ctx.ahora,
     );
   });
+}
+
+// --- Rangos (CU-24; RN-41, RF-62) ---
+
+const nombreRangoRepetido = () => new ErrorApi("VALIDACION", "nombre: ya existe un rango con ese nombre.");
+
+/** Alta de un rango como combinación del catálogo fijo de permisos (RF-62). */
+export async function crearRangoServicio(ctx: ContextoServicio, entrada: RangoEntrada): Promise<Rango> {
+  const rango: Rango = { id: contextoDominio(ctx.ahora).generarId(), ...entrada };
+  try {
+    return await ctx.prisma.$transaction(async (tx) => {
+      await tx.rango.create({
+        data: { id: rango.id, nombre: rango.nombre, permisos: { create: rango.permisos.map((permiso) => ({ permiso })) } },
+      });
+      await auditar(
+        tx,
+        { usuarioId: ctx.usuario.id, accion: "RANGO_CREADO", tipoEntidad: "RANGO", entidadId: rango.id, valorNuevo: rango },
+        ctx.ahora,
+      );
+      return rango;
+    });
+  } catch (error) {
+    if (esViolacionUnica(error)) throw nombreRangoRepetido();
+    throw error;
+  }
+}
+
+/**
+ * Edición de nombre y permisos (CU-24 A1). Rige de inmediato para todos los usuarios que tienen el rango,
+ * porque los permisos se leen en cada solicitud (RF-63). Quien edita no puede quitarse a sí mismo
+ * `users.manage` por esta vía (decisión 19 de contracts).
+ */
+export async function editarRangoServicio(ctx: ContextoServicio, id: string, entrada: RangoEntrada): Promise<Rango> {
+  try {
+    return await ctx.prisma.$transaction(async (tx) => {
+      const fila = await tx.rango.findUnique({ where: { id }, include: { permisos: true } });
+      if (fila === null) throw noEncontrado("El rango");
+      const previo = aRango(fila);
+      const rango: Rango = { id, ...entrada };
+
+      const solicitante = await tx.usuario.findUniqueOrThrow({ where: { id: ctx.usuario.id }, include: INCLUIR_USUARIO });
+      const rangosResultantes = aRangos(solicitante).map((r) => (r.id === id ? rango : r));
+      validarEdicionPropia(ctx.usuario.id, aUsuario(solicitante), rangosResultantes);
+
+      await tx.rangoPermiso.deleteMany({ where: { rangoId: id } });
+      await tx.rango.update({
+        where: { id },
+        data: { nombre: rango.nombre, permisos: { create: rango.permisos.map((permiso) => ({ permiso })) } },
+      });
+      await auditar(
+        tx,
+        { usuarioId: ctx.usuario.id, accion: "RANGO_EDITADO", tipoEntidad: "RANGO", entidadId: id, valorPrevio: previo, valorNuevo: rango },
+        ctx.ahora,
+      );
+      return rango;
+    });
+  } catch (error) {
+    if (esViolacionUnica(error)) throw nombreRangoRepetido();
+    throw error;
+  }
 }

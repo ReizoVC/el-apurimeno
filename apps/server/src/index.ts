@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { construirApp } from "./app.js";
+import { leerOrigenesPermitidos } from "./cors.js";
 import { crearPrisma } from "./db.js";
 
 const produccion = process.env["NODE_ENV"] === "production";
@@ -13,7 +14,9 @@ if (jwtSecret === undefined) {
 }
 
 const prisma = crearPrisma(url);
-const app = await construirApp({ prisma, jwtSecret, logger: true });
+const origenesPermitidos = leerOrigenesPermitidos(process.env["CORS_ORIGINS"], produccion);
+const app = await construirApp({ prisma, jwtSecret, logger: true, origenesPermitidos });
+app.log.info({ origenesPermitidos }, "Orígenes permitidos (CORS)");
 
 const cerrar = async () => {
   await app.close();

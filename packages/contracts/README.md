@@ -240,7 +240,12 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
 19. **Nadie se deja a sí mismo sin acceso de administración** (`SELF_LOCKOUT_FORBIDDEN`, CU-23). Al
     editar su propia cuenta, un usuario no puede desactivarla ni quedarse sin `users.manage` en los
     rangos que se asigna. Otro usuario con `users.manage` sí puede hacerlo. El SRS no trae esta regla;
-    la pidió el negocio para no quedar sin nadie que administre las cuentas.
+    la pidió el negocio para no quedar sin nadie que administre las cuentas. Vale también al editar un
+    rango que el usuario tiene asignado.
+20. **`MetodoPago.afectaCaja` no se edita** una vez creado el método. El efectivo esperado de un turno
+    abierto se calcula con el valor actual de cada método (RN-35): cambiarlo alteraría arqueos en curso
+    sin que nadie lo note. Para otro comportamiento se crea un método nuevo y se deshabilita el anterior.
+    Nombre, número de referencia y habilitación sí se editan (RF-54).
 
 ## Decisiones pendientes que afectan el contrato
 

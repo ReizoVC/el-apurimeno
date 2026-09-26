@@ -186,8 +186,10 @@ export default function VistaGeneral() {
                 >
                   <p className="font-medium">{t.cajero}</p>
                   <p className="text-muted-foreground">
-                    Desde {fechaHora(t.abiertoEn)} · inicial{" "}
-                    {soles(t.efectivoInicial)}
+                    Desde {fechaHora(t.abiertoEn)} ·{" "}
+                    <span className="whitespace-nowrap">
+                      inicial {soles(t.efectivoInicial)}
+                    </span>
                   </p>
                 </li>
               ))}

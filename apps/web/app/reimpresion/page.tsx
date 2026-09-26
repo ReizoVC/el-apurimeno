@@ -211,7 +211,7 @@ export default function Reimpresion() {
           </CardContent>
         </Card>
         {copia !== null ? (
-          <Card className="w-96 shrink-0">
+          <Card className="max-w-full shrink-0">
             <CardHeader>
               <CardTitle className="text-base">
                 Copia del ticket {copia.ticket.numero}
@@ -221,7 +221,7 @@ export default function Reimpresion() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="rounded-md border bg-white p-3 font-mono text-xs leading-snug text-black">
+              <pre className="overflow-x-auto rounded-md border bg-white p-3 font-mono text-xs leading-snug text-black">
                 {copia.respuesta.contenido.join("\n")}
               </pre>
             </CardContent>

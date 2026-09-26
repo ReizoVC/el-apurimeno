@@ -1,6 +1,7 @@
 import type {
   AccionAuditoria,
   CodigoErrorEspejo,
+  CodigoErrorRespaldo,
   OrigenTicket,
   Permiso,
   TipoEntidadAuditada,
@@ -78,6 +79,7 @@ export const ACCION: Record<AccionAuditoria, string> = {
   RANGO_EDITADO: "Rango editado",
   CONFIGURACION_CAMBIADA: "Configuración cambiada",
   ESPEJO_SINCRONIZADO: "Sincronización del espejo",
+  RESPALDO_MANUAL: "Copia de respaldo manual",
 };
 
 export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
@@ -99,6 +101,7 @@ export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
   CODIGO_AUTORIZACION: "Código de autorización",
   TRABAJO_IMPRESION: "Impresión",
   ESPEJO: "Espejo en la nube",
+  RESPALDO: "Respaldo",
 };
 
 /** Por qué falló la última sincronización con el espejo en la nube. */
@@ -106,5 +109,13 @@ export const ERROR_ESPEJO: Record<CodigoErrorEspejo, string> = {
   SIN_CONEXION: "Sin conexión con Supabase",
   CREDENCIALES_RECHAZADAS: "Supabase rechazó la cuenta de sincronización",
   RECHAZADO_POR_EL_ESPEJO: "Supabase rechazó los datos",
+  ERROR_INTERNO: "Error interno del servidor",
+};
+
+/** Por qué falló la última copia de respaldo. */
+export const ERROR_RESPALDO: Record<CodigoErrorRespaldo, string> = {
+  DESTINO_INACCESIBLE: "No se pudo escribir en la carpeta de destino",
+  SIN_ESPACIO: "No queda espacio en el disco",
+  COPIA_INVALIDA: "La copia no pasó la verificación",
   ERROR_INTERNO: "Error interno del servidor",
 };

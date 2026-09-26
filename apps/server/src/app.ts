@@ -6,6 +6,8 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { SIN_ESPEJO, crearControlEspejo, type ControlEspejo, type OpcionesEspejo } from "./espejo/control.js";
+import type { ConfiguracionRespaldos } from "./respaldo/configuracion.js";
+import { SIN_RESPALDOS, crearControlRespaldos, type ControlRespaldos } from "./respaldo/control.js";
 import { manejarError } from "./errores.js";
 import { despacharPendientes } from "./impresion/cola.js";
 import { OPCIONES_ESCPOS_POR_DEFECTO, type PaginaCodigos } from "./impresion/escpos.js";
@@ -15,6 +17,7 @@ import { registrarRutasClientes } from "./rutas-clientes.js";
 import { registrarRutasConfiguracion } from "./rutas-configuracion.js";
 import { registrarRutasEspejo } from "./rutas-espejo.js";
 import { registrarRutasHabitaciones } from "./rutas-habitaciones.js";
+import { registrarRutasRespaldos } from "./rutas-respaldos.js";
 import { registrarRutasUsuarios } from "./rutas-usuarios.js";
 
 declare module "fastify" {
@@ -23,6 +26,8 @@ declare module "fastify" {
     colaImpresion: () => Promise<void>;
     /** Sincronización con el espejo en la nube; `index.ts` la inicia, las pruebas la llaman a mano. */
     espejo: ControlEspejo;
+    /** Respaldos de la base; `index.ts` los inicia, las pruebas los llaman a mano. */
+    respaldos: ControlRespaldos;
   }
 }
 
@@ -43,6 +48,8 @@ export interface OpcionesApp {
   paginaCodigos?: PaginaCodigos;
   /** Espejo en la nube (ADR-06). Sin él, el servidor funciona igual, sin sincronizar. */
   espejo?: OpcionesEspejo;
+  /** Respaldos de la base (Planos §14.3). Sin ellos, el servidor no copia nada (pruebas). */
+  respaldos?: ConfiguracionRespaldos;
 }
 
 export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstance> {
@@ -81,6 +88,10 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   app.decorate("espejo", espejo);
   app.addHook("onClose", async () => espejo.detener());
   registrarRutasEspejo(app, opciones.prisma, ahora, espejo);
+  const respaldos = crearControlRespaldos(opciones.respaldos ?? SIN_RESPALDOS, ahora, app.log);
+  app.decorate("respaldos", respaldos);
+  app.addHook("onClose", async () => respaldos.detener());
+  registrarRutasRespaldos(app, opciones.prisma, ahora, respaldos);
   await app.ready();
   return app;
 }

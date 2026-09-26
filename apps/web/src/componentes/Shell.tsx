@@ -112,6 +112,12 @@ const SECCIONES: {
     grupo: "Sistema",
   },
   {
+    href: "/respaldos",
+    etiqueta: "Respaldos",
+    permiso: "settings.manage",
+    grupo: "Sistema",
+  },
+  {
     href: "/auditoria",
     etiqueta: "Auditoría",
     permiso: "audit.view",

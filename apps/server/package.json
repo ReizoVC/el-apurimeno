@@ -9,6 +9,8 @@
     "migrate": "prisma migrate deploy",
     "seed": "tsx src/scripts/sembrar.ts",
     "prueba-impresora": "tsx src/scripts/prueba-impresora.ts",
+    "clave-respaldo": "tsx src/scripts/clave-respaldo.ts",
+    "restaurar": "tsx --env-file-if-exists=.env src/scripts/restaurar.ts",
     "dev": "prisma migrate deploy && tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "tsx --env-file-if-exists=.env src/index.ts",
     "check-types": "tsc --noEmit",

@@ -3,6 +3,7 @@ import {
   ClienteSchema,
   ConfiguracionRespuestaSchema,
   EstadoEspejoSchema,
+  EstadoRespaldosSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
   HabitacionSchema,
   LoginRespuestaSchema,
@@ -14,6 +15,7 @@ import {
   ReporteArqueosSchema,
   ReporteOcupacionSchema,
   ReporteVentasSchema,
+  RespaldoRespuestaSchema,
   RespuestaErrorSchema,
   SincronizacionEspejoRespuestaSchema,
   TableroSchema,
@@ -23,6 +25,7 @@ import {
   type AuditoriaConsulta,
   type ClienteEntrada,
   type ConfiguracionGlobal,
+  type DestinoRespaldo,
   type CrearUsuarioEntrada,
   type EditarUsuarioEntrada,
   type ForzarCierreTurnoEntrada,
@@ -269,6 +272,11 @@ export const servidor = {
       SincronizacionEspejoRespuestaSchema,
       { completo },
     ),
+  estadoRespaldos: () =>
+    llamar("GET", RUTAS.estadoRespaldos, EstadoRespaldosSchema),
+  /** Espera a que termine la copia: devuelve el resultado, o el error en el estado del destino. */
+  respaldar: (destino: DestinoRespaldo) =>
+    llamar("POST", RUTAS.respaldar, RespaldoRespuestaSchema, { destino }),
   generarCodigoAutorizacion: () =>
     llamar(
       "POST",

@@ -12,3 +12,4 @@ export * from "./permisos.js";
 export * from "./reportes.js";
 export * from "./comprobantes.js";
 export * from "./espejo.js";
+export * from "./respaldo.js";

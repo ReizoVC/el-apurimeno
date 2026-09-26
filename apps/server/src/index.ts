@@ -3,9 +3,10 @@ import { readFileSync } from "node:fs";
 import { construirApp } from "./app.js";
 import { leerOrigenesPermitidos } from "./cors.js";
 import { transporteArchivo } from "./impresion/transporte.js";
-import { crearPrisma } from "./db.js";
+import { crearPrisma, rutaDesdeUrl } from "./db.js";
 import { leerConfiguracionEspejo } from "./espejo/configuracion.js";
 import { transporteSupabase } from "./espejo/supabase.js";
+import { leerConfiguracionRespaldos } from "./respaldo/configuracion.js";
 
 const produccion = process.env["NODE_ENV"] === "production";
 const url = process.env["DATABASE_URL"] ?? "file:./datos/apurimeno.db";
@@ -31,7 +32,8 @@ const espejo = {
   intervaloMinutos: configuracionEspejo.intervaloMinutos,
   versionServidor: version,
 };
-const app = await construirApp({ prisma, jwtSecret, logger: true, origenesPermitidos, impresora, paginaCodigos, espejo });
+const respaldos = leerConfiguracionRespaldos(process.env, rutaDesdeUrl(url));
+const app = await construirApp({ prisma, jwtSecret, logger: true, origenesPermitidos, impresora, paginaCodigos, espejo, respaldos });
 app.log.info({ impresora: impresora?.descripcion ?? "sin configurar", paginaCodigos }, "Impresora de comprobantes");
 app.log.info({ origenesPermitidos }, "Orígenes permitidos (CORS)");
 if (espejo.transporte !== null) {
@@ -40,6 +42,15 @@ if (espejo.transporte !== null) {
   app.log.error(`Espejo en la nube apagado: ${espejo.problemaConfiguracion}`);
 } else {
   app.log.info("Espejo en la nube sin configurar (variables ESPEJO_*): el servidor funciona igual, sin sincronizar.");
+}
+
+app.log.info({ carpeta: respaldos.carpetaLocal }, "Respaldo local cada 15 minutos");
+if (respaldos.externo !== null) {
+  app.log.info({ carpeta: respaldos.externo.carpeta }, "Respaldo externo cifrado, diario a las 04:00 de Lima");
+} else if (respaldos.problemaExterno !== null) {
+  app.log.error(`Respaldo externo apagado: ${respaldos.problemaExterno}`);
+} else {
+  app.log.warn("Respaldo externo sin configurar (RESPALDO_CARPETA_EXTERNA y RESPALDO_CLAVE_PUBLICA): solo hay copias en este equipo.");
 }
 
 const cerrar = async () => {
@@ -53,3 +64,4 @@ process.on("SIGTERM", cerrar);
 // 0.0.0.0: el POS, el Dashboard y la app de limpieza se conectan desde la red local (RES-04).
 await app.listen({ host: process.env["HOST"] ?? "0.0.0.0", port: Number(process.env["PORT"] ?? 3001) });
 app.espejo.iniciar();
+app.respaldos.iniciar();

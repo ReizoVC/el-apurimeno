@@ -303,7 +303,8 @@ describe("Tienda", () => {
     expect(ProductoSchema.safeParse(p).success).toBe(true);
     expect(ProductoSchema.safeParse({ ...p, codigoBarras: null }).success).toBe(true);
     expect(ProductoSchema.safeParse({ ...p, codigoBarras: "" }).success).toBe(false);
-    const { codigoBarras: _omitido, ...sinCampo } = p;
+    const sinCampo: Record<string, unknown> = { ...p };
+    delete sinCampo["codigoBarras"];
     expect(ProductoSchema.safeParse(sinCampo).success).toBe(false);
   });
 

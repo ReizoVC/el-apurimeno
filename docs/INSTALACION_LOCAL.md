@@ -208,6 +208,17 @@ La más reciente de cada tipo no se borra por antigüedad.
 
 **Subida a la nube:** necesita Drive abierto en la sesión de la propietaria y conexión a internet. Si Drive no corre, las copias se siguen escribiendo en la carpeta y suben cuando vuelva.
 
+**Espacio en Google Drive: dos medidas obligatorias mientras no haya una solución en el sistema.**
+
+Cada copia reciente que el servidor borra va a la papelera de Drive y ocupa espacio durante 30 días. Con el volumen de un negocio real, los 15 GB gratuitos se llenarían en unos 2 a 7 meses. El análisis y las opciones están en `docs/ESTADO_ACTUAL.md` ("Fuera del MVP"); se retoma a los 2 o 3 meses de operación. Mientras tanto:
+
+1. **Una cuenta de Google solo para los respaldos**, distinta de la personal de la propietaria. Si se llena, no afecta su correo ni sus fotos.
+   - Iniciar sesión con esa cuenta en Google Drive para escritorio (Preferencias → Configuración → Agregar otra cuenta) y agregar `C:\RespaldosApurimeno` desde **esa** cuenta, en el paso 2 de arriba.
+   - La contraseña de esa cuenta va al gestor de contraseñas de la propietaria.
+2. **Revisar el espacio una vez al mes**, con esa cuenta, en [drive.google.com](https://drive.google.com) → Almacenamiento, contando la papelera.
+   - Si pasa del 80 %, avisar antes de que se llene.
+   - Con la cuenta llena, Drive deja de subir las copias, y el Dashboard no lo nota.
+
 ## 6. Dashboard y Limpieza
 
 Instalados como servicios por el mismo script con `-Produccion` (sección 4). Se sirven con `next start` sobre el build de cada app. Es el camino más directo con las configuraciones actuales, que ya traen `build` y `start` ([Next.js en Node](https://nextjs.org/docs/15/app/getting-started/deploying)). Servir las páginas desde Fastify reduciría procesos, pero exigiría exportar ambas apps y cambiar el servidor ya probado. Para una prueba manual sin servicios:
@@ -271,6 +282,7 @@ Antes de crear las reglas, revisar las que ya existan para no duplicarlas: `Get-
 - [ ] Dashboard → Respaldos sin error rojo y archivo visible en la web de Drive.
 - [ ] Arranque automático de los tres servicios comprobado tras un reinicio hecho por la propietaria; `taskkill /F` de cada uno y vuelta sola.
 - [ ] Drive inicia en la sesión; se conoce que la subida requiere sesión activa e internet.
+- [ ] La carpeta de respaldos sincroniza con una cuenta de Google solo para respaldos, y la revisión mensual de su espacio (con la papelera) está agendada.
 - [ ] Restauración ensayada de forma separada siguiendo la guía, sin sustituir la base operativa.
 - [ ] Pendientes explícitos: impresión física, Supabase de producción y piloto con cuaderno.
 

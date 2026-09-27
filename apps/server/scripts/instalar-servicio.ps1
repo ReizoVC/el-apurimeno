@@ -7,8 +7,9 @@
   Hay que correrlo en una PowerShell "Ejecutar como administrador" (crear un servicio lo exige). Pasos:
     1. Descarga NSSM 2.24-101 (la versión recomendada para Windows 10 y 11) del sitio oficial, verifica su SHA-256
        y deja nssm.exe en C:\Program Files\NSSM. Si ya está, no lo descarga de nuevo.
-    2. Crea (o actualiza) el servicio: node.exe con tsx, en apps/server, leyendo apps/server/.env como `pnpm start`.
-       Arranque automático, reinicio a los 5 s si el proceso termina, registro en datos/logs con rotación.
+    2. Crea (o actualiza) el servicio: un solo proceso node.exe con tsx, en apps/server, leyendo apps/server/.env
+       como `pnpm start`. Arranque automático; si el proceso termina, NSSM lo vuelve a lanzar a los 5 s (vuelve a
+       responder en unos 7 s); registro en datos/logs, rotado al arrancar el servicio.
     3. Lo inicia y comprueba que responde en /health.
   Se puede volver a correr: actualiza la configuración del servicio existente.
 
@@ -61,9 +62,10 @@ try {
     Write-Host "NSSM instalado en $nssm"
   }
 
-  # 2. El servicio: lo mismo que `pnpm start` (tsx --env-file-if-exists=.env src/index.ts), sin pasar por pnpm.
+  # 2. El servicio: lo mismo que `pnpm start`, pero en un solo proceso (node --import tsx) y sin pasar por pnpm. El
+  #    lanzador de tsx deja dos procesos node: matar solo el hijo lo dejaría huérfano con el puerto tomado.
   $node = (Get-Command node -ErrorAction Stop).Source
-  $tsx = Join-Path $servidor "node_modules\tsx\dist\cli.mjs"
+  $tsx = Join-Path $servidor "node_modules\tsx"
   if (-not (Test-Path $tsx)) { throw "No se encontró ${tsx}: corra 'pnpm install' en la raíz del repositorio." }
   $env_ = Join-Path $servidor ".env"
   if ($Produccion) {
@@ -79,7 +81,7 @@ try {
   if ($existe) { & $nssm stop $Nombre | Out-Null } else { & $nssm install $Nombre $node | Out-Null }
   $ajustes = @(
     @("Application", $node),
-    @("AppParameters", "`"$tsx`" --env-file-if-exists=.env src/index.ts"),
+    @("AppParameters", "--import tsx --env-file-if-exists=.env src/index.ts"),
     @("AppDirectory", $servidor),
     @("DisplayName", "El Apurimeño - servidor local"),
     @("Description", "API local del POS, el Dashboard y la app de limpieza; hace los respaldos y sincroniza el espejo."),
@@ -91,14 +93,17 @@ try {
     @("AppStdout", $log),
     @("AppStderr", $log),
     @("AppRotateFiles", "1"),
-    @("AppRotateOnline", "1"),
+    # Rotación al arrancar, NO en línea: con AppRotateOnline 1, cuando el proceso muere NSSM queda esperando el hilo
+    # que lee su salida y nunca ejecuta el reinicio (comprobado matando el proceso con taskkill /F).
+    @("AppRotateOnline", "0"),
     @("AppRotateBytes", "10485760")
   )
   foreach ($a in $ajustes) { & $nssm set $Nombre @a | Out-Null; if ($LASTEXITCODE -ne 0) { throw "nssm set $($a -join ' ') falló." } }
   if ($Produccion) { & $nssm set $Nombre AppEnvironmentExtra "NODE_ENV=production" | Out-Null }
   else { & $nssm reset $Nombre AppEnvironmentExtra | Out-Null }
-  # Si el proceso muere, Windows también reintenta el servicio (además del reinicio propio de NSSM).
+  # El servidor lo relanza NSSM. Si el propio NSSM terminara, Windows reintenta el servicio.
   sc.exe failure $Nombre reset= 86400 actions= restart/5000/restart/5000/restart/30000 | Out-Null
+  sc.exe failureflag $Nombre 1 | Out-Null
 
   # 3. Arrancar y comprobar.
   & $nssm start $Nombre | Out-Null

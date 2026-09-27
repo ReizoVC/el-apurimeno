@@ -41,10 +41,10 @@ el equipo (aunque nadie inicie sesión) y se reinicia solo si se cae. Lo instala
 
 1. descarga NSSM 2.24-101 del sitio oficial (la versión recomendada para Windows 10 y 11), verifica su SHA-256 y lo
    deja en `C:\Program Files\NSSM\nssm.exe`;
-2. crea el servicio `ApurimenoServidor` ("El Apurimeño - servidor local"): `node.exe` con tsx en `apps/server`, igual
-   que `pnpm start` (lee `apps/server/.env`), cuenta `LocalSystem`, arranque automático, reinicio a los 5 s si el
-   proceso termina (y Windows reintenta el servicio a los 5 s, 5 s y 30 s), registro en `datos/logs/servidor.log`
-   rotado cada 10 MB;
+2. crea el servicio `ApurimenoServidor` ("El Apurimeño - servidor local"): un solo proceso `node.exe --import tsx`
+   en `apps/server`, igual que `pnpm start` (lee `apps/server/.env`), cuenta `LocalSystem` y arranque automático. Si
+   el servidor se cae, NSSM lo vuelve a lanzar a los 5 s; si terminara el propio NSSM, Windows reintenta el servicio
+   (5 s, 5 s y 30 s). Registro en `datos/logs/servidor.log`, rotado cada 10 MB al arrancar el servicio;
 3. lo inicia y comprueba que responde en `/health`.
 
 **Antes:** `pnpm install` en la raíz, y en `apps/server` el `.env`, `pnpm migrate` y, la primera vez, `pnpm seed`.
@@ -76,6 +76,17 @@ Windows. Ver la configuración: `nssm dump ApurimenoServidor`. Registro: `apps/s
 **Actualizar el sistema:** detener el servicio (con él corriendo, `pnpm install` no puede reemplazar los archivos de
 la base SQLite en uso), hacer una copia con "Copiar ahora" antes (RNF-DEPL-02), `git pull`, `pnpm install`,
 `pnpm migrate` en `apps/server`, y volver a iniciar el servicio.
+
+**Comprobado el 26/09/2026 en el equipo de desarrollo:** al reiniciar el PC, el servicio arrancó solo y el POS se
+conectó sin abrir nada. Con el servidor matado a la fuerza (`taskkill /F`), volvió a responder en `/health` en unos
+7 s (6,8 a 7,1 s: la espera de 5 s más el arranque), en caídas seguidas.
+
+**Dos detalles de configuración, con su porqué:**
+- **Un solo proceso** (`node --import tsx`), no el lanzador `tsx`: ese deja dos procesos `node`, y matar solo el hijo
+  lo dejaría huérfano con el puerto tomado.
+- **`AppRotateOnline 0`**: con la rotación "en línea", al morir el proceso NSSM quedaba esperando el hilo que lee su
+  salida y nunca lo relanzaba (el servicio seguía "En ejecución" sin servidor). Con 0, el registro rota al arrancar el
+  servicio, no mientras corre: entre reinicios del equipo puede crecer (cada consulta del POS deja una línea).
 
 **A tener en cuenta:**
 - Corre como `LocalSystem`: puede escribir en `datos/` y en la carpeta sincronizada del perfil de la propietaria.

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -11,7 +11,7 @@ import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cifrarArchivo, descifrarArchivo, ErrorClave, generarClaves, leerClavePrivada, leerClavePublica, publicaDePrivada } from "../src/respaldo/cifrado.js";
 import { leerConfiguracionRespaldos, type ConfiguracionRespaldos } from "../src/respaldo/configuracion.js";
-import { fechaDeCopia, nombreCopia, verificarBase } from "../src/respaldo/copia.js";
+import { fechaDeCopia, listarCopias, nombreCopia, verificarBase } from "../src/respaldo/copia.js";
 import { copiasDisponibles, restaurar } from "../src/respaldo/restauracion.js";
 import { efectivo, prepararEntorno, type Entorno } from "./entorno.js";
 
@@ -346,6 +346,25 @@ describe("Restauración completa (RNF-BKP-02)", () => {
     expect(existsSync(`${e.ruta}.restaurando`)).toBe(false);
   });
 
+  it("nunca restaura un .parcial, aunque esté completo, ni lo ofrece entre las copias", async () => {
+    const { local, externa } = await conDatos();
+    const [copiaLocal] = await copiasDisponibles({ carpetaLocal: local, carpetaExternaConfigurada: null });
+    const [copiaExterna] = await copiasDisponibles({ carpetaLocal: null, carpetaExternaConfigurada: externa });
+    // Copias íntegras con el nombre de una a medio escribir, más nuevas que las terminadas.
+    const parcialLocal = join(local, "apurimeno-20260926T155900Z.db.parcial");
+    const parcialExterna = join(externa, "apurimeno-reciente-20260926T155900Z.db.gz.cifrado.parcial");
+    copyFileSync(copiaLocal!.ruta, parcialLocal);
+    copyFileSync(copiaExterna!.ruta, parcialExterna);
+
+    const disponibles = await copiasDisponibles({ carpetaLocal: local, carpetaExternaConfigurada: externa });
+    expect(disponibles.map((c) => c.nombre).filter((n) => n.endsWith(".parcial"))).toEqual([]);
+    expect(disponibles[0]).toMatchObject({ creadoEn: "2026-09-26T15:00:00.000Z" });
+    await expect(restaurar(parcialLocal, e.ruta, null, new Date())).rejects.toThrow(/a medio escribir/);
+    await expect(restaurar(parcialExterna, e.ruta, claves.privada, new Date())).rejects.toThrow(/a medio escribir/);
+    expect(tickets(e.ruta)).toBe(2);
+    expect(existsSync(`${e.ruta}.restaurando`)).toBe(false);
+  });
+
   it("rechaza un archivo que no es una copia", async () => {
     await conDatos();
     writeFileSync(join(dir, "cualquier.db"), "no soy una base");
@@ -410,6 +429,24 @@ describe("Ventana de 2 horas: las copias de cada 15 minutos también van cifrada
     expect(recientes.at(-1)).toBe("apurimeno-reciente-20260926T150000Z.db.gz.cifrado");
     expect(recientes[0]).toBe("apurimeno-reciente-20260926T124500Z.db.gz.cifrado"); // se van 12:15 y 12:30
     expect(readdirSync(externa)).toContain("apurimeno-20260901T090000Z.db.gz.cifrado");
+  });
+
+  it("los .parcial no cuentan como copias: ni ocupan lugar entre las 8 recientes ni entran en la retención", async () => {
+    await preparar();
+    for (let i = 1; i <= 7; i++) writeFileSync(join(externa, `apurimeno-reciente-20260926T14${String(i * 5).padStart(2, "0")}00Z.db.gz.cifrado`), "x");
+    // Más nuevos que todas: si contaran como copias, desplazarían a las válidas.
+    const parciales = ["apurimeno-reciente-20260926T145800Z.db.gz.cifrado.parcial", "apurimeno-20260926T145900Z.db.gz.cifrado.parcial"];
+    for (const n of parciales) writeFileSync(join(externa, n), "x");
+    expect(await listarCopias(externa, "RECIENTE")).toHaveLength(7);
+    expect(await listarCopias(externa, "EXTERNO")).toHaveLength(0);
+
+    await e.app.respaldos.respaldar("LOCAL");
+    const recientes = readdirSync(externa).filter((n) => n.startsWith("apurimeno-reciente-")).sort();
+    // 7 + la nueva = 8: no se borró ninguna válida; los .parcial se limpiaron antes de copiar.
+    expect(recientes).toHaveLength(8);
+    expect(recientes[0]).toBe("apurimeno-reciente-20260926T140500Z.db.gz.cifrado");
+    expect(readdirSync(externa).filter((n) => n.endsWith(".parcial"))).toEqual([]);
+    expect((await e.app.respaldos.estado()).reciente.copiasGuardadas).toBe(8);
   });
 
   it("si la carpeta sincronizada no está, la copia local se hace igual y la reciente queda con su error", async () => {

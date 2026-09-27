@@ -46,7 +46,10 @@ el equipo (aunque nadie inicie sesión) y se reinicia solo si se cae. Lo instala
    el servidor se cae, NSSM lo vuelve a lanzar a los 5 s; si terminara el propio NSSM, Windows reintenta el servicio
    (5 s, 5 s y 30 s). El registro lo escribe el propio servidor en `datos/logs/servidor.log` y lo rota cada 10 MB
    mientras corre (ver abajo); `datos/logs/servicio.log` guarda solo lo que salga por la consola;
-3. lo inicia y comprueba que responde en `/health`.
+3. con `-Produccion`, crea también `ApurimenoDashboard` (puerto 3000) y `ApurimenoLimpieza` (puerto 3002): `next start`
+   sobre el build de producción de cada app, con la misma recuperación (ver `docs/INSTALACION_LOCAL.md`, sección 4).
+   `-Pantallas` los instala sin pasar el servidor a producción: solo para probarlos en un equipo de desarrollo;
+4. los inicia y comprueba que responden (`/health` en el servidor).
 
 **Antes:** `pnpm install` en la raíz, y en `apps/server` el `.env`, `pnpm migrate` y, la primera vez, `pnpm seed`.
 
@@ -69,15 +72,15 @@ Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList @('-NoProfile','-Ex
   '-Registro','"D:\dev\el-apurimeno\apps\server\datos\logs\instalacion-servicio.log"')
 ```
 
-Volver a correr el script actualiza el servicio existente. `-Desinstalar` lo elimina (no toca la base ni las copias).
+Volver a correr el script actualiza los servicios existentes. `-Desinstalar` los elimina (no toca la base ni las copias).
 
 **Uso diario** (como administrador): `nssm status|stop|start|restart ApurimenoServidor`, o desde "Servicios" de
 Windows. Ver la configuración: `nssm dump ApurimenoServidor`. Registro: `apps/server/datos/logs/servidor.log` (los anteriores,
 `servidor.1.log` … `servidor.5.log`); un error al arrancar queda en `servicio.log`.
 
-**Actualizar el sistema:** detener el servicio (con él corriendo, `pnpm install` no puede reemplazar los archivos de
-la base SQLite en uso), hacer una copia con "Copiar ahora" antes (RNF-DEPL-02), `git pull`, `pnpm install`,
-`pnpm migrate` en `apps/server`, y volver a iniciar el servicio.
+**Actualizar el sistema:** hacer una copia con "Copiar ahora" antes (RNF-DEPL-02) y detener los servicios (con el
+servidor corriendo, `pnpm install` no puede reemplazar los archivos de la base SQLite en uso); `git pull`,
+`pnpm install`, `pnpm migrate` en `apps/server`, compilar el Dashboard y Limpieza, y volver a correr el instalador.
 
 **Comprobado el 26/09/2026 en el equipo de desarrollo:** al reiniciar el PC, el servicio arrancó solo y el POS se
 conectó sin abrir nada. Con el servidor matado a la fuerza (`taskkill /F`), volvió a responder en `/health` en unos

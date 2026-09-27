@@ -2,7 +2,17 @@ import { copyFile, mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { descifrarArchivo, ErrorClave, leerClavePrivada } from "./cifrado.js";
 import type { ConfiguracionRespaldos } from "./configuracion.js";
-import { destinoDeArchivo, fechaDeCopia, listarCopias, verificarBase, type CopiaGuardada, type ResumenBase, type TipoCopia } from "./copia.js";
+import {
+  destinoDeArchivo,
+  ErrorRespaldo,
+  fechaDeCopia,
+  listarCopias,
+  SUFIJO_PARCIAL,
+  verificarBase,
+  type CopiaGuardada,
+  type ResumenBase,
+  type TipoCopia,
+} from "./copia.js";
 
 // Restauración completa de la base desde una copia local o externa (RNF-BKP-02, RNF-REC-02). La base actual
 // nunca se borra: se aparta a una carpeta "reemplazada-…" junto a la base.
@@ -72,6 +82,10 @@ export interface ResultadoRestauracion {
  * externa) y se verifica completa ANTES de tocar la base actual: si algo falla, la base actual queda como estaba.
  */
 export async function restaurar(archivo: string, rutaBase: string, clavePrivada: string | null, ahora: Date): Promise<ResultadoRestauracion> {
+  // Un .parcial es una copia que se estaba escribiendo (o que se cortó): nunca se restaura, aunque parezca completa.
+  if (basename(archivo).endsWith(SUFIJO_PARCIAL)) {
+    throw new ErrorRespaldo("COPIA_INVALIDA", `${basename(archivo)} es una copia a medio escribir (${SUFIJO_PARCIAL}): elija una copia terminada.`);
+  }
   const cifrada = await esCifrada(archivo);
   const nombre = basename(archivo);
   const tipo = destinoDeArchivo(nombre);

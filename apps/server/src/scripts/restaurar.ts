@@ -5,7 +5,7 @@ import { fechaHora, hace } from "@apurimeno/formato";
 import { rutaDesdeUrl } from "../db.js";
 import { ErrorClave } from "../respaldo/cifrado.js";
 import { leerConfiguracionRespaldos } from "../respaldo/configuracion.js";
-import { ErrorRespaldo } from "../respaldo/copia.js";
+import { ErrorRespaldo, SUFIJO_PARCIAL } from "../respaldo/copia.js";
 import { copiasDisponibles, restaurar, type CopiaDisponible } from "../respaldo/restauracion.js";
 import { preguntar } from "./entrada.js";
 
@@ -53,6 +53,8 @@ if (argumentos.length === 0) {
 
 const pedido = argumentos[0]!;
 const archivo = pedido === "ultima" ? (copias[0]?.ruta ?? fallar("no hay copias en las carpetas configuradas.")) : resolve(pedido);
+// Antes de pedir confirmación o la clave: una copia a medio escribir nunca se restaura (restaurar() también lo rechaza).
+if (archivo.endsWith(SUFIJO_PARCIAL)) fallar(`es una copia a medio escribir (${SUFIJO_PARCIAL}): elija una copia terminada.`);
 
 if (await servidorEncendido()) fallar("el servidor está encendido. Deténgalo (Ctrl+C en su ventana, o el servicio) y vuelva a intentarlo.");
 

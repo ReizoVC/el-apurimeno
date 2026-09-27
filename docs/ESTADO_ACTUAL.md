@@ -1,17 +1,21 @@
 # Estado actual del proyecto
 
-Al 26/09/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
+Al 27/09/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
 decisiones esperan a la propietaria. El detalle técnico de cada parte está en el README de su carpeta.
 
-**En una línea:** el MVP de software está completo salvo la **impresión real** (parte 2, con la impresora). Lo que
-falta es sobre todo puesta en marcha: Supabase de producción, instalación en el PC del local, datos reales y el piloto
-con el cuaderno.
+**En una línea:** el MVP de software está completo salvo la **impresión real** (parte 2, con la impresora). Los tres
+servicios de Windows y el respaldo externo quedaron probados en el equipo de desarrollo. Para instalar en el local
+solo falta: **impresión parte 2**, el **proyecto de Supabase de producción** y la **instalación con `-Produccion` en el
+equipo del local**. Después vienen los datos reales y el piloto con el cuaderno.
 
 ## Integrado
 
-Todo está en `main`, hasta el PR #15 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
-`@apurimeno/formato` (#13), revisión y este documento (#14), y respaldos (local, externo cifrado y restauración) con la
-pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integrar.
+Todo está en `main`, hasta el PR #19 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
+`@apurimeno/formato` (#13), revisión y este documento (#14), respaldos (local, externo cifrado y restauración) con la
+pantalla de productos e inventario (#15), correcciones de la auditoría (#16), el servidor como servicio de Windows
+(#17), su registro que rota por tamaño (#18), y el Dashboard y Limpieza como servicios, la carpeta de respaldo
+sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19). No quedan ramas con trabajo sin
+integrar.
 
 ## Completo y probado
 
@@ -27,6 +31,8 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | Espejo en la nube | El servidor publica cada 30 min ventas, anulados, ocupación por día y arqueos por turno; nunca clientes, tickets ni el estado en vivo | Contra el proyecto `apurimeno-prueba`: primera sincronización, cambios, anulación de días anteriores, sin internet y vuelta, re-sincronización completa |
 | `apps/owner` | Resumen remoto para la propietaria: contraseña + TOTP obligatorio, franja "Datos al…", Hoy/Ayer/7 días/Mes, ventas, arqueos y ocupación | De punta a punta en Chrome de celular contra `apurimeno-prueba`, servida con las cabeceras reales de Cloudflare Pages; cifras iguales a lo publicado |
 | Respaldos | Copia local consistente cada 15 min (24 h), externa diaria a las 04:00 comprimida y cifrada con clave pública (30 días), `pnpm restaurar` y pantalla con "Desactualizado" | Pruebas contra SQLite real; en Chrome contra el servidor real; restauración de punta a punta con el servidor real y copias reales cada 15 min, en el mismo equipo y en un "PC nuevo" (`docs/RESPALDO_Y_RESTAURACION.md`) |
+| Servicios de Windows | `ApurimenoServidor` (3001), `ApurimenoDashboard` (3000) y `ApurimenoLimpieza` (3002) con NSSM: arrancan solos al encender el equipo y se relanzan si se caen; un solo instalador con `-Produccion` (`docs/INSTALACION_LOCAL.md`) | En el equipo de desarrollo, 26 y 27/09: `taskkill /F` de cada uno, vuelven solos en 6,5 a 7 s; el registro del servidor rota a 10 MB sin reiniciarlo; tras un reinicio del PC (27/09, 00:10) los tres arrancaron solos y respondieron en 3001, 3000 y 3002 |
+| Respaldo externo en Drive | Las copias cifradas (recientes cada 15 min y diaria) van a `C:\RespaldosApurimeno`, carpeta física que Google Drive para escritorio sube desde "Mi computadora" (el servicio no puede escribir en `G:\Mi unidad`) | En el equipo de desarrollo, 26/09: 9 ciclos seguidos sin error, 8 recientes guardadas, Dashboard → Respaldos sin rojo y los archivos visibles en la web de Drive, en "Computadoras" |
 | `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; las dos migraciones aplicadas en `apurimeno-prueba` y verificadas el 26/09 con la cuenta lectora: con solo la contraseña, con un autenticador sin verificar, o con TOTP registrado pero sin el código en la sesión, no lee nada (ni por la API directa) ni puede escribir; con el código (aal2) lee el resumen |
 
 `pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (526 pruebas). Todas las apps compilan.
@@ -47,15 +53,13 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
    larga) y las de la propietaria y su hija.
 3. **Publicar `apps/owner` en Cloudflare Pages** con las credenciales de producción (pasos exactos en
    `apps/owner/README.md`).
-4. **Instalación en el PC del local:**
+4. **Instalación con `-Produccion` en el equipo del local**, siguiendo `docs/INSTALACION_LOCAL.md` (los servicios y
+   el respaldo externo ya se probaron en el equipo de desarrollo; falta repetirlo allí):
    - Node 22.9 o posterior, el servidor con su `.env` de producción (`JWT_SECRET` propio, base en una carpeta
      fija, `ESPEJO_*` del proyecto de producción, `IMPRESORA_*`).
-   - El servidor, el Dashboard y Limpieza como servicios de Windows, que arrancan solos y se reinician si se caen:
-     listos con NSSM (`apps/server/scripts/instalar-servicio.ps1 -Produccion`, ver `docs/INSTALACION_LOCAL.md`).
-     Instalados y probados en el equipo de desarrollo (reinicio tras una caída, registro que rota cada 10 MB sin
-     reiniciar); falta el reinicio del equipo con los tres y correrlo en el PC del local.
-   - Respaldo externo en una carpeta física sincronizada por Drive (`C:\RespaldosApurimeno`, "Mi computadora"): el
-     servicio no puede escribir en `G:\Mi unidad`. Probado en el equipo de desarrollo.
+   - Compilar el Dashboard y Limpieza y correr `apps/server/scripts/instalar-servicio.ps1 -Produccion`: deja los
+     tres servicios. Comprobar `taskkill /F` y un reinicio del equipo, como en el de desarrollo.
+   - La carpeta de respaldo física agregada en Drive → "Mi computadora", no `G:\Mi unidad`.
    - Que el equipo no se suspenda (la sincronización y la impresión corren en el servidor).
    - IP fija en la red del local y `CORS_ORIGINS` con las direcciones del Dashboard y de la app de limpieza.
    - El instalador del POS (Tauri) compilado en un equipo con Visual Studio "Desarrollo para el escritorio con

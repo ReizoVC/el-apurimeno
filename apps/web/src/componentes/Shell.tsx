@@ -22,6 +22,8 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Input } from "@apurimeno/ui/components/input";
+import { MarcoCapacitacion } from "@apurimeno/ui/components/modo-capacitacion";
+import { entornoDeUsuario } from "@apurimeno/ui/lib/capacitacion";
 import {
   ErrorApi,
   mensajeDe,
@@ -200,59 +202,61 @@ export function Shell({ children }: { children: ReactNode }) {
   const grupos = [...new Set(visibles.map((s) => s.grupo))];
   return (
     <ContextoSesion.Provider value={sesion}>
-      <div className="flex min-h-screen bg-muted/30">
-        <aside className="flex w-60 shrink-0 flex-col border-r bg-background">
-          <div className="border-b px-4 py-3">
-            <p className="font-semibold">El Apurimeño</p>
-            <p className="text-xs text-muted-foreground">Dashboard</p>
-          </div>
-          <nav
-            className="flex flex-1 flex-col gap-4 p-3 text-sm"
-            aria-label="Secciones"
-          >
-            {grupos.map((grupo) => (
-              <div key={grupo} className="flex flex-col gap-0.5">
-                {grupo !== "" && (
-                  <p className="px-2 pb-1 text-xs font-semibold uppercase text-muted-foreground">
-                    {grupo}
-                  </p>
-                )}
-                {visibles
-                  .filter((s) => s.grupo === grupo)
-                  .map((s) => (
-                    <Link
-                      key={s.href}
-                      href={s.href}
-                      aria-current={ruta === s.href ? "page" : undefined}
-                      className={`rounded-md px-2 py-1.5 hover:bg-muted ${ruta === s.href ? "bg-muted font-medium" : ""}`}
-                    >
-                      {s.etiqueta}
-                    </Link>
-                  ))}
-              </div>
-            ))}
-          </nav>
-          <div className="border-t p-3 text-sm">
-            <p className="text-muted-foreground">
-              Sesión:{" "}
-              <span className="font-medium text-foreground">
-                {sesion.usuario.nombreUsuario}
-              </span>
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 px-0"
-              onClick={() => salir(null)}
+      <MarcoCapacitacion activo={sesion.entorno === "CAPACITACION"}>
+        <div className="flex min-h-screen bg-muted/30">
+          <aside className="flex w-60 shrink-0 flex-col border-r bg-background">
+            <div className="border-b px-4 py-3">
+              <p className="font-semibold">El Apurimeño</p>
+              <p className="text-xs text-muted-foreground">Dashboard</p>
+            </div>
+            <nav
+              className="flex flex-1 flex-col gap-4 p-3 text-sm"
+              aria-label="Secciones"
             >
-              Cerrar sesión
-            </Button>
-          </div>
-        </aside>
-        <main className="flex min-w-0 flex-1 flex-col gap-4 p-6">
-          {children}
-        </main>
-      </div>
+              {grupos.map((grupo) => (
+                <div key={grupo} className="flex flex-col gap-0.5">
+                  {grupo !== "" && (
+                    <p className="px-2 pb-1 text-xs font-semibold uppercase text-muted-foreground">
+                      {grupo}
+                    </p>
+                  )}
+                  {visibles
+                    .filter((s) => s.grupo === grupo)
+                    .map((s) => (
+                      <Link
+                        key={s.href}
+                        href={s.href}
+                        aria-current={ruta === s.href ? "page" : undefined}
+                        className={`rounded-md px-2 py-1.5 hover:bg-muted ${ruta === s.href ? "bg-muted font-medium" : ""}`}
+                      >
+                        {s.etiqueta}
+                      </Link>
+                    ))}
+                </div>
+              ))}
+            </nav>
+            <div className="border-t p-3 text-sm">
+              <p className="text-muted-foreground">
+                Sesión:{" "}
+                <span className="font-medium text-foreground">
+                  {sesion.usuario.nombreUsuario}
+                </span>
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 px-0"
+                onClick={() => salir(null)}
+              >
+                Cerrar sesión
+              </Button>
+            </div>
+          </aside>
+          <main className="flex min-w-0 flex-1 flex-col gap-4 p-6">
+            {children}
+          </main>
+        </div>
+      </MarcoCapacitacion>
     </ContextoSesion.Provider>
   );
 }
@@ -283,7 +287,12 @@ function Login({
           "Esta cuenta no tiene acceso al Dashboard.",
         );
       }
-      onSesion({ token: r.token, usuario: r.usuario, permisos: r.permisos });
+      onSesion({
+        token: r.token,
+        usuario: r.usuario,
+        permisos: r.permisos,
+        entorno: entornoDeUsuario(nombreUsuario),
+      });
     } catch (e) {
       setAviso(mensajeDe(e));
       setContrasena("");
@@ -292,42 +301,52 @@ function Login({
     }
   };
 
+  const capacitacion = entornoDeUsuario(nombreUsuario) === "CAPACITACION";
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
-        <form onSubmit={(e) => void enviar(e)}>
-          <CardHeader>
-            <CardTitle>El Apurimeño</CardTitle>
-            <CardDescription>Dashboard de administración.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {aviso !== null && <Aviso tipo="error">{aviso}</Aviso>}
-            <Campo etiqueta="Usuario">
-              <Input
-                autoComplete="username"
-                autoFocus
-                required
-                value={nombreUsuario}
-                onChange={(e) => setNombreUsuario(e.target.value)}
-              />
-            </Campo>
-            <Campo etiqueta="Contraseña">
-              <Input
-                type="password"
-                autoComplete="current-password"
-                required
-                value={contrasena}
-                onChange={(e) => setContrasena(e.target.value)}
-              />
-            </Campo>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={enviando}>
-              {enviando ? "Ingresando…" : "Ingresar"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </main>
+    <MarcoCapacitacion activo={capacitacion}>
+      <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-sm">
+          <form onSubmit={(e) => void enviar(e)}>
+            <CardHeader>
+              <CardTitle>El Apurimeño</CardTitle>
+              <CardDescription>Dashboard de administración.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {aviso !== null && <Aviso tipo="error">{aviso}</Aviso>}
+              {capacitacion && (
+                <p className="rounded-md border border-fuchsia-300 bg-fuchsia-50 px-3 py-2 text-sm text-fuchsia-900">
+                  Cuenta de capacitación: entrará al servidor de práctica, no al
+                  del local.
+                </p>
+              )}
+              <Campo etiqueta="Usuario">
+                <Input
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  value={nombreUsuario}
+                  onChange={(e) => setNombreUsuario(e.target.value)}
+                />
+              </Campo>
+              <Campo etiqueta="Contraseña">
+                <Input
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                />
+              </Campo>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={enviando}>
+                {enviando ? "Ingresando…" : "Ingresar"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </main>
+    </MarcoCapacitacion>
   );
 }

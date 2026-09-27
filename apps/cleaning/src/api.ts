@@ -5,6 +5,12 @@ import {
   RespuestaErrorSchema,
   type Habitacion,
 } from "@apurimeno/contracts";
+import {
+  entornoDeUsuario,
+  urlCapacitacion,
+  usuarioParaEnviar,
+  type Entorno,
+} from "@apurimeno/ui/lib/capacitacion";
 import type { Sesion } from "./sesion";
 
 // Cliente de la API del servidor para la app de limpieza. Las rutas y las formas de las respuestas
@@ -16,13 +22,27 @@ const PUERTO_SERVIDOR = 3001;
  * URL del servidor. `NEXT_PUBLIC_SERVIDOR_URL` la fija (p. ej. http://192.168.1.50:3001). Sin ella, se
  * asume que el servidor corre en la misma máquina de la red local que sirve esta app, en el puerto
  * 3001: el celular abre http://<ip-del-local>:3002 y la API queda en http://<ip-del-local>:3001.
+ *
+ * En capacitación, el servidor de capacitación: `NEXT_PUBLIC_SERVIDOR_CAPACITACION_URL`, o el mismo en el
+ * puerto 3011.
  */
-export function urlServidor(): string {
+export function urlServidor(entorno: Entorno = "PRODUCCION"): string {
   const configurada = process.env.NEXT_PUBLIC_SERVIDOR_URL;
-  if (configurada !== undefined && configurada !== "") {
-    return configurada.replace(/\/+$/, "");
-  }
-  return `${window.location.protocol}//${window.location.hostname}:${PUERTO_SERVIDOR}`;
+  const produccion =
+    configurada !== undefined && configurada !== ""
+      ? configurada.replace(/\/+$/, "")
+      : `${window.location.protocol}//${window.location.hostname}:${PUERTO_SERVIDOR}`;
+  if (entorno === "PRODUCCION") return produccion;
+  return urlCapacitacion(
+    produccion,
+    process.env.NEXT_PUBLIC_SERVIDOR_CAPACITACION_URL,
+  );
+}
+
+/** Servidor de la sesión abierta (la página lo fija al entrar y al leer la sesión guardada). */
+let entornoActual: Entorno = "PRODUCCION";
+export function usarEntorno(entorno: Entorno): void {
+  entornoActual = entorno;
 }
 
 /** Error de una llamada: `estado` es el HTTP (0 si no hubo respuesta) y `codigo`, el del contrato. */
@@ -47,6 +67,8 @@ async function llamar(
   ruta: string,
   token: string | null,
   cuerpo?: unknown,
+  /** Solo el login, que todavía no tiene sesión: a qué servidor va. Después, el de la sesión. */
+  entorno: Entorno = entornoActual,
 ): Promise<unknown> {
   const headers: Record<string, string> = {};
   if (token !== null) headers["authorization"] = `Bearer ${token}`;
@@ -54,7 +76,7 @@ async function llamar(
 
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${urlServidor()}${ruta}`, {
+    respuesta = await fetch(`${urlServidor(entorno)}${ruta}`, {
       method: metodo,
       headers,
       body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
@@ -84,13 +106,23 @@ async function llamar(
 const conId = (plantilla: string, id: string) =>
   plantilla.replace(":id", encodeURIComponent(id));
 
-/** Inicia sesión. Solo acepta cuentas con acceso a limpieza (`cleaning.access`). */
+/**
+ * Inicia sesión. Solo acepta cuentas con acceso a limpieza (`cleaning.access`). La cuenta decide el servidor,
+ * antes de llamar a nada: las de capacitación ("capacitacion.…") van al de capacitación.
+ */
 export async function iniciarSesion(
   nombreUsuario: string,
   contrasena: string,
 ): Promise<Sesion> {
+  const entorno = entornoDeUsuario(nombreUsuario);
   const respuesta = LoginRespuestaSchema.parse(
-    await llamar("POST", RUTAS.login, null, { nombreUsuario, contrasena }),
+    await llamar(
+      "POST",
+      RUTAS.login,
+      null,
+      { nombreUsuario: usuarioParaEnviar(nombreUsuario), contrasena },
+      entorno,
+    ),
   );
   if (!respuesta.permisos.includes("cleaning.access")) {
     throw new ErrorApi(
@@ -102,6 +134,7 @@ export async function iniciarSesion(
   return {
     token: respuesta.token,
     nombreUsuario: respuesta.usuario.nombreUsuario,
+    entorno,
   };
 }
 

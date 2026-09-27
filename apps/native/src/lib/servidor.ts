@@ -28,6 +28,12 @@ import {
   type RegistrarIngresoEntrada,
   type RegistrarVentaEntrada,
 } from "@apurimeno/contracts";
+import {
+  entornoDeUsuario,
+  urlCapacitacion,
+  usuarioParaEnviar,
+  type Entorno,
+} from "@apurimeno/ui/lib/capacitacion";
 import type { Sesion } from "./sesion";
 
 // Cliente de la API del servidor para el POS. Rutas, cuerpos y respuestas vienen de @apurimeno/contracts
@@ -36,12 +42,21 @@ import type { Sesion } from "./sesion";
 /**
  * URL del servidor: `VITE_SERVIDOR_URL` (p. ej. http://192.168.1.50:3001). Sin ella, `http://localhost:3001`:
  * en el local, el POS y el servidor corren en la misma máquina (Planos §4.3).
+ *
+ * En capacitación, el servidor de capacitación: `VITE_SERVIDOR_CAPACITACION_URL`, o el mismo equipo en el
+ * puerto 3011.
  */
-export function urlServidor(): string {
+export function urlServidor(entorno: Entorno = "PRODUCCION"): string {
   const configurada = import.meta.env.VITE_SERVIDOR_URL as string | undefined;
-  return configurada !== undefined && configurada !== ""
-    ? configurada.replace(/\/+$/, "")
-    : "http://localhost:3001";
+  const produccion =
+    configurada !== undefined && configurada !== ""
+      ? configurada.replace(/\/+$/, "")
+      : "http://localhost:3001";
+  if (entorno === "PRODUCCION") return produccion;
+  return urlCapacitacion(
+    produccion,
+    import.meta.env.VITE_SERVIDOR_CAPACITACION_URL as string | undefined,
+  );
 }
 
 /** Error de una llamada: `estado` es el HTTP (0 si no hubo respuesta) y `codigo`, el del contrato. */
@@ -77,13 +92,15 @@ interface Opciones {
   cuerpo?: unknown;
   /** Operaciones que cobran (RF-59): el mismo valor en cada reintento de la misma operación. */
   claveIdempotencia?: string;
+  /** Solo el login, que todavía no tiene sesión: a qué servidor va. Después, el de la sesión. */
+  entorno?: Entorno;
 }
 
 async function llamar<T>(
   metodo: "GET" | "POST",
   ruta: string,
   esquema: { parse: (datos: unknown) => T },
-  { cuerpo, claveIdempotencia }: Opciones = {},
+  { cuerpo, claveIdempotencia, entorno }: Opciones = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (sesionActual !== null)
@@ -94,7 +111,8 @@ async function llamar<T>(
 
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${urlServidor()}${ruta}`, {
+    const destino = entorno ?? sesionActual?.entorno ?? "PRODUCCION";
+    respuesta = await fetch(`${urlServidor(destino)}${ruta}`, {
       method: metodo,
       headers,
       body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
@@ -126,9 +144,14 @@ const conId = (plantilla: string, id: string) =>
   plantilla.replace(":id", encodeURIComponent(id));
 
 export const servidor = {
+  /**
+   * La cuenta decide el servidor, antes de llamar a nada: las de capacitación ("capacitacion.…") van al de
+   * capacitación; todas las demás, al del local.
+   */
   login: (nombreUsuario: string, contrasena: string) =>
     llamar("POST", RUTAS.login, LoginRespuestaSchema, {
-      cuerpo: { nombreUsuario, contrasena },
+      cuerpo: { nombreUsuario: usuarioParaEnviar(nombreUsuario), contrasena },
+      entorno: entornoDeUsuario(nombreUsuario),
     }),
 
   tablero: () => llamar("GET", RUTAS.tablero, TableroSchema),

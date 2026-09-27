@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MarcoCapacitacion } from "@apurimeno/ui/components/modo-capacitacion";
+import { usarEntorno } from "../src/api";
 import { Login } from "../src/login";
 import { Pendientes } from "../src/pendientes";
 import {
@@ -22,6 +24,7 @@ export default function CleaningPage() {
 
   useEffect(() => {
     const sesion = leerSesion();
+    usarEntorno(sesion?.entorno ?? "PRODUCCION");
     setEstado(
       sesion === null
         ? { tipo: "sin-sesion", aviso: null }
@@ -31,11 +34,13 @@ export default function CleaningPage() {
 
   const entrar = useCallback((sesion: Sesion) => {
     guardarSesion(sesion);
+    usarEntorno(sesion.entorno);
     setEstado({ tipo: "con-sesion", sesion });
   }, []);
 
   const salir = useCallback((aviso: string | null) => {
     borrarSesion();
+    usarEntorno("PRODUCCION");
     setEstado({ tipo: "sin-sesion", aviso });
   }, []);
 
@@ -44,10 +49,12 @@ export default function CleaningPage() {
     return <Login avisoInicial={estado.aviso} onSesion={entrar} />;
   }
   return (
-    <Pendientes
-      sesion={estado.sesion}
-      onSesionInvalida={salir}
-      onCerrarSesion={() => salir(null)}
-    />
+    <MarcoCapacitacion activo={estado.sesion.entorno === "CAPACITACION"}>
+      <Pendientes
+        sesion={estado.sesion}
+        onSesionInvalida={salir}
+        onCerrarSesion={() => salir(null)}
+      />
+    </MarcoCapacitacion>
   );
 }

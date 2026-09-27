@@ -1,4 +1,5 @@
 import type { Permiso, Usuario } from "@apurimeno/contracts";
+import { entornoGuardado, type Entorno } from "@apurimeno/ui/lib/capacitacion";
 
 // Sesión del POS: el token JWT del servidor, la cuenta y sus permisos (para mostrar u ocultar acciones; el
 // servidor vuelve a comprobarlos en cada solicitud). Se guarda en localStorage, como en apps/cleaning.
@@ -9,6 +10,8 @@ export interface Sesion {
   token: string;
   usuario: Usuario;
   permisos: Permiso[];
+  /** A qué servidor pertenece la sesión: el del local o el de capacitación. */
+  entorno: Entorno;
 }
 
 export function leerSesion(): Sesion | null {
@@ -19,7 +22,7 @@ export function leerSesion(): Sesion | null {
     return typeof sesion.token === "string" &&
       sesion.usuario !== undefined &&
       Array.isArray(sesion.permisos)
-      ? (sesion as Sesion)
+      ? { ...(sesion as Sesion), entorno: entornoGuardado(sesion.entorno) }
       : null;
   } catch {
     return null;

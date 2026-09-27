@@ -1,4 +1,5 @@
 import type { Permiso, Usuario } from "@apurimeno/contracts";
+import { entornoGuardado, type Entorno } from "@apurimeno/ui/lib/capacitacion";
 
 // Sesión del Dashboard: token JWT, la cuenta y sus permisos (para mostrar u ocultar secciones; el servidor
 // los vuelve a comprobar en cada solicitud). Se guarda en localStorage, como en el POS y en limpieza.
@@ -9,6 +10,8 @@ export interface Sesion {
   token: string;
   usuario: Usuario;
   permisos: Permiso[];
+  /** A qué servidor pertenece la sesión: el del local o el de capacitación. */
+  entorno: Entorno;
 }
 
 export function leerSesion(): Sesion | null {
@@ -19,7 +22,7 @@ export function leerSesion(): Sesion | null {
     return typeof sesion.token === "string" &&
       sesion.usuario !== undefined &&
       Array.isArray(sesion.permisos)
-      ? (sesion as Sesion)
+      ? { ...(sesion as Sesion), entorno: entornoGuardado(sesion.entorno) }
       : null;
   } catch {
     return null;

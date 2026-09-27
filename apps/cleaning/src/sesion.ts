@@ -3,11 +3,15 @@
 // Todo acceso va en try/catch: en modo privado o con el almacenamiento bloqueado, la sesión dura
 // lo que dure la pestaña.
 
+import { entornoGuardado, type Entorno } from "@apurimeno/ui/lib/capacitacion";
+
 const CLAVE = "apurimeno.limpieza.sesion";
 
 export interface Sesion {
   token: string;
   nombreUsuario: string;
+  /** A qué servidor pertenece la sesión: el del local o el de capacitación. */
+  entorno: Entorno;
 }
 
 export function leerSesion(): Sesion | null {
@@ -17,7 +21,11 @@ export function leerSesion(): Sesion | null {
     const sesion = JSON.parse(valor) as Partial<Sesion>;
     return typeof sesion.token === "string" &&
       typeof sesion.nombreUsuario === "string"
-      ? { token: sesion.token, nombreUsuario: sesion.nombreUsuario }
+      ? {
+          token: sesion.token,
+          nombreUsuario: sesion.nombreUsuario,
+          entorno: entornoGuardado(sesion.entorno),
+        }
       : null;
   } catch {
     return null;

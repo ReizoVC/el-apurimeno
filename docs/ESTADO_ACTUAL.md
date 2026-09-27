@@ -20,7 +20,7 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | `packages/contracts` | Tipos y esquemas de todo el sistema; 25 decisiones de interpretación del SRS documentadas | 45 pruebas |
 | `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno | 242 pruebas, incluida la tabla de casos del SRS |
 | `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
-| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 229 pruebas contra SQLite real; pruebas de concurrencia |
+| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 231 pruebas contra SQLite real; pruebas de concurrencia |
 | `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
 | `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
@@ -29,7 +29,7 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | Respaldos | Copia local consistente cada 15 min (24 h), externa diaria a las 04:00 comprimida y cifrada con clave pública (30 días), `pnpm restaurar` y pantalla con "Desactualizado" | Pruebas contra SQLite real; en Chrome contra el servidor real; restauración de punta a punta con el servidor real y copias reales cada 15 min, en el mismo equipo y en un "PC nuevo" (`docs/RESPALDO_Y_RESTAURACION.md`) |
 | `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; las dos migraciones aplicadas en `apurimeno-prueba` y verificadas el 26/09 con la cuenta lectora: con solo la contraseña, con un autenticador sin verificar, o con TOTP registrado pero sin el código en la sesión, no lee nada (ni por la API directa) ni puede escribir; con el código (aal2) lee el resumen |
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (524 pruebas). Todas las apps compilan.
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (526 pruebas). Todas las apps compilan.
 
 ## Qué falta para reemplazar el cuaderno
 
@@ -50,9 +50,12 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 4. **Instalación en el PC del local:**
    - Node 22.9 o posterior, el servidor con su `.env` de producción (`JWT_SECRET` propio, base en una carpeta
      fija, `ESPEJO_*` del proyecto de producción, `IMPRESORA_*`).
-   - El servidor como servicio de Windows, que arranca solo y se reinicia si se cae: listo con NSSM
-     (`apps/server/scripts/instalar-servicio.ps1 -Produccion`, ver "Servicio de Windows" en `apps/server/README.md`).
-     Instalado y probado en el equipo de desarrollo (reinicio tras una caída, registro que rota cada 10 MB sin reiniciar); falta correrlo en el PC del local.
+   - El servidor, el Dashboard y Limpieza como servicios de Windows, que arrancan solos y se reinician si se caen:
+     listos con NSSM (`apps/server/scripts/instalar-servicio.ps1 -Produccion`, ver `docs/INSTALACION_LOCAL.md`).
+     Instalados y probados en el equipo de desarrollo (reinicio tras una caída, registro que rota cada 10 MB sin
+     reiniciar); falta el reinicio del equipo con los tres y correrlo en el PC del local.
+   - Respaldo externo en una carpeta física sincronizada por Drive (`C:\RespaldosApurimeno`, "Mi computadora"): el
+     servicio no puede escribir en `G:\Mi unidad`. Probado en el equipo de desarrollo.
    - Que el equipo no se suspenda (la sincronización y la impresión corren en el servidor).
    - IP fija en la red del local y `CORS_ORIGINS` con las direcciones del Dashboard y de la app de limpieza.
    - El instalador del POS (Tauri) compilado en un equipo con Visual Studio "Desarrollo para el escritorio con
@@ -72,7 +75,7 @@ pantalla de productos e inventario (#15). No quedan ramas con trabajo sin integr
 | Transferencia bancaria (P-04) | Creada pero desactivada | ¿Se activa desde el inicio? Se cambia en el Dashboard, sin código |
 | Vigencia del código de anulación (RF-65) | 5 minutos | ¿Está bien? Configurable en el Dashboard |
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
-| Encendido del equipo | El servidor arranca solo como servicio de Windows (NSSM) | ¿Quién enciende el equipo cada día, o queda siempre encendido? |
+| Encendido del equipo | El servidor, el Dashboard y Limpieza arrancan solos como servicios de Windows (NSSM) | ¿Quién enciende el equipo cada día, o queda siempre encendido? |
 | Logotipo en el comprobante | Sin logotipo | La RED-E803 lo soporta; ¿se quiere? Se decide con la impresora conectada |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
 

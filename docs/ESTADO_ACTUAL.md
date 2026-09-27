@@ -90,6 +90,55 @@ horas en la nube; decisión 23), comentario obligatorio con cualquier diferencia
 acceso (19), contenido del espejo y lectura con TOTP (22), dos cuentas lectoras (propietaria e hija), Cloudflare
 Pages para la vista remota.
 
+## Fuera del MVP por decisión de la propietaria
+
+### Espacio en Google Drive: la papelera acumula las copias recientes borradas
+
+Cada 15 minutos el servidor deja una copia reciente cifrada en la carpeta sincronizada y borra la más vieja (se
+guardan 8). Drive manda cada archivo borrado a su papelera, donde sigue ocupando espacio de la cuenta durante 30 días:
+unas 96 copias por día, casi 2.900 en la papelera a la vez.
+
+**Análisis del 27/09/2026.**
+
+**Cómo se midió:** simulación de 30 días de operación contra la API real, con las copias cifradas tal como las hace el
+servidor. La base no se depura, así que la copia crece en línea recta:
+
+| Volumen supuesto por día | La copia crece | Copia a 6 / 12 meses | Papelera + copias a 6 / 12 meses | Se llenan los 15 GB gratuitos |
+| --- | --- | --- | --- | --- |
+| Bajo: 20 alquileres, 15 ventas | 26 KB/día | 4,8 / 9,6 MB | 12,9 / 27 GB | a los ~7 meses |
+| Medio: 40 alquileres, 30 ventas | 50 KB/día | 9,0 / 18,1 MB | 24 / 51 GB | a los ~4 meses |
+| Alto: 80 alquileres, 60 ventas | 96 KB/día | 17,6 / 35,2 MB | 47 / 99 GB | a los ~2,3 meses |
+
+**Lo que hace grave que se llene:**
+
+- **Correo:** los 15 GB se comparten con Gmail y Google Fotos de la misma cuenta, y con la cuenta llena Gmail deja de
+  recibir correos.
+- **Aviso en verde:** si Drive deja de subir, el servidor sigue escribiendo bien en la carpeta local y el Dashboard
+  no lo nota.
+
+**Opciones propuestas.** La "pérdida máxima" es la de perder el equipo; si solo se daña la base, las copias locales
+siguen cada 15 minutos en todas:
+
+1. **Recientes en la nube cada 1 h o cada 2 h (las locales siguen cada 15 min):** la papelera baja 4 u 8 veces
+   (volumen medio a 12 meses: 13,7 o 7,4 GB). La pérdida máxima sube a ~1 h o ~2 h.
+2. **Diaria completa más, cada 15 min, solo los cambios desde la diaria:** la papelera queda por debajo de 0,2 GB y
+   la pérdida máxima sigue en ~15 min. Es el trabajo más grande: cambia el formato de las copias y la restauración.
+3. **Aviso en el Dashboard cuando baje el espacio de Drive:** exige conectar el servidor a la cuenta de Google con
+   un permiso guardado en el PC. Solo avisa, no evita que se llene.
+4. **Una cuenta de Google solo para respaldos, o un plan de pago de Google One:** aísla el correo de la propietaria.
+   Sola no evita que se llene.
+5. **Vaciar la papelera a mano:** no se recomienda como única medida.
+
+**Decisión:** queda fuera del MVP y se retoma **a los 2 o 3 meses de operación**, con el volumen real del local.
+Mientras tanto:
+
+- **Cuenta de Google solo para los respaldos**, distinta de la personal de la propietaria. Así, si se llena, no
+  afecta su correo.
+- **Revisión del espacio de esa cuenta una vez al mes**, en drive.google.com → Almacenamiento, incluida la
+  papelera.
+
+Pasos en `docs/INSTALACION_LOCAL.md`, sección 5.
+
 ## Decisiones tomadas en la última etapa, para revisar
 
 Tomadas sin revisión porque no bloqueaban nada; cada una está explicada en el README correspondiente:

@@ -21,6 +21,17 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
   `feat(ámbito):` / `fix(ámbito):` / `docs(ámbito):`; los PR se integran de a uno, en el orden en que se abrieron.
 - No se toca la impresión parte 2 (transporte USB/Bluetooth/Windows) sin la impresora física conectada.
 
+## Puertos
+
+| Puerto | Qué |
+|---|---|
+| 3000 | Dashboard (`apps/web`) |
+| 3001 | Servidor (`apps/server`) |
+| 3002 | Limpieza (`apps/cleaning`) |
+| 3003 | Catálogo (`apps/store-catalog`) |
+| 1420 | POS en desarrollo (`apps/native`, Tauri dev) |
+| 3011 | Servidor de capacitación (`apps/server` con `--capacitacion`; ver `docs/INSTALACION_LOCAL.md`) |
+
 ## Acciones sobre el sistema
 
 Las sesiones de trabajo corren en el PC de la propietaria del repositorio, junto a sus otros programas y archivos.

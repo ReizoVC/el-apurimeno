@@ -2,7 +2,7 @@
 
 Guía revisada contra el código y los scripts del repositorio el 26/09/2026. Los ejemplos usan `C:\ElApurimeno`; sustituir esa ruta por la elegida. Completar los marcadores `<...>` localmente. No enviar secretos por chat ni incluirlos en registros.
 
-**Estado:** un solo instalador, `apps/server/scripts/instalar-servicio.ps1 -Produccion`, deja como servicios de Windows el servidor (3001), el Dashboard (3000) y Limpieza (3002). Los tres arrancan solos y se reinician si se caen; probado el 26/09/2026 en el equipo de desarrollo (sección 4), falta el reinicio del equipo. El respaldo externo va a una carpeta física sincronizada por Drive (sección 5).
+**Estado:** un solo instalador, `apps/server/scripts/instalar-servicio.ps1 -Produccion`, deja como servicios de Windows el servidor (3001), el Dashboard (3000) y Limpieza (3002). Los tres arrancan solos y se reinician si se caen; probado el 26 y 27/09/2026 en el equipo de desarrollo, incluido un reinicio del equipo (sección 4). El respaldo externo va a una carpeta física sincronizada por Drive (sección 5).
 
 ## 1. Programas y preparación
 
@@ -163,7 +163,7 @@ Para aplicar cambios de `apps/server/.env`, como administrador: `& 'C:\Program F
 
 - **Instalación:** los tres servicios quedaron en ejecución, con arranque automático, cuenta LocalSystem y un solo proceso `node.exe` cada uno.
 - **Caídas:** `taskkill /F` del proceso que escucha en 3000 y en 3002, dos veces seguidas cada uno. Volvieron a responder en 6,5 a 6,6 s (la espera de 5 s más el arranque de Next). El servidor vuelve en unos 7 s (prueba anterior).
-- **Reinicio del equipo:** pendiente; lo hace la propietaria.
+- **Reinicio del equipo:** hecho el 27/09/2026 a las 00:10. Los tres servicios arrancaron solos y respondieron en 3001, 3000 y 3002.
 
 ## 5. Respaldo externo: carpeta física sincronizada por Drive
 

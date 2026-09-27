@@ -10,12 +10,12 @@ equipo del local**. Después vienen los datos reales y el piloto con el cuaderno
 
 ## Integrado
 
-Todo está en `main`, hasta el PR #19 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
+Todo está en `main`, hasta el PR #21 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
 `@apurimeno/formato` (#13), revisión y este documento (#14), respaldos (local, externo cifrado y restauración) con la
 pantalla de productos e inventario (#15), correcciones de la auditoría (#16), el servidor como servicio de Windows
-(#17), su registro que rota por tamaño (#18), y el Dashboard y Limpieza como servicios, la carpeta de respaldo
-sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19). No quedan ramas con trabajo sin
-integrar.
+(#17), su registro que rota por tamaño (#18), el Dashboard y Limpieza como servicios, la carpeta de respaldo
+sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19), la actualización de este documento
+(#20) y la decisión sobre el espacio en Google Drive (#21). No quedan ramas con trabajo sin integrar.
 
 ## Completo y probado
 
@@ -130,7 +130,8 @@ siguen cada 15 minutos en todas:
 5. **Vaciar la papelera a mano:** no se recomienda como única medida.
 
 **Decisión:** queda fuera del MVP y se retoma **a los 2 o 3 meses de operación**, con el volumen real del local.
-Mientras tanto:
+La propuesta elegida para entonces es la **opción 2**: una copia diaria completa más, cada 15 minutos, solo los
+cambios desde esa diaria. Mientras tanto:
 
 - **Cuenta de Google solo para los respaldos**, distinta de la personal de la propietaria. Así, si se llena, no
   afecta su correo.

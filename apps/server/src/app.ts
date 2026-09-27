@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import fastifyCors from "@fastify/cors";
 import fastifyJwt from "@fastify/jwt";
 import { CABECERA_IDEMPOTENCIA } from "@apurimeno/contracts";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
 import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { SIN_ESPEJO, crearControlEspejo, type ControlEspejo, type OpcionesEspejo } from "./espejo/control.js";
@@ -37,7 +37,8 @@ export interface OpcionesApp {
   jwtSecret: string;
   /** Reloj del servidor; las pruebas lo controlan para simular el paso del tiempo. */
   ahora?: () => Date;
-  logger?: boolean;
+  /** true: a la consola; `{ stream }`: a un archivo (ver registro.ts). */
+  logger?: FastifyServerOptions["logger"];
   /** Costo bcrypt de las contraseñas nuevas; las pruebas usan uno bajo. */
   costoBcrypt?: number;
   /** Lista blanca de orígenes de navegador (CORS); ver cors.ts. Por defecto, ninguno. */

@@ -108,6 +108,47 @@ conectó sin abrir nada. Con el servidor matado a la fuerza (`taskkill /F`), vol
   sesión en el POS y el Dashboard. En el PC del local se usa `-Produccion` con un `JWT_SECRET` fijo.
 - El equipo no debe suspenderse: las copias, el espejo y la impresión corren dentro del servicio.
 
+## Instancia de capacitación
+
+Una segunda copia de este mismo servidor para que la dueña y el personal practiquen sin tocar datos reales. Se
+arranca con el argumento `--capacitacion` (`src/instancia.ts`); instalación y uso en `docs/INSTALACION_LOCAL.md`,
+sección 9.
+
+**Qué la aísla.** Es un argumento de la línea de comandos, no una variable: un `.env` mal copiado no convierte un
+servidor en el otro. Con `--capacitacion` el servidor **ignora** `DATABASE_URL`, `PORT`, `JWT_SECRET`, `ESPEJO_*` y
+`RESPALDO_*` aunque estén definidas. La base es fija, `datos/capacitacion/apurimeno-capacitacion.db`, y el puerto es
+3011 (`CAPACITACION_PORT` lo cambia). El transporte a Supabase no se crea nunca, y las copias van solo junto a su
+base, en `datos/capacitacion/respaldos`, nunca a la carpeta sincronizada. El servidor de producción se niega a
+arrancar si su `DATABASE_URL` apunta a la base de capacitación. De `.env` solo toma lo que no lleva datos a ningún
+lado: `HOST`, `CORS_ORIGINS`, la impresora y `NODE_ENV`. Lo comprueba `test/capacitacion.test.ts` con el `.env`
+completo de producción.
+
+**Cuentas:** `capacitacion.admin` (Administrador), `capacitacion.cajero1` y `capacitacion.cajero2` (Cajero), creadas
+por `pnpm preparar-capacitacion` con una contraseña que se escribe al prepararla. No se copia ninguna cuenta ni
+credencial de producción. Las apps eligen el servidor mirando el usuario escrito en el login
+(`packages/ui/src/lib/capacitacion.ts`); la autenticación de este servidor no cambia.
+
+**Comprobantes:** todo comprobante de esta instancia lleva `*** CAPACITACIÓN ***`, en el mismo lugar y tamaño que
+`*** COPIA ***` (la reimpresión lleva las dos), tanto el impreso como la vista previa del Dashboard. Usa la misma
+impresora que producción.
+
+**Decisiones de interpretación** (27/09/2026):
+
+- **Modo del servicio:** `-Capacitacion` copia el `NODE_ENV` de `ApurimenoServidor`. Así acepta los mismos orígenes
+  (`CORS_ORIGINS`): en el PC del local, producción; en uno de desarrollo, los orígenes de desarrollo.
+- **Secreto de las sesiones:** nunca el de producción. Sin `CAPACITACION_JWT_SECRET`, uno nuevo en cada arranque:
+  al reiniciar el servicio hay que volver a entrar.
+- **Copias locales:** sí, junto a su base. El pedido excluye la carpeta de respaldos y cualquier carpeta
+  sincronizada, no las copias locales, y así un reinicio accidental se puede deshacer.
+- **Qué borra el reinicio** (`pnpm reiniciar-capacitacion`): todo lo operativo (alquileres, tickets, pagos, turnos,
+  movimientos de caja e inventario, códigos, trabajos de impresión y auditoría), más los clientes, las cuentas
+  creadas al practicar y el estado del espejo. Recarga las 17 habitaciones de la semilla (con sus precios) y los 8
+  productos de ejemplo. No toca las tres cuentas ni su contraseña, la configuración, los métodos de pago ni los
+  rangos. Se niega a correr si la base no tiene las tres cuentas.
+- **El reinicio no aplica migraciones:** `prisma migrate deploy` necesita la base en exclusiva y el servicio la tiene
+  abierta. El reinicio corre con el servicio funcionando y solo comprueba que no falte ninguna. Si falta, pide
+  detener el servicio y correr `pnpm preparar-capacitacion`, que migra y no cambia nada de lo que ya existe.
+
 ## Endpoints
 
 Los cuerpos de entrada y salida están en `@apurimeno/contracts` (`api.ts`, constante `RUTAS`). Todos

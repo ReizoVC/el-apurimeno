@@ -13,6 +13,10 @@ pnpm dev   # http://localhost:3002
   app usa la misma máquina que la sirve, en el puerto 3001: si el celular abre
   `http://192.168.1.50:3002`, la API queda en `http://192.168.1.50:3001`. Next la incorpora al
   compilar, así que va en el entorno de `pnpm dev` o `pnpm build`.
+- **Capacitación:** un usuario que empieza con `capacitacion.` (el teclado del celular puede poner mayúscula o
+  tilde: da igual) entra al servidor de capacitación, en el puerto 3011 de la misma máquina, o
+  `NEXT_PUBLIC_SERVIDOR_CAPACITACION_URL`. Desde el celular hace falta el puerto 3011 abierto en el firewall
+  (`docs/INSTALACION_LOCAL.md`, secciones 8 y 9).
 - **CORS:** el servidor debe tener el origen de la app en `CORS_ORIGINS`. En desarrollo ya acepta
   `http://localhost:3002`; desde el celular hay que agregar `http://<ip-del-local>:3002`.
 - **Sesión:** usuario y contraseña contra `POST /auth/login`. Solo entran cuentas con

@@ -37,6 +37,7 @@ import {
   hora,
 } from "@apurimeno/formato";
 import { Aviso, Encabezado } from "../../src/componentes/comunes";
+import { useSesion } from "../../src/componentes/Shell";
 import { useCarga } from "../../src/lib/carga";
 import { ERROR_RESPALDO } from "../../src/lib/rotulos";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
@@ -184,6 +185,29 @@ function TarjetaCopia({
   ocupado: boolean;
   onCopiar: () => void;
 }) {
+  // En capacitación no hay copias en la nube a propósito: no se sugiere configurarlas.
+  const capacitacion = useSesion().entorno === "CAPACITACION";
+  if (!copia.configurado && capacitacion) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{titulo}</CardTitle>
+          <CardDescription>{descripcion}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertTitle>
+              Instancia de capacitación: sin copias en la nube
+            </AlertTitle>
+            <AlertDescription>
+              A propósito: las copias de la base de práctica quedan solo en
+              este equipo, junto a ella, y nunca van a la carpeta sincronizada.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
   if (!copia.configurado) {
     return (
       <Card>

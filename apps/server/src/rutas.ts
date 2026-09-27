@@ -96,8 +96,9 @@ export function registrarRutas(
   ahora: () => Date,
   secretoCodigos: SecretoCodigos,
   imprimir: (ticketId: string) => void = () => undefined,
+  capacitacion = false,
 ): void {
-  const ctx = creadorContexto(prisma, ahora, imprimir);
+  const ctx = creadorContexto(prisma, ahora, imprimir, capacitacion);
 
   app.get(RUTAS.salud, { config: { publica: true } }, async () => ({ estado: "ok" }));
 

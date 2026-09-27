@@ -206,7 +206,9 @@ describe("Base de capacitación: cuentas, ejemplos y reinicio", () => {
       });
       const { alquiler, ticket } = RegistrarIngresoRespuestaSchema.parse(r.json());
       // La reimpresión también: la copia de capacitación lleva las dos marcas.
-      await app.inject({ method: "POST", url: ruta(RUTAS.reimprimirTicket, ticket.id), headers });
+      const copia = await app.inject({ method: "POST", url: ruta(RUTAS.reimprimirTicket, ticket.id), headers });
+      // La vista previa que muestra el Dashboard dice lo mismo que el papel.
+      expect(copia.json<{ contenido: string[] }>().contenido.some((l) => l.includes("*** CAPACITACIÓN ***"))).toBe(capacitacion);
       await app.colaImpresion();
       await app.inject({ method: "POST", url: ruta(RUTAS.registrarSalida, alquiler.id), headers, payload: {} });
       await app.inject({ method: "POST", url: RUTAS.cerrarTurno, headers, payload: { efectivoContado: 4000, comentario: null } });

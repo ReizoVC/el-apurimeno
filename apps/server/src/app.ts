@@ -84,7 +84,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
       .catch((err: unknown) => app.log.error({ err, ticketId }, "Error en la cola de impresión"));
   };
   app.decorate("colaImpresion", () => cola);
-  registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir);
+  registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir, opciones.capacitacion === true);
   registrarRutasHabitaciones(app, opciones.prisma, ahora);
   registrarRutasClientes(app, opciones.prisma, ahora);
   registrarRutasConfiguracion(app, opciones.prisma, ahora);

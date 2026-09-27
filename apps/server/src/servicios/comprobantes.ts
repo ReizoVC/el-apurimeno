@@ -23,6 +23,8 @@ export async function reimprimirTicketServicio(ctx: ContextoServicio, ticketId: 
       anchoPapelMm: impresora.anchoPapelMm,
       metodosPago: (await tx.metodoPago.findMany()).map(aMetodoPago),
       esCopia: true,
+      // La vista previa dice lo mismo que el papel: en capacitación, también la marca CAPACITACIÓN.
+      esCapacitacion: ctx.capacitacion === true,
     });
     const trabajo = aTrabajoImpresion(
       await tx.trabajoImpresion.create({

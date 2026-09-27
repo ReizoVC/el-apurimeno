@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Aviso, Encabezado } from "../../src/componentes/comunes";
+import { useSesion } from "../../src/componentes/Shell";
 import { useCarga } from "../../src/lib/carga";
 import { fechaHora, hace, hora } from "@apurimeno/formato";
 import { ERROR_ESPEJO } from "../../src/lib/rotulos";
@@ -214,6 +215,20 @@ export default function Espejo() {
 }
 
 function SinConfigurar({ problema }: { problema: string | null }) {
+  // En capacitación el espejo está apagado a propósito: no se sugiere configurarlo.
+  if (useSesion().entorno === "CAPACITACION") {
+    return (
+      <Alert className="max-w-2xl">
+        <AlertTitle>
+          Instancia de capacitación: no publica nada en la nube
+        </AlertTitle>
+        <AlertDescription>
+          A propósito: lo que se practica aquí nunca llega al resumen de la
+          propietaria. No hay nada que configurar.
+        </AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <Alert
       variant={problema === null ? "default" : "destructive"}

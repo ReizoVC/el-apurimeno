@@ -44,7 +44,8 @@ el equipo (aunque nadie inicie sesión) y se reinicia solo si se cae. Lo instala
 2. crea el servicio `ApurimenoServidor` ("El Apurimeño - servidor local"): un solo proceso `node.exe --import tsx`
    en `apps/server`, igual que `pnpm start` (lee `apps/server/.env`), cuenta `LocalSystem` y arranque automático. Si
    el servidor se cae, NSSM lo vuelve a lanzar a los 5 s; si terminara el propio NSSM, Windows reintenta el servicio
-   (5 s, 5 s y 30 s). Registro en `datos/logs/servidor.log`, rotado cada 10 MB al arrancar el servicio;
+   (5 s, 5 s y 30 s). El registro lo escribe el propio servidor en `datos/logs/servidor.log` y lo rota cada 10 MB
+   mientras corre (ver abajo); `datos/logs/servicio.log` guarda solo lo que salga por la consola;
 3. lo inicia y comprueba que responde en `/health`.
 
 **Antes:** `pnpm install` en la raíz, y en `apps/server` el `.env`, `pnpm migrate` y, la primera vez, `pnpm seed`.
@@ -71,7 +72,8 @@ Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList @('-NoProfile','-Ex
 Volver a correr el script actualiza el servicio existente. `-Desinstalar` lo elimina (no toca la base ni las copias).
 
 **Uso diario** (como administrador): `nssm status|stop|start|restart ApurimenoServidor`, o desde "Servicios" de
-Windows. Ver la configuración: `nssm dump ApurimenoServidor`. Registro: `apps/server/datos/logs/servidor.log`.
+Windows. Ver la configuración: `nssm dump ApurimenoServidor`. Registro: `apps/server/datos/logs/servidor.log` (los anteriores,
+`servidor.1.log` … `servidor.5.log`); un error al arrancar queda en `servicio.log`.
 
 **Actualizar el sistema:** detener el servicio (con él corriendo, `pnpm install` no puede reemplazar los archivos de
 la base SQLite en uso), hacer una copia con "Copiar ahora" antes (RNF-DEPL-02), `git pull`, `pnpm install`,
@@ -81,12 +83,20 @@ la base SQLite en uso), hacer una copia con "Copiar ahora" antes (RNF-DEPL-02), 
 conectó sin abrir nada. Con el servidor matado a la fuerza (`taskkill /F`), volvió a responder en `/health` en unos
 7 s (6,8 a 7,1 s: la espera de 5 s más el arranque), en caídas seguidas.
 
-**Dos detalles de configuración, con su porqué:**
+**Detalles de configuración, con su porqué:**
 - **Un solo proceso** (`node --import tsx`), no el lanzador `tsx`: ese deja dos procesos `node`, y matar solo el hijo
   lo dejaría huérfano con el puerto tomado.
-- **`AppRotateOnline 0`**: con la rotación "en línea", al morir el proceso NSSM quedaba esperando el hilo que lee su
-  salida y nunca lo relanzaba (el servicio seguía "En ejecución" sin servidor). Con 0, el registro rota al arrancar el
-  servicio, no mientras corre: entre reinicios del equipo puede crecer (cada consulta del POS deja una línea).
+- **El registro lo rota el servidor, no NSSM.** NSSM solo rota por tamaño mientras el proceso corre con la rotación "en
+  línea" (`AppRotateOnline 1`), y con ella, al morir el proceso, NSSM quedaba esperando el hilo que lee su salida y
+  nunca lo relanzaba (el servicio seguía "En ejecución" sin servidor). Por eso el servicio fija
+  `REGISTRO_ARCHIVO=datos\logs\servidor.log` y el servidor (`src/registro.ts`) pasa a un archivo nuevo al llegar a
+  10 MB, sin reiniciarse, y conserva 5 anteriores: como mucho unos 60 MB. La rotación de NSSM queda apagada
+  (`AppRotateFiles 0`): la de arranque dejaba un archivo nuevo en cada inicio aunque estuviera vacío, y
+  `servicio.log` solo recibe lo que salga por la consola.
+
+  Comprobado el 26/09/2026 con el servicio instalado: unas 27 000 consultas a `/health` en 7 s llevaron el registro a
+  10 MB, y rotó (dos veces, en dos pruebas) sin cambiar de proceso. Matado a la fuerza antes y después de rotar, volvió
+  a responder en 6,9 a 7,2 s.
 
 **A tener en cuenta:**
 - Corre como `LocalSystem`: puede escribir en `datos/` y en la carpeta sincronizada del perfil de la propietaria.

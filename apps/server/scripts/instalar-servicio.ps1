@@ -9,7 +9,9 @@
        y deja nssm.exe en C:\Program Files\NSSM. Si ya está, no lo descarga de nuevo.
     2. Crea (o actualiza) el servicio: un solo proceso node.exe con tsx, en apps/server, leyendo apps/server/.env
        como `pnpm start`. Arranque automático; si el proceso termina, NSSM lo vuelve a lanzar a los 5 s (vuelve a
-       responder en unos 7 s); registro en datos/logs, rotado al arrancar el servicio.
+       responder en unos 7 s). El registro lo escribe el propio servidor en datos/logs/servidor.log y lo rota cada
+       10 MB mientras corre; NSSM guarda en datos/logs/servicio.log solo lo que salga por la consola (un error al
+       arrancar, un fallo sin capturar).
     3. Lo inicia y comprueba que responde en /health.
   Se puede volver a correr: actualiza la configuración del servicio existente.
 
@@ -74,7 +76,9 @@ try {
   }
   $logs = Join-Path $servidor "datos\logs"
   New-Item -ItemType Directory -Force $logs | Out-Null
-  $log = Join-Path $logs "servidor.log"
+  # Ojo: PowerShell no distingue mayúsculas en los nombres de variables; $registro pisaría el parámetro -Registro.
+  $logServidor = Join-Path $logs "servidor.log"   # lo escribe y rota el servidor (src/registro.ts)
+  $log = Join-Path $logs "servicio.log"           # la consola del proceso, capturada por NSSM
 
   sc.exe query $Nombre | Out-Null
   $existe = $LASTEXITCODE -eq 0
@@ -92,15 +96,20 @@ try {
     @("AppStopMethodConsole", "15000"),
     @("AppStdout", $log),
     @("AppStderr", $log),
-    @("AppRotateFiles", "1"),
-    # Rotación al arrancar, NO en línea: con AppRotateOnline 1, cuando el proceso muere NSSM queda esperando el hilo
-    # que lee su salida y nunca ejecuta el reinicio (comprobado matando el proceso con taskkill /F).
-    @("AppRotateOnline", "0"),
-    @("AppRotateBytes", "10485760")
+    # Sin rotación de NSSM. La "en línea" (AppRotateOnline 1), la única que rota por tamaño mientras el proceso corre,
+    # impide el reinicio: al morir el proceso NSSM queda esperando el hilo que lee su salida y nunca lo relanza
+    # (comprobado con taskkill /F). La de arranque dejaba un archivo nuevo en cada inicio, aunque estuviera vacío.
+    # servidor.log lo rota el propio servidor; servicio.log solo recibe lo que salga por la consola, y se agrega.
+    @("AppRotateFiles", "0"),
+    @("AppStdoutCreationDisposition", "4"),
+    @("AppStderrCreationDisposition", "4")
   )
   foreach ($a in $ajustes) { & $nssm set $Nombre @a | Out-Null; if ($LASTEXITCODE -ne 0) { throw "nssm set $($a -join ' ') falló." } }
-  if ($Produccion) { & $nssm set $Nombre AppEnvironmentExtra "NODE_ENV=production" | Out-Null }
-  else { & $nssm reset $Nombre AppEnvironmentExtra | Out-Null }
+  foreach ($r in "AppRotateOnline", "AppRotateBytes") { & $nssm reset $Nombre $r | Out-Null }   # de instalaciones previas
+  $entorno = @("REGISTRO_ARCHIVO=$logServidor")
+  if ($Produccion) { $entorno += "NODE_ENV=production" }
+  & $nssm set $Nombre AppEnvironmentExtra @entorno | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "nssm set AppEnvironmentExtra falló." }
   # El servidor lo relanza NSSM. Si el propio NSSM terminara, Windows reintenta el servicio.
   sc.exe failure $Nombre reset= 86400 actions= restart/5000/restart/5000/restart/30000 | Out-Null
   sc.exe failureflag $Nombre 1 | Out-Null
@@ -118,7 +127,7 @@ try {
     try { $ok = (Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$puerto/health" -TimeoutSec 2).StatusCode -eq 200 } catch {}
   }
   & $nssm status $Nombre
-  if (-not $ok) { throw "El servicio no respondió en http://127.0.0.1:$puerto/health: revise $log" }
+  if (-not $ok) { throw "El servicio no respondió en http://127.0.0.1:$puerto/health: revise $log y $logServidor" }
   Write-Host "Listo: el servicio $Nombre responde en el puerto $puerto y arrancará solo al encender el equipo."
 } finally {
   if ($Registro) { Stop-Transcript | Out-Null }

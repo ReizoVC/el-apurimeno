@@ -6,6 +6,7 @@ import { transporteArchivo } from "./impresion/transporte.js";
 import { crearPrisma, rutaDesdeUrl } from "./db.js";
 import { leerConfiguracionEspejo } from "./espejo/configuracion.js";
 import { transporteSupabase } from "./espejo/supabase.js";
+import { registroRotativo } from "./registro.js";
 import { leerConfiguracionRespaldos } from "./respaldo/configuracion.js";
 
 const produccion = process.env["NODE_ENV"] === "production";
@@ -33,7 +34,10 @@ const espejo = {
   versionServidor: version,
 };
 const respaldos = leerConfiguracionRespaldos(process.env, rutaDesdeUrl(url));
-const app = await construirApp({ prisma, jwtSecret, logger: true, origenesPermitidos, impresora, paginaCodigos, espejo, respaldos });
+// El servicio de Windows fija REGISTRO_ARCHIVO: el registro va a ese archivo y rota por tamaño. Sin ella, a la consola.
+const archivoRegistro = process.env["REGISTRO_ARCHIVO"] || undefined;
+const logger = archivoRegistro === undefined ? true : { stream: registroRotativo(archivoRegistro) };
+const app = await construirApp({ prisma, jwtSecret, logger, origenesPermitidos, impresora, paginaCodigos, espejo, respaldos });
 app.log.info({ impresora: impresora?.descripcion ?? "sin configurar", paginaCodigos }, "Impresora de comprobantes");
 app.log.info({ origenesPermitidos }, "Orígenes permitidos (CORS)");
 if (espejo.transporte !== null) {

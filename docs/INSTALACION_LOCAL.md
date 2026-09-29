@@ -13,6 +13,7 @@ Guía revisada contra el código y los scripts del repositorio el 26/09/2026. Lo
 - Google Drive para escritorio, configurado por la propietaria.
 - NSSM: el instalador del servidor descarga 2.24-101, verifica SHA-256 y lo guarda en `C:\Program Files\NSSM`. Si ya existe, lo reutiliza.
 - MSI del POS ya compilado. Para instalarlo no hacen falta Rust, Visual Studio ni Windows SDK.
+- **Hora de Windows sincronizada automáticamente**, confirmada antes de poner el sistema en marcha: Configuración → Hora e idioma → Fecha y hora → "Establecer la hora automáticamente" activado, y "Sincronizar ahora" sin error. El servidor registra con la hora del equipo los ingresos, las salidas y el tiempo de cortesía: un reloj atrasado o adelantado los cambia directamente. El 28/09/2026 el equipo de desarrollo iba 37 s atrasado y por eso fallaba la verificación en dos pasos de la vista remota. Tras sincronizarlo, la diferencia con Supabase bajó a menos de 1 s.
 
 En PowerShell como administrador:
 

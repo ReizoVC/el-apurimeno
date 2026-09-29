@@ -23,6 +23,9 @@ coverage
 
 # Build Outputs
 .next/
+# Builds de recompilar-produccion.ps1: el nuevo antes del cambio y el anterior, para volver atrás
+.next-nuevo/
+.next-anterior/
 out/
 build
 dist

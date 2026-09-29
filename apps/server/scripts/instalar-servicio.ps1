@@ -27,6 +27,13 @@
 .PARAMETER Pantallas
   Instala el Dashboard y Limpieza sin pasar el servidor a producción (para probarlos en un equipo de desarrollo).
 
+.PARAMETER Capacitacion
+  Instala solo ApurimenoCapacitacion: el servidor de capacitación (mismo código, `src/index.ts --capacitacion`), en el
+  puerto 3011, con su propia base en datos/capacitacion. No crea, detiene ni cambia los otros tres servicios. Exige
+  la base preparada antes (`pnpm preparar-capacitacion`). Toma el modo (NODE_ENV) del ApurimenoServidor instalado,
+  para aceptar los mismos orígenes (CORS_ORIGINS). Con -Desinstalar, elimina solo ApurimenoCapacitacion.
+  Ver docs/INSTALACION_LOCAL.md, "Entorno de capacitación".
+
 .PARAMETER Desinstalar
   Detiene y elimina los servicios que existan (servidor, Dashboard y Limpieza). No toca la base ni las copias.
 #>
@@ -34,6 +41,7 @@ param(
   [string]$Nombre = "ApurimenoServidor",
   [switch]$Produccion,
   [switch]$Pantallas,
+  [switch]$Capacitacion,
   [switch]$Desinstalar,
   [string]$Registro
 )
@@ -58,6 +66,24 @@ try {
     @{ Servicio = "ApurimenoLimpieza"; Carpeta = "cleaning"; Puerto = 3002; Titulo = "Limpieza"
        Descripcion = "App de limpieza para los celulares (next start, puerto 3002)." }
   )
+
+  # El servicio de capacitación se instala y se quita por separado: nunca junto con los del local.
+  $servicioCapacitacion = "ApurimenoCapacitacion"
+  if ($Capacitacion -and ($Produccion -or $Pantallas)) {
+    throw "-Capacitacion se usa sola: instala únicamente $servicioCapacitacion, sin tocar los otros servicios."
+  }
+
+  if ($Desinstalar -and $Capacitacion) {
+    if (Test-Path $nssm) {
+      sc.exe query $servicioCapacitacion | Out-Null
+      if ($LASTEXITCODE -eq 0) {
+        & $nssm stop $servicioCapacitacion confirm | Out-Null; & $nssm remove $servicioCapacitacion confirm
+        Write-Host "Servicio $servicioCapacitacion eliminado."
+      }
+    }
+    Write-Host "La base de capacitación no se tocó. Los demás servicios, tampoco."
+    return
+  }
 
   if ($Desinstalar) {
     if (Test-Path $nssm) {
@@ -142,6 +168,37 @@ try {
   $tsx = Join-Path $servidor "node_modules\tsx"
   if (-not (Test-Path $tsx)) { throw "No se encontró ${tsx}: corra 'pnpm install' en la raíz del repositorio." }
   $env_ = Join-Path $servidor ".env"
+
+  # Capacitación: solo su servicio, y termina aquí. Los otros tres ni se leen ni se detienen (salvo leer el modo del
+  # servidor del local, sin cambiarlo).
+  if ($Capacitacion) {
+    $datosCap = Join-Path $servidor "datos\capacitacion"
+    if (-not (Test-Path (Join-Path $datosCap "apurimeno-capacitacion.db"))) {
+      throw "No existe la base de capacitación: corra 'pnpm preparar-capacitacion' en la raíz antes de instalar el servicio."
+    }
+    $logsCap = Join-Path $datosCap "logs"
+    New-Item -ItemType Directory -Force $logsCap | Out-Null
+    $logServidorCap = Join-Path $logsCap "servidor.log"
+    $logCap = Join-Path $logsCap "servicio.log"
+    $entornoCap = @("REGISTRO_ARCHIVO=$logServidorCap")
+    $claveLocal = "HKLM:\SYSTEM\CurrentControlSet\Services\$Nombre\Parameters"
+    $entornoLocal = (Get-ItemProperty $claveLocal -ErrorAction SilentlyContinue).AppEnvironmentExtra
+    if ($entornoLocal -contains "NODE_ENV=production") { $entornoCap += "NODE_ENV=production" }
+    Configurar-Servicio $servicioCapacitacion "--import tsx --env-file-if-exists=.env src/index.ts --capacitacion" $servidor `
+      "servidor de capacitación" "Servidor de práctica (puerto 3011): base propia, sin espejo en la nube ni respaldo externo. Ningún dato es real." `
+      $logCap $entornoCap
+    & $nssm start $servicioCapacitacion | Out-Null
+    $puertoCap = 3011
+    if (Test-Path $env_) {
+      $pc = Select-String -Path $env_ -Pattern '^\s*CAPACITACION_PORT\s*=\s*"?(\d+)' | Select-Object -First 1
+      if ($pc) { $puertoCap = [int]$pc.Matches[0].Groups[1].Value }
+    }
+    Esperar-Respuesta "http://127.0.0.1:$puertoCap/health" $servicioCapacitacion "$logCap y $logServidorCap"
+    $modo = if ($entornoCap -contains "NODE_ENV=production") { "producción" } else { "desarrollo" }
+    Write-Host "Listo: $servicioCapacitacion responde en el puerto $puertoCap (modo $modo, como $Nombre). Los demás servicios no se tocaron."
+    return
+  }
+
   if ($Produccion) {
     $jwt = if (Test-Path $env_) { Select-String -Path $env_ -Pattern '^\s*JWT_SECRET\s*=\s*"?([^"\s]{32,})' } else { $null }
     if (-not $jwt) { throw "En producción, apps/server/.env necesita JWT_SECRET de al menos 32 caracteres." }

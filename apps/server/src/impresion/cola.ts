@@ -29,6 +29,7 @@ export async function despacharPendientes(
   ticketId: string,
   registro: Registro,
   opciones: OpcionesEscPos = OPCIONES_ESCPOS_POR_DEFECTO,
+  esCapacitacion = false,
 ): Promise<void> {
   const trabajos = await prisma.trabajoImpresion.findMany({ where: { ticketId, estado: "PENDIENTE" }, orderBy: { creadoEn: "asc" } });
   if (trabajos.length === 0) return;
@@ -42,7 +43,13 @@ export async function despacharPendientes(
   const metodosPago = (await prisma.metodoPago.findMany()).map(aMetodoPago);
 
   for (const trabajo of trabajos) {
-    const lineas = componerLineasComprobante(ticket, { datos: comprobante, anchoPapelMm: impresora.anchoPapelMm, metodosPago, esCopia: trabajo.esCopia });
+    const lineas = componerLineasComprobante(ticket, {
+      datos: comprobante,
+      anchoPapelMm: impresora.anchoPapelMm,
+      metodosPago,
+      esCopia: trabajo.esCopia,
+      esCapacitacion,
+    });
     try {
       await transporte.enviar(comandosComprobante(lineas, opciones));
       await prisma.trabajoImpresion.update({ where: { id: trabajo.id }, data: { estado: "IMPRESO" } });

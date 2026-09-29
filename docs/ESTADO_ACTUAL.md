@@ -10,21 +10,21 @@ equipo del local**. Después vienen los datos reales y el piloto con el cuaderno
 
 ## Integrado
 
-Todo está en `main`, hasta el PR #19 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
+Todo está en `main`, hasta el PR #21 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
 `@apurimeno/formato` (#13), revisión y este documento (#14), respaldos (local, externo cifrado y restauración) con la
 pantalla de productos e inventario (#15), correcciones de la auditoría (#16), el servidor como servicio de Windows
-(#17), su registro que rota por tamaño (#18), y el Dashboard y Limpieza como servicios, la carpeta de respaldo
-sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19). No quedan ramas con trabajo sin
-integrar.
+(#17), su registro que rota por tamaño (#18), el Dashboard y Limpieza como servicios, la carpeta de respaldo
+sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19), la actualización de este documento
+(#20) y la decisión sobre el espacio en Google Drive (#21). No quedan ramas con trabajo sin integrar.
 
 ## Completo y probado
 
 | Parte | Qué hace | Cómo se probó |
 |---|---|---|
 | `packages/contracts` | Tipos y esquemas de todo el sistema; 25 decisiones de interpretación del SRS documentadas | 45 pruebas |
-| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno | 242 pruebas, incluida la tabla de casos del SRS |
+| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno | 243 pruebas, incluida la tabla de casos del SRS |
 | `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
-| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 231 pruebas contra SQLite real; pruebas de concurrencia |
+| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 244 pruebas contra SQLite real; pruebas de concurrencia |
 | `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
 | `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
@@ -33,9 +33,15 @@ integrar.
 | Respaldos | Copia local consistente cada 15 min (24 h), externa diaria a las 04:00 comprimida y cifrada con clave pública (30 días), `pnpm restaurar` y pantalla con "Desactualizado" | Pruebas contra SQLite real; en Chrome contra el servidor real; restauración de punta a punta con el servidor real y copias reales cada 15 min, en el mismo equipo y en un "PC nuevo" (`docs/RESPALDO_Y_RESTAURACION.md`) |
 | Servicios de Windows | `ApurimenoServidor` (3001), `ApurimenoDashboard` (3000) y `ApurimenoLimpieza` (3002) con NSSM: arrancan solos al encender el equipo y se relanzan si se caen; un solo instalador con `-Produccion` (`docs/INSTALACION_LOCAL.md`) | En el equipo de desarrollo, 26 y 27/09: `taskkill /F` de cada uno, vuelven solos en 6,5 a 7 s; el registro del servidor rota a 10 MB sin reiniciarlo; tras un reinicio del PC (27/09, 00:10) los tres arrancaron solos y respondieron en 3001, 3000 y 3002 |
 | Respaldo externo en Drive | Las copias cifradas (recientes cada 15 min y diaria) van a `C:\RespaldosApurimeno`, carpeta física que Google Drive para escritorio sube desde "Mi computadora" (el servicio no puede escribir en `G:\Mi unidad`) | En el equipo de desarrollo, 26/09: 9 ciclos seguidos sin error, 8 recientes guardadas, Dashboard → Respaldos sin rojo y los archivos visibles en la web de Drive, en "Computadoras" |
+| Entorno de capacitación | Segunda instancia del servidor (`ApurimenoCapacitacion`, puerto 3011) con base propia, sin espejo ni copias en Drive; cuentas `capacitacion.admin`, `.cajero1` y `.cajero2`; POS, Dashboard y Limpieza se conectan a ella por el usuario del login y muestran el banner "MODO CAPACITACIÓN"; comprobantes con `*** CAPACITACIÓN ***`; `pnpm reiniciar-capacitacion` (`docs/INSTALACION_LOCAL.md`, sección 9) | En el equipo de desarrollo, 27/09: servicio instalado sin tocar los otros tres; las tres cuentas desde el POS, todo contra 3011; ingreso, salida, limpieza y reimpresión con la marca (salida a archivo); la base de producción quedó igual; reinicio con el servicio funcionando. Falta la impresión física |
 | `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; las dos migraciones aplicadas en `apurimeno-prueba` y verificadas el 26/09 con la cuenta lectora: con solo la contraseña, con un autenticador sin verificar, o con TOTP registrado pero sin el código en la sesión, no lee nada (ni por la API directa) ni puede escribir; con el código (aal2) lee el resumen |
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (526 pruebas). Todas las apps compilan.
+**Entorno de capacitación, migraciones:** `pnpm reiniciar-capacitacion` no aplica migraciones (el servicio tiene la
+base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema cambió, antes de reiniciar hay que
+detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
+iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
+
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (540 pruebas). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
 ## Qué falta para reemplazar el cuaderno
 
@@ -130,7 +136,8 @@ siguen cada 15 minutos en todas:
 5. **Vaciar la papelera a mano:** no se recomienda como única medida.
 
 **Decisión:** queda fuera del MVP y se retoma **a los 2 o 3 meses de operación**, con el volumen real del local.
-Mientras tanto:
+La propuesta elegida para entonces es la **opción 2**: una copia diaria completa más, cada 15 minutos, solo los
+cambios desde esa diaria. Mientras tanto:
 
 - **Cuenta de Google solo para los respaldos**, distinta de la personal de la propietaria. Así, si se llena, no
   afecta su correo.

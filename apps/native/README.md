@@ -16,6 +16,9 @@ pnpm tauri dev    # la aplicación de escritorio (requiere Rust)
 Mismo patrón que `apps/cleaning`:
 - **URL:** `VITE_SERVIDOR_URL` (p. ej. `http://192.168.1.50:3001`). Por defecto `http://localhost:3001`,
   porque en el local el POS y el servidor corren en la misma máquina (Planos §4.3).
+- **Capacitación:** un usuario que empieza con `capacitacion.` entra al servidor de capacitación: la misma URL en
+  el puerto 3011, o `VITE_SERVIDOR_CAPACITACION_URL` (se fija al compilar). La sesión lo recuerda, y todas las
+  pantallas muestran el banner "MODO CAPACITACIÓN" (`docs/INSTALACION_LOCAL.md`, sección 9).
 - **CORS:** el servidor acepta siempre los orígenes del POS de escritorio (`tauri://localhost` y
   `http://tauri.localhost`) y, en desarrollo, `http://localhost:1420`.
 - **Sesión:** usuario y contraseña contra `POST /auth/login`; solo entran cuentas con `pos.access`. El

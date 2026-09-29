@@ -13,6 +13,8 @@ export interface ContextoServicio {
   ahora: Date;
   /** Envía a la impresora los comprobantes en cola de un ticket, sin esperar ni fallar (RF-56). */
   imprimir: (ticketId: string) => void;
+  /** Instancia de capacitación (instancia.ts): los comprobantes que se muestran llevan la marca, como los impresos. */
+  capacitacion?: boolean;
 }
 
 /** Contexto de cada solicitud: el usuario que autenticó el middleware y la hora del servidor en ese momento. */
@@ -20,8 +22,9 @@ export function creadorContexto(
   prisma: PrismaClient,
   ahora: () => Date,
   imprimir: (ticketId: string) => void = () => undefined,
+  capacitacion = false,
 ): (request: FastifyRequest) => ContextoServicio {
-  return (request) => ({ prisma, usuario: usuarioDe(request), ahora: ahora(), imprimir });
+  return (request) => ({ prisma, usuario: usuarioDe(request), ahora: ahora(), imprimir, capacitacion });
 }
 
 export function contextoDominio(ahora: Date): Contexto {

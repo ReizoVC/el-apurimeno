@@ -18,6 +18,10 @@ pnpm build   # compila para producción; `pnpm start` la sirve
 Mismo patrón que `apps/native` y `apps/cleaning`:
 - **URL:** `NEXT_PUBLIC_SERVIDOR_URL` (p. ej. `http://192.168.1.50:3001`). Por defecto, el mismo host desde
   el que se abrió el Dashboard, en el puerto 3001. Como es `NEXT_PUBLIC_`, se fija al compilar.
+- **Capacitación:** un usuario que empieza con `capacitacion.` entra al servidor de capacitación: la misma URL en
+  el puerto 3011, o `NEXT_PUBLIC_SERVIDOR_CAPACITACION_URL`. Se decide al escribir el usuario, antes de llamar a
+  nada, y la sesión lo recuerda. Esa sesión muestra el banner "MODO CAPACITACIÓN", y en Espejo y Respaldos
+  explica que la instancia no publica ni copia a la nube, a propósito (`docs/INSTALACION_LOCAL.md`, sección 9).
 - **CORS:** en desarrollo el servidor ya acepta `http://localhost:3000`. En producción solo acepta el POS de
   escritorio, así que hay que agregar el origen del Dashboard: `CORS_ORIGINS=http://192.168.1.50:3000` (o la
   lista completa, separada por comas, si también se usa la app de limpieza).

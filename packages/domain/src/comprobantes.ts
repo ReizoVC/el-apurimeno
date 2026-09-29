@@ -69,6 +69,11 @@ export interface OpcionesComprobante {
   metodosPago: readonly MetodoPago[];
   /** Reimpresión: el comprobante lo dice de forma visible (RF-44). */
   esCopia: boolean;
+  /**
+   * Instancia de capacitación: todo comprobante lo dice de forma visible, como la copia, para que ninguno se
+   * confunda con uno real. Por defecto, no.
+   */
+  esCapacitacion?: boolean;
 }
 
 /**
@@ -109,6 +114,8 @@ export function componerLineasComprobante(
   if (opciones.datos.datosAdicionales !== null)
     agregar(centrar(opciones.datos.datosAdicionales, ancho));
   agregar([separador]);
+  if (opciones.esCapacitacion === true)
+    agregar(centrar("*** CAPACITACIÓN ***", ancho), "grande");
   if (opciones.esCopia) agregar(centrar("*** COPIA ***", ancho), "grande");
   if (ticket.tipo === "COMPENSATORIO")
     agregar(centrar("ANULACIÓN DE UN COBRO ANTERIOR", ancho), "negrita");

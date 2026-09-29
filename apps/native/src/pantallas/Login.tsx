@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Input } from "@apurimeno/ui/components/input";
+import { MarcoCapacitacion } from "@apurimeno/ui/components/modo-capacitacion";
+import { entornoDeUsuario } from "@apurimeno/ui/lib/capacitacion";
 import { Aviso } from "../componentes/Aviso";
 import { Campo } from "../componentes/Campo";
 import { ErrorApi, mensajeDe, servidor } from "../lib/servidor";
@@ -39,7 +41,12 @@ export function Login({ avisoInicial, onSesion }: Props) {
           "Esta cuenta no tiene acceso al punto de venta.",
         );
       }
-      onSesion({ token: r.token, usuario: r.usuario, permisos: r.permisos });
+      onSesion({
+        token: r.token,
+        usuario: r.usuario,
+        permisos: r.permisos,
+        entorno: entornoDeUsuario(nombreUsuario),
+      });
     } catch (error) {
       setAviso(mensajeDe(error));
       setContrasena("");
@@ -48,46 +55,56 @@ export function Login({ avisoInicial, onSesion }: Props) {
     }
   };
 
+  const capacitacion = entornoDeUsuario(nombreUsuario) === "CAPACITACION";
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
-        <form onSubmit={(e) => void enviar(e)}>
-          <CardHeader>
-            <CardTitle>El Apurimeño</CardTitle>
-            <CardDescription>
-              Punto de venta. Ingrese con su usuario y contraseña.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {aviso !== null && <Aviso tipo="error">{aviso}</Aviso>}
-            <Campo etiqueta="Usuario">
-              <Input
-                name="usuario"
-                autoComplete="username"
-                autoFocus
-                required
-                value={nombreUsuario}
-                onChange={(e) => setNombreUsuario(e.target.value)}
-              />
-            </Campo>
-            <Campo etiqueta="Contraseña">
-              <Input
-                name="contrasena"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={contrasena}
-                onChange={(e) => setContrasena(e.target.value)}
-              />
-            </Campo>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={enviando}>
-              {enviando ? "Ingresando…" : "Ingresar"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </main>
+    <MarcoCapacitacion activo={capacitacion}>
+      <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-sm">
+          <form onSubmit={(e) => void enviar(e)}>
+            <CardHeader>
+              <CardTitle>El Apurimeño</CardTitle>
+              <CardDescription>
+                Punto de venta. Ingrese con su usuario y contraseña.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {aviso !== null && <Aviso tipo="error">{aviso}</Aviso>}
+              {capacitacion && (
+                <p className="rounded-md border border-fuchsia-300 bg-fuchsia-50 px-3 py-2 text-sm text-fuchsia-900">
+                  Cuenta de capacitación: entrará al servidor de práctica, no al
+                  del local.
+                </p>
+              )}
+              <Campo etiqueta="Usuario">
+                <Input
+                  name="usuario"
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  value={nombreUsuario}
+                  onChange={(e) => setNombreUsuario(e.target.value)}
+                />
+              </Campo>
+              <Campo etiqueta="Contraseña">
+                <Input
+                  name="contrasena"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                />
+              </Campo>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={enviando}>
+                {enviando ? "Ingresando…" : "Ingresar"}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </main>
+    </MarcoCapacitacion>
   );
 }

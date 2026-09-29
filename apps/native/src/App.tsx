@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { MarcoCapacitacion } from "@apurimeno/ui/components/modo-capacitacion";
 import { registrarSesionInvalida, usarSesion } from "./lib/servidor";
 import {
   borrarSesion,
@@ -43,5 +44,9 @@ export default function App() {
 
   if (estado.tipo === "sin-sesion")
     return <Login avisoInicial={estado.aviso} onSesion={entrar} />;
-  return <Principal sesion={estado.sesion} onSalir={() => salir(null)} />;
+  return (
+    <MarcoCapacitacion activo={estado.sesion.entorno === "CAPACITACION"}>
+      <Principal sesion={estado.sesion} onSalir={() => salir(null)} />
+    </MarcoCapacitacion>
+  );
 }

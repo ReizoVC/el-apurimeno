@@ -13,6 +13,10 @@
     "restaurar": "tsx --env-file-if-exists=.env src/scripts/restaurar.ts",
     "dev": "prisma migrate deploy && tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "tsx --env-file-if-exists=.env src/index.ts",
+    "start:capacitacion": "tsx --env-file-if-exists=.env src/index.ts --capacitacion",
+    "dev:capacitacion": "tsx watch --env-file-if-exists=.env src/index.ts --capacitacion",
+    "preparar-capacitacion": "tsx src/scripts/capacitacion.ts preparar",
+    "reiniciar-capacitacion": "tsx src/scripts/capacitacion.ts reiniciar",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint . --max-warnings 0"

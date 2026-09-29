@@ -2,7 +2,7 @@
 
 Guía revisada contra el código y los scripts del repositorio el 26/09/2026. Los ejemplos usan `C:\ElApurimeno`; sustituir esa ruta por la elegida. Completar los marcadores `<...>` localmente. No enviar secretos por chat ni incluirlos en registros.
 
-**Estado:** un solo instalador, `apps/server/scripts/instalar-servicio.ps1 -Produccion`, deja como servicios de Windows el servidor (3001), el Dashboard (3000) y Limpieza (3002). Los tres arrancan solos y se reinician si se caen; probado el 26/09/2026 en el equipo de desarrollo (sección 4), falta el reinicio del equipo. El respaldo externo va a una carpeta física sincronizada por Drive (sección 5).
+**Estado:** un solo instalador, `apps/server/scripts/instalar-servicio.ps1 -Produccion`, deja como servicios de Windows el servidor (3001), el Dashboard (3000) y Limpieza (3002). Los tres arrancan solos y se reinician si se caen; probado el 26 y 27/09/2026 en el equipo de desarrollo, incluido un reinicio del equipo (sección 4). El respaldo externo va a una carpeta física sincronizada por Drive (sección 5).
 
 ## 1. Programas y preparación
 
@@ -13,6 +13,7 @@ Guía revisada contra el código y los scripts del repositorio el 26/09/2026. Lo
 - Google Drive para escritorio, configurado por la propietaria.
 - NSSM: el instalador del servidor descarga 2.24-101, verifica SHA-256 y lo guarda en `C:\Program Files\NSSM`. Si ya existe, lo reutiliza.
 - MSI del POS ya compilado. Para instalarlo no hacen falta Rust, Visual Studio ni Windows SDK.
+- **Hora de Windows sincronizada automáticamente**, confirmada antes de poner el sistema en marcha: Configuración → Hora e idioma → Fecha y hora → "Establecer la hora automáticamente" activado, y "Sincronizar ahora" sin error. El servidor registra con la hora del equipo los ingresos, las salidas y el tiempo de cortesía: un reloj atrasado o adelantado los cambia directamente. El 28/09/2026 el equipo de desarrollo iba 37 s atrasado y por eso fallaba la verificación en dos pasos de la vista remota. Tras sincronizarlo, la diferencia con Supabase bajó a menos de 1 s.
 
 En PowerShell como administrador:
 
@@ -163,7 +164,7 @@ Para aplicar cambios de `apps/server/.env`, como administrador: `& 'C:\Program F
 
 - **Instalación:** los tres servicios quedaron en ejecución, con arranque automático, cuenta LocalSystem y un solo proceso `node.exe` cada uno.
 - **Caídas:** `taskkill /F` del proceso que escucha en 3000 y en 3002, dos veces seguidas cada uno. Volvieron a responder en 6,5 a 6,6 s (la espera de 5 s más el arranque de Next). El servidor vuelve en unos 7 s (prueba anterior).
-- **Reinicio del equipo:** pendiente; lo hace la propietaria.
+- **Reinicio del equipo:** hecho el 27/09/2026 a las 00:10. Los tres servicios arrancaron solos y respondieron en 3001, 3000 y 3002.
 
 ## 5. Respaldo externo: carpeta física sincronizada por Drive
 
@@ -266,9 +267,72 @@ Abrir 3000 solo si el Dashboard se usará desde otro dispositivo:
 New-NetFirewallRule -Name 'ApurimenoDashboardPrivada' -DisplayName 'El Apurimeño - Dashboard' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3000 -Profile Private -RemoteAddress LocalSubnet
 ```
 
+Abrir 3011 solo si el personal practicará Limpieza desde el celular (sección 9):
+
+```powershell
+New-NetFirewallRule -Name 'ApurimenoCapacitacionPrivada' -DisplayName 'El Apurimeño - Capacitación' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3011 -Profile Private -RemoteAddress LocalSubnet
+```
+
 Antes de crear las reglas, revisar las que ya existan para no duplicarlas: `Get-NetFirewallRule -Name 'Apurimeno*'`. Una regla nueva y limitada no anula otra más amplia para Node. No abrir 1420 ni 3003, y no publicar puertos en el router. [Referencia de Microsoft](https://learn.microsoft.com/en-us/powershell/module/netsecurity/new-netfirewallrule).
 
-## 9. Lista final
+## 9. Entorno de capacitación
+
+Un espacio aislado para que la propietaria y el personal practiquen el sistema completo (POS, Dashboard y Limpieza) sin tocar datos reales. Es una segunda copia del mismo servidor, `ApurimenoCapacitacion`, en el puerto **3011**, con su propia base. Las apps son las mismas: se conectan a este servidor cuando el usuario escrito en el login empieza con `capacitacion.` (sin distinguir mayúsculas ni tildes), antes de cualquier llamada de red. Detalle técnico y decisiones: `apps/server/README.md`, "Instancia de capacitación".
+
+**Qué lo separa de los datos reales:**
+
+| Qué                | Producción (`ApurimenoServidor`) | Capacitación (`ApurimenoCapacitacion`)                                                     |
+| ------------------ | -------------------------------- | ------------------------------------------------------------------------------------------ |
+| Puerto             | 3001                             | 3011                                                                                       |
+| Base               | `DATABASE_URL`                   | `apps/server/datos/capacitacion/apurimeno-capacitacion.db`, fija                           |
+| Espejo en Supabase | Con `ESPEJO_*`                   | Nunca, aunque `ESPEJO_*` esté en `.env`                                                    |
+| Respaldos          | Local y `C:\RespaldosApurimeno`  | Solo locales, en `datos/capacitacion/respaldos`; nunca la carpeta de Drive                 |
+| Comprobantes       | Normales                         | Con `*** CAPACITACIÓN ***`, en la misma impresora                                          |
+| Pantallas          | Normales                         | Banner fijo "MODO CAPACITACIÓN — ningún dato aquí es real", marco y fondo a franjas fucsia |
+
+**Instalar**, una vez que los tres servicios del local funcionan (sección 4). No crea, detiene ni cambia esos tres:
+
+1. Preparar la base y las tres cuentas (`capacitacion.admin`, `capacitacion.cajero1`, `capacitacion.cajero2`). Pide una contraseña para las tres, que no se muestra; no usar la de ninguna cuenta real:
+
+   ```powershell
+   Set-Location C:\ElApurimeno
+   pnpm preparar-capacitacion
+   ```
+
+2. Como administrador, instalar el servicio:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File apps\server\scripts\instalar-servicio.ps1 -Capacitacion
+   ```
+
+   Toma el modo (`NODE_ENV`) de `ApurimenoServidor`, así que acepta los mismos orígenes de `CORS_ORIGINS`. Registro en `apps/server/datos/capacitacion/logs`. Para quitarlo: `-Capacitacion -Desinstalar`, que no toca la base ni los otros servicios.
+
+3. Si el personal practicará Limpieza desde el celular, abrir el puerto 3011 en el firewall (sección 8).
+
+**Practicar:** en el POS, el Dashboard o Limpieza, entrar con una cuenta `capacitacion.…`. Antes de enviar ya aparece el aviso "Cuenta de capacitación: entrará al servidor de práctica", y dentro, el banner en todas las pantallas. Todo lo que se haga queda solo en la base de capacitación.
+
+**Volver a empezar de cero:**
+
+```powershell
+Set-Location C:\ElApurimeno
+pnpm reiniciar-capacitacion
+```
+
+Borra todo lo operativo (alquileres, tickets, turnos, movimientos, auditoría, clientes y cuentas creadas al practicar) y vuelve a cargar las 17 habitaciones y los productos de ejemplo. Las tres cuentas quedan con su contraseña. Se corre con el servicio funcionando; quien tenga una sesión de práctica abierta verá la caja cerrada y el tablero vacío.
+
+**Al actualizar el sistema** (sección 4, "Actualizar el sistema"), si hubo migraciones nuevas, el reinicio lo avisa. Entonces, como administrador: detener `ApurimenoCapacitacion`, correr `pnpm preparar-capacitacion` (migra y no cambia nada de lo que ya existe) y volver a iniciarlo.
+
+**Comprobado el 27/09/2026 en el equipo de desarrollo:**
+
+- **Servicio:** instalado con `-Capacitacion`, responde en 3011. Los tres servicios del local conservaron su proceso, así que no se reiniciaron.
+- **Cuentas y conexión:** el POS entró con las tres cuentas (una escrita "Capacitación.Admin", otra "Capacitacion.cajero2") y todas sus llamadas fueron a 3011, ninguna a 3001.
+- **Operación:** un ingreso con su cobro y la salida. Limpieza marcó la habitación como lista, y el Dashboard de capacitación mostró el ingreso.
+- **Comprobante:** el comprobante (salida a archivo) y su reimpresión salieron con `*** CAPACITACIÓN ***` (la reimpresión, además, con `*** COPIA ***`), con la Ó bien codificada.
+- **Aislamiento:** la base de producción quedó con las mismas cifras (tickets, alquileres, turnos, pagos, auditoría) y sin cuentas `capacitacion.`. El proceso de capacitación no abrió ninguna conexión fuera del equipo, y su registro no tiene sincronizaciones ni copias externas.
+- **Reinicio:** con el servicio funcionando, quedó todo en cero, con 17 habitaciones libres y 8 productos. Las tres cuentas siguieron entrando con la misma contraseña.
+- **Pendiente:** la impresión física, con la impresora conectada (parte 2).
+
+## 10. Lista final
 
 - [ ] Revisión Git y versiones anotadas; instalación con lockfile correcta.
 - [ ] `pnpm check-types`, `pnpm lint` y `pnpm test` pasan desde la raíz.
@@ -283,6 +347,7 @@ Antes de crear las reglas, revisar las que ya existan para no duplicarlas: `Get-
 - [ ] Arranque automático de los tres servicios comprobado tras un reinicio hecho por la propietaria; `taskkill /F` de cada uno y vuelta sola.
 - [ ] Drive inicia en la sesión; se conoce que la subida requiere sesión activa e internet.
 - [ ] La carpeta de respaldos sincroniza con una cuenta de Google solo para respaldos, y la revisión mensual de su espacio (con la papelera) está agendada.
+- [ ] Capacitación: `pnpm preparar-capacitacion` y `-Capacitacion` instalados; se entra con `capacitacion.admin` y aparece el banner; `pnpm reiniciar-capacitacion` deja todo limpio.
 - [ ] Restauración ensayada de forma separada siguiendo la guía, sin sustituir la base operativa.
 - [ ] Pendientes explícitos: impresión física, Supabase de producción y piloto con cuaderno.
 

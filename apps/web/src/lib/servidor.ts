@@ -39,6 +39,12 @@ import {
   type ProductoEntrada,
   type RangoEntrada,
 } from "@apurimeno/contracts";
+import {
+  entornoDeUsuario,
+  urlCapacitacion,
+  usuarioParaEnviar,
+  type Entorno,
+} from "@apurimeno/ui/lib/capacitacion";
 import type { Sesion } from "./sesion";
 
 // Cliente de la API para el Dashboard. Rutas, cuerpos y respuestas vienen de @apurimeno/contracts
@@ -47,12 +53,21 @@ import type { Sesion } from "./sesion";
 /**
  * URL del servidor: `NEXT_PUBLIC_SERVIDOR_URL` (p. ej. http://192.168.1.50:3001). Sin ella, la misma máquina
  * que sirve el Dashboard, en el puerto 3001, como en la app de limpieza.
+ *
+ * En capacitación, el servidor de capacitación: `NEXT_PUBLIC_SERVIDOR_CAPACITACION_URL`, o el mismo en el
+ * puerto 3011.
  */
-export function urlServidor(): string {
+export function urlServidor(entorno: Entorno = "PRODUCCION"): string {
   const configurada = process.env.NEXT_PUBLIC_SERVIDOR_URL;
-  if (configurada !== undefined && configurada !== "")
-    return configurada.replace(/\/+$/, "");
-  return `${window.location.protocol}//${window.location.hostname}:3001`;
+  const produccion =
+    configurada !== undefined && configurada !== ""
+      ? configurada.replace(/\/+$/, "")
+      : `${window.location.protocol}//${window.location.hostname}:3001`;
+  if (entorno === "PRODUCCION") return produccion;
+  return urlCapacitacion(
+    produccion,
+    process.env.NEXT_PUBLIC_SERVIDOR_CAPACITACION_URL,
+  );
 }
 
 /** Error de una llamada: `estado` es el HTTP (0 si no hubo respuesta) y `codigo`, el del contrato. */
@@ -91,6 +106,8 @@ async function llamar<T>(
   ruta: string,
   esquema: { parse: (datos: unknown) => T },
   cuerpo?: unknown,
+  /** Solo el login, que todavía no tiene sesión: a qué servidor va. Después, el de la sesión. */
+  entorno?: Entorno,
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (sesionActual !== null)
@@ -98,7 +115,8 @@ async function llamar<T>(
   if (cuerpo !== undefined) headers["content-type"] = "application/json";
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${urlServidor()}${ruta}`, {
+    const destino = entorno ?? sesionActual?.entorno ?? "PRODUCCION";
+    respuesta = await fetch(`${urlServidor(destino)}${ruta}`, {
       method: metodo,
       headers,
       body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
@@ -139,11 +157,18 @@ function query(valores: Record<string, string | number | undefined>): string {
 }
 
 export const servidor = {
+  /**
+   * La cuenta decide el servidor, antes de llamar a nada: las de capacitación ("capacitacion.…") van al de
+   * capacitación; todas las demás, al del local.
+   */
   login: (nombreUsuario: string, contrasena: string) =>
-    llamar("POST", RUTAS.login, LoginRespuestaSchema, {
-      nombreUsuario,
-      contrasena,
-    }),
+    llamar(
+      "POST",
+      RUTAS.login,
+      LoginRespuestaSchema,
+      { nombreUsuario: usuarioParaEnviar(nombreUsuario), contrasena },
+      entornoDeUsuario(nombreUsuario),
+    ),
 
   // Vista general
   tablero: () => llamar("GET", RUTAS.tablero, TableroSchema),

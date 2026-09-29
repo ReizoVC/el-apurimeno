@@ -153,6 +153,27 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
     expect(componerComprobante(conYape, opciones)).toContain("  Op. 0001");
   });
 
+  it("en capacitación, todo comprobante dice CAPACITACIÓN en grande, antes de COPIA si es reimpresión", () => {
+    const original = componerLineasComprobante(venta(), {
+      ...opciones,
+      esCapacitacion: true,
+    });
+    expect(
+      original.filter((l) => l.estilo === "grande").map((l) => l.texto.trim()),
+    ).toEqual(["*** CAPACITACIÓN ***"]);
+    const copia = componerLineasComprobante(venta(), {
+      ...opciones,
+      esCopia: true,
+      esCapacitacion: true,
+    });
+    expect(
+      copia.filter((l) => l.estilo === "grande").map((l) => l.texto.trim()),
+    ).toEqual(["*** CAPACITACIÓN ***", "*** COPIA ***"]);
+    expect(componerComprobante(venta(), opciones).join("\n")).not.toContain(
+      "CAPACITACIÓN",
+    );
+  });
+
   it("estilos para la impresora: negocio y total en negrita, COPIA y ANULADO en grande; el resto normal", () => {
     const lineas = componerLineasComprobante(venta(), {
       ...opciones,

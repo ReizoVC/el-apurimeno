@@ -51,6 +51,8 @@ export interface OpcionesApp {
   espejo?: OpcionesEspejo;
   /** Respaldos de la base (Planos §14.3). Sin ellos, el servidor no copia nada (pruebas). */
   respaldos?: ConfiguracionRespaldos;
+  /** Instancia de capacitación (instancia.ts): todo comprobante impreso lleva la marca "CAPACITACIÓN". */
+  capacitacion?: boolean;
 }
 
 export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstance> {
@@ -76,11 +78,13 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   let cola: Promise<void> = Promise.resolve();
   const imprimir = (ticketId: string) => {
     cola = cola
-      .then(() => despacharPendientes(opciones.prisma, opciones.impresora ?? null, ticketId, app.log, opcionesEscPos))
+      .then(() =>
+        despacharPendientes(opciones.prisma, opciones.impresora ?? null, ticketId, app.log, opcionesEscPos, opciones.capacitacion === true),
+      )
       .catch((err: unknown) => app.log.error({ err, ticketId }, "Error en la cola de impresión"));
   };
   app.decorate("colaImpresion", () => cola);
-  registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir);
+  registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir, opciones.capacitacion === true);
   registrarRutasHabitaciones(app, opciones.prisma, ahora);
   registrarRutasClientes(app, opciones.prisma, ahora);
   registrarRutasConfiguracion(app, opciones.prisma, ahora);

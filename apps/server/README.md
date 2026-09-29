@@ -108,6 +108,34 @@ conectó sin abrir nada. Con el servidor matado a la fuerza (`taskkill /F`), vol
   sesión en el POS y el Dashboard. En el PC del local se usa `-Produccion` con un `JWT_SECRET` fijo.
 - El equipo no debe suspenderse: las copias, el espejo y la impresión corren dentro del servicio.
 
+**Actualizar el código: `scripts/recompilar-produccion.ps1`** (uso en `docs/INSTALACION_LOCAL.md`, sección 4).
+Compila el Dashboard y Limpieza con los servicios funcionando y solo después reemplaza. Decisiones (28/09/2026):
+
+- **Otra carpeta de compilación:** `CARPETA_COMPILACION` elige la carpeta del build en el `next.config.ts` de cada
+  app; por defecto sigue siendo `.next`. El script compila en `.next-nuevo` y al final cambia los nombres, con los
+  servicios detenidos solo durante ese cambio.
+- **Archivos preparados para esa carpeta:** los `tsconfig.json` ya incluyen `.next-nuevo/types`. Si no, Next los
+  reescribe al compilar y el checkout de producción queda con cambios. `.next-nuevo/`, `.next-anterior/` y
+  `.next-fallido/` están en `.gitignore`: si no, el checkout de producción quedaría con cambios y la siguiente
+  corrida se negaría a seguir.
+- **Solo el código de salida cuenta como error:** la compilación va por `cmd /c` con la salida a un archivo, para que
+  PowerShell 5.1 no convierta en error los avisos de Browserslist o de Node. No se actualizó `caniuse-lite`: el
+  aviso de Browserslist no es el único que sale por la salida de errores (también `punycode` de Node), y actualizarlo
+  cambia el lockfile de todas las apps sin resolver el problema.
+- **No migra:** si alguna base tiene migraciones pendientes (`prisma migrate status`, que funciona con el servidor
+  encendido), se niega antes de tocar nada y remite a la actualización completa, que empieza con una copia.
+- **Qué reinicia:** también `ApurimenoCapacitacion`, porque corre el mismo código.
+- **Vuelta atrás:** si una app no responde con su build nuevo, vuelve sola al anterior y se informa. El build que
+  falló queda en `.next-fallido`.
+- **Espera de respuesta:** tiene un plazo de 40 s en total, no 40 intentos. En Windows, cada intento contra un
+  puerto donde nadie escucha tarda unos 2 s en fallar, y con 40 intentos la espera se estiraba a 2 minutos con el
+  servicio detenido: pasó en la primera prueba de la vuelta atrás.
+- **Cómo se prueba sin tocar los servicios reales:** el reemplazo está en la función `Reemplazar-Builds`, y detener
+  o iniciar un servicio en `Detener-Servicio` / `Iniciar-Servicio`. Cargado con `.`, el script solo define sus
+  funciones. `scripts/probar-reversion-recompilar.ps1` lo carga, reemplaza esas dos funciones por `next start` en
+  los puertos 3100 y 3102, y comprueba la vuelta atrás con un build que no arranca. Se niega a correr en la carpeta
+  desde la que sirven los servicios reales.
+
 ## Instancia de capacitación
 
 Una segunda copia de este mismo servidor para que la dueña y el personal practiquen sin tocar datos reales. Se

@@ -151,14 +151,53 @@ Para aplicar cambios de `apps/server/.env`, como administrador: `& 'C:\Program F
 
 **No correr `pnpm dev` del Dashboard ni de Limpieza en la carpeta de los servicios.** `next dev` escribe en la misma carpeta `.next` que el build de producción y lo reemplaza, y el servicio deja de arrancar la próxima vez que se inicie. Si pasa, volver a compilar la app y reiniciar su servicio. Ocurrió durante la prueba del 26/09: el instalador lo detectó y no tocó nada.
 
-**Actualizar el sistema:**
+**Actualizar el código (lo habitual): `recompilar-produccion.ps1`.** Cada actualización de código necesita recompilar el Dashboard y Limpieza y reiniciar los servicios. Hacerlo **en un horario de baja ocupación del local**:
 
 1. Hacer antes una copia con "Copiar ahora".
-2. Como administrador, detener `ApurimenoDashboard`, `ApurimenoLimpieza` y `ApurimenoServidor`.
+2. En el checkout de producción, en `main` y sin cambios: `git pull`.
+3. Como administrador, desde la raíz:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File apps\server\scripts\recompilar-produccion.ps1
+   ```
+
+El script **compila primero, con los servicios funcionando**:
+
+- **Dónde compila:** cada app se compila en `.next-nuevo`, no en `.next`, que es la carpeta que están sirviendo.
+- **Qué detiene el proceso:** solo un error real de compilación, es decir, un código de salida distinto de 0. Los avisos de herramientas (Browserslist, avisos de Node) quedan en el registro, `apps/server/datos/logs/compilacion-<app>.log`, y no detienen nada.
+- **Si una compilación falla:** los servicios no se tocan, siguen sirviendo lo de antes, y el script muestra las últimas líneas del registro.
+
+**Solo si las dos compilaron, reemplaza:**
+
+- **La interrupción:** detiene los servicios, cambia `.next` por el build nuevo (un cambio de nombre, instantáneo) y los vuelve a iniciar. Los tres servicios del local, y `ApurimenoCapacitacion` si está instalado, se interrumpen **solo durante ese reemplazo**, no mientras compila. El POS tampoco puede cobrar durante ese intervalo, porque el servidor se reinicia.
+- **Duración:** el script informa cuánto duró la interrupción. Se calcula en unos 15 a 30 s, por los tiempos de arranque medidos: unos 7 s el servidor y 6,5 s cada app de Next.
+- **Si algo no responde:** si una app no responde con su build nuevo en 40 s, vuelve sola al anterior y queda funcionando con él. El build que falló queda en `.next-fallido` para revisarlo, y el script lo informa como error. Las demás apps siguen con su build nuevo. En ese caso la interrupción se alarga unos 50 s. El build anterior de una app que sí respondió queda en `.next-anterior`.
+- **Cómo se probó la vuelta atrás:** `apps/server/scripts/probar-reversion-recompilar.ps1`. Corre el reemplazo real del script con `next start` en los puertos 3100 y 3102 en vez de los servicios, y con un build nuevo del Dashboard que no arranca. Resultado del 28/09/2026: 12 de 12 comprobaciones.
+
+  - El Dashboard volvió a su build anterior, responde y quedó sin nada a medio camino.
+  - Limpieza quedó con su build nuevo.
+  - Hubo un solo mensaje de error, claro.
+  - La interrupción duró 48 s.
+
+  La prueba se corre en un clon o worktree de desarrollo: se niega a correr en el checkout de producción.
+
+**Tiempos medidos** el 28/09/2026 en el equipo de desarrollo:
+
+- **Compilación:** Dashboard unos 30 s, Limpieza unos 20 a 28 s; en total, alrededor de 1 minuto. El PC del local puede tardar más.
+- **Cómo medirlo allí sin tocar nada:** correr el script con `-SoloCompilar`, que no toca ningún servicio ni exige administrador. Deja `.next-nuevo` listo e informa los tiempos.
+
+**El script se detiene sin tocar nada** si el checkout no está en `main` sin cambios, si falta un servicio, o si alguna base (la del local o la de capacitación) tiene migraciones pendientes. En ese último caso, usar la actualización completa.
+
+**Por qué así:** el 28/09/2026 un script temporal, que ya no existe, compilaba con los servicios ya detenidos, y un aviso de Browserslist cortó la compilación. Los tres servicios quedaron caídos unos 2,5 minutos. En Windows PowerShell 5.1, redirigir la salida de errores de un programa con `$ErrorActionPreference = "Stop"` convierte cualquier aviso en un error fatal. El script nuevo compila con `cmd /c` y manda la salida a un archivo.
+
+**Actualización completa (cuando cambian las dependencias o hay migraciones).** Si `git pull` trae cambios en `pnpm-lock.yaml` o en `apps/server/prisma/migrations`, `pnpm install` y las migraciones necesitan los servicios detenidos. Aquí la interrupción dura toda la actualización, varios minutos; también en horario de baja ocupación:
+
+1. Hacer antes una copia con "Copiar ahora".
+2. Como administrador, detener `ApurimenoDashboard`, `ApurimenoLimpieza`, `ApurimenoServidor` y, si está instalado, `ApurimenoCapacitacion`.
 3. `git pull` y `pnpm install --frozen-lockfile`.
-4. `pnpm migrate` en `apps/server`.
+4. `pnpm migrate` en `apps/server`, y `pnpm preparar-capacitacion` en la raíz si está la capacitación.
 5. `pnpm --filter web build` y `pnpm --filter cleaning build`.
-6. Volver a correr el instalador con `-Produccion`.
+6. Volver a correr el instalador con `-Produccion` (y con `-Capacitacion`, si está).
 
 **Comprobado el 26/09/2026 en el equipo de desarrollo** (con `-Pantallas`):
 
@@ -320,7 +359,7 @@ pnpm reiniciar-capacitacion
 
 Borra todo lo operativo (alquileres, tickets, turnos, movimientos, auditoría, clientes y cuentas creadas al practicar) y vuelve a cargar las 17 habitaciones y los productos de ejemplo. Las tres cuentas quedan con su contraseña. Se corre con el servicio funcionando; quien tenga una sesión de práctica abierta verá la caja cerrada y el tablero vacío.
 
-**Al actualizar el sistema** (sección 4, "Actualizar el sistema"), si hubo migraciones nuevas, el reinicio lo avisa. Entonces, como administrador: detener `ApurimenoCapacitacion`, correr `pnpm preparar-capacitacion` (migra y no cambia nada de lo que ya existe) y volver a iniciarlo.
+**Al actualizar el código** (sección 4), `recompilar-produccion.ps1` también reinicia `ApurimenoCapacitacion` y se niega a seguir si su base tiene migraciones pendientes. Si hubo migraciones nuevas, el reinicio de la capacitación también lo avisa. Entonces, como administrador: detener `ApurimenoCapacitacion`, correr `pnpm preparar-capacitacion` (migra y no cambia nada de lo que ya existe) y volver a iniciarlo.
 
 **Comprobado el 27/09/2026 en el equipo de desarrollo:**
 

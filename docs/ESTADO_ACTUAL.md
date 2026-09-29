@@ -3,7 +3,9 @@
 Al 27/09/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
 decisiones esperan a la propietaria. El detalle técnico de cada parte está en el README de su carpeta.
 
-**En una línea:** el MVP de software está completo salvo la **impresión real** (parte 2, con la impresora). Los tres
+**En una línea:** el MVP de software está completo salvo la **prueba de la impresión con la impresora física**: la
+conexión (USB, Bluetooth, cola de Windows), la lectura de su estado, los reintentos, el aviso al cajero y el
+logotipo están hechos y probados con simulación y salida a archivo (PR de impresión parte 2). Los tres
 servicios de Windows y el respaldo externo quedaron probados en el equipo de desarrollo. Para instalar en el local
 solo falta: **impresión parte 2**, el **proyecto de Supabase de producción** y la **instalación con `-Produccion` en el
 equipo del local**. Después vienen los datos reales y el piloto con el cuaderno.
@@ -24,7 +26,7 @@ sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19
 | `packages/contracts` | Tipos y esquemas de todo el sistema; 25 decisiones de interpretación del SRS documentadas | 45 pruebas |
 | `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno | 243 pruebas, incluida la tabla de casos del SRS |
 | `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
-| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión (parte 1) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 244 pruebas contra SQLite real; pruebas de concurrencia |
+| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión con conexión a la impresora (COM, USB directa, cola de Windows), lectura de su estado, reintentos y logotipo (probada con simulación y salida a archivo) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 296 pruebas contra SQLite real; pruebas de concurrencia; la impresión, con una impresora simulada que responde como una real y con el ayudante de Windows real contra puertos que no existen |
 | `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
 | `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
@@ -41,16 +43,21 @@ base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema 
 detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
 iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (540 pruebas). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (594 pruebas). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
 ## Qué falta para reemplazar el cuaderno
 
 ### Software
 
-1. **Impresión parte 2** (el domingo, con la impresora conectada): enviar los bytes a la REDPOS RED-E803 por USB
-   (y Bluetooth), en Windows; elegir la página de códigos que imprime bien las tildes (`pnpm prueba-impresora`);
-   confirmar el corte y el avance de papel; reintentar trabajos en `ERROR`/`PENDIENTE` (RF-56). La parte 1
-   (contenido y bytes ESC/POS, cola conectada a cada cobro) está hecha.
+1. **Prueba de la impresión con la REDPOS RED-E803 conectada**, en el local. El software está hecho y probado sin
+   la impresora: transporte por puerto COM (Bluetooth), USB directa o cola de Windows, lectura de papel, tapa y
+   temperatura antes de cada comprobante, 3 intentos si no hay conexión, reintento automático cada 30 s de los
+   comprobantes de los últimos 15 minutos, aviso al cajero en el POS con "Reintentar ahora", y el logotipo centrado
+   con el nombre debajo. Falta, con la impresora: `pnpm buscar-impresora` para saber cómo aparece por USB y por
+   Bluetooth, cuál transporte funciona y si contesta el estado; la página de prueba (`pnpm prueba-impresora` y
+   `pnpm enviar-impresora`) para elegir la página de códigos, ver el logotipo en papel y confirmar el corte y el
+   avance; y un cobro con la tapa abierta y sin papel para ver el aviso. Pasos en `apps/server/README.md`,
+   "Impresión".
 
 ### Puesta en marcha
 
@@ -86,10 +93,10 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
 | Vigencia del código de anulación (RF-65) | 5 minutos | ¿Está bien? Configurable en el Dashboard |
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
 | Encendido del equipo | El servidor, el Dashboard y Limpieza arrancan solos como servicios de Windows (NSSM) | ¿Quién enciende el equipo cada día, o queda siempre encendido? |
-| Logotipo en el comprobante | Sin logotipo | La RED-E803 lo soporta; ¿se quiere? Se decide con la impresora conectada |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
 
-Ya resueltas y registradas (no requieren nada): número de operación obligatorio para Yape y Plin (P-05; en la
+Ya resueltas y registradas (no requieren nada): logotipo en el comprobante (sí, centrado arriba del nombre; se
+puede quitar con `IMPRESORA_LOGO=no` si en papel no se ve bien), número de operación obligatorio para Yape y Plin (P-05; en la
 semilla, y se cambia en el Dashboard), respaldos (destino, retención, hora, cifrado, aviso y la ventana de 2
 horas en la nube; decisión 23), comentario obligatorio con cualquier diferencia de arqueo
 (decisión 15), leyenda del comprobante editable (21), `afectaCaja` inmutable (20), nadie se quita su propio

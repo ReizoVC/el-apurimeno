@@ -36,6 +36,11 @@ sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19
 | Entorno de capacitación | Segunda instancia del servidor (`ApurimenoCapacitacion`, puerto 3011) con base propia, sin espejo ni copias en Drive; cuentas `capacitacion.admin`, `.cajero1` y `.cajero2`; POS, Dashboard y Limpieza se conectan a ella por el usuario del login y muestran el banner "MODO CAPACITACIÓN"; comprobantes con `*** CAPACITACIÓN ***`; `pnpm reiniciar-capacitacion` (`docs/INSTALACION_LOCAL.md`, sección 9) | En el equipo de desarrollo, 27/09: servicio instalado sin tocar los otros tres; las tres cuentas desde el POS, todo contra 3011; ingreso, salida, limpieza y reimpresión con la marca (salida a archivo); la base de producción quedó igual; reinicio con el servicio funcionando. Falta la impresión física |
 | `supabase/` | Tablas, row-level security (lectoras solo leen con TOTP; el servidor solo escribe), procedimiento de cuentas | Matriz de permisos en PGlite; las dos migraciones aplicadas en `apurimeno-prueba` y verificadas el 26/09 con la cuenta lectora: con solo la contraseña, con un autenticador sin verificar, o con TOTP registrado pero sin el código en la sesión, no lee nada (ni por la API directa) ni puede escribir; con el código (aal2) lee el resumen |
 
+**Entorno de capacitación, migraciones:** `pnpm reiniciar-capacitacion` no aplica migraciones (el servicio tiene la
+base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema cambió, antes de reiniciar hay que
+detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
+iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
+
 `pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (540 pruebas). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
 ## Qué falta para reemplazar el cuaderno

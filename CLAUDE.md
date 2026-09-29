@@ -32,6 +32,13 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
 | 1420 | POS en desarrollo (`apps/native`, Tauri dev) |
 | 3011 | Servidor de capacitación (`apps/server` con `--capacitacion`; ver `docs/INSTALACION_LOCAL.md`) |
 
+## Flujo de trabajo
+
+- **El checkout `D:\dev\el-apurimeno` es exclusivamente el de producción** (rama `main`, sirve los tres servicios de
+  Windows). Ningún agente debe trabajar directamente ahí: cada tarea se hace en su propio worktree o clon. Antes de
+  instalar o reiniciar cualquier servicio de producción desde ese checkout, confirmar con Reizo que está en `main` y
+  sin cambios sin commit.
+
 ## Acciones sobre el sistema
 
 Las sesiones de trabajo corren en el PC de la propietaria del repositorio, junto a sus otros programas y archivos.

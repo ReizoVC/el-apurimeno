@@ -171,7 +171,15 @@ El script **compila primero, con los servicios funcionando**:
 
 - **La interrupción:** detiene los servicios, cambia `.next` por el build nuevo (un cambio de nombre, instantáneo) y los vuelve a iniciar. Los tres servicios del local, y `ApurimenoCapacitacion` si está instalado, se interrumpen **solo durante ese reemplazo**, no mientras compila. El POS tampoco puede cobrar durante ese intervalo, porque el servidor se reinicia.
 - **Duración:** el script informa cuánto duró la interrupción. Se calcula en unos 15 a 30 s, por los tiempos de arranque medidos: unos 7 s el servidor y 6,5 s cada app de Next.
-- **Si algo no responde:** si una app no responde con su build nuevo, vuelve sola al anterior. El build anterior queda en `.next-anterior`.
+- **Si algo no responde:** si una app no responde con su build nuevo en 40 s, vuelve sola al anterior y queda funcionando con él. El build que falló queda en `.next-fallido` para revisarlo, y el script lo informa como error. Las demás apps siguen con su build nuevo. En ese caso la interrupción se alarga unos 50 s. El build anterior de una app que sí respondió queda en `.next-anterior`.
+- **Cómo se probó la vuelta atrás:** `apps/server/scripts/probar-reversion-recompilar.ps1`. Corre el reemplazo real del script con `next start` en los puertos 3100 y 3102 en vez de los servicios, y con un build nuevo del Dashboard que no arranca. Resultado del 28/09/2026: 12 de 12 comprobaciones.
+
+  - El Dashboard volvió a su build anterior, responde y quedó sin nada a medio camino.
+  - Limpieza quedó con su build nuevo.
+  - Hubo un solo mensaje de error, claro.
+  - La interrupción duró 48 s.
+
+  La prueba se corre en un clon o worktree de desarrollo: se niega a correr en el checkout de producción.
 
 **Tiempos medidos** el 28/09/2026 en el equipo de desarrollo:
 

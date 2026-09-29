@@ -23,9 +23,10 @@ coverage
 
 # Build Outputs
 .next/
-# Builds de recompilar-produccion.ps1: el nuevo antes del cambio y el anterior, para volver atrás
+# Builds de recompilar-produccion.ps1: el nuevo antes del cambio, el anterior para volver atrás y el que no arrancó
 .next-nuevo/
 .next-anterior/
+.next-fallido/
 out/
 build
 dist

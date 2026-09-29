@@ -67,3 +67,11 @@ Mismo patrón que `apps/cleaning`:
 
 Cada cobro imprime su comprobante desde el servidor (ADR-05): el POS no habla con la impresora. Ver
 "Impresión" en `apps/server/README.md`.
+
+**Aviso de la impresora** (`componentes/AvisoImpresora.tsx`; RF-56, decisión 26 de contracts): si el último
+comprobante no salió, arriba de todas las pestañas aparece qué pasa y qué hacer ("La impresora no tiene papel.
+Coloque un rollo nuevo…"), cuántos comprobantes esperan y que el cobro ya quedó registrado, con un botón
+"Reintentar ahora". El estado se pide cada 10 s y 2,5 s después de cada cobro; el servidor reintenta solo cada
+30 s, así que el botón solo evita esperar. Sin impresora configurada no se muestra nada: es de la instalación, no
+del cajero. Probado en el navegador contra el servidor real con un puerto COM que no existe (aviso "sin conexión",
+"Reintentar ahora") y, al reiniciarlo con salida a archivo, el comprobante pendiente salió solo.

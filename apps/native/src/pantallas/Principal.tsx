@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@apurimeno/ui/components/card";
 import { Aviso } from "../componentes/Aviso";
+import { AvisoImpresora } from "../componentes/AvisoImpresora";
 import { ESTADO_HABITACION } from "../componentes/estados";
 import { fechaHoraCorta } from "@apurimeno/formato";
 import { sincronizarReloj } from "../lib/reloj";
@@ -57,6 +58,8 @@ export function Principal({ sesion, onSalir }: Props) {
   const [exito, setExito] = useState<string | null>(null);
   const [pestana, setPestana] = useState<Pestana>("habitaciones");
   const [turno, setTurno] = useState<EstadoTurno>({ tipo: "consultando" });
+  /** Sube con cada cobro: el aviso de la impresora se revisa poco después. */
+  const [cobros, setCobros] = useState(0);
 
   const cargarTablero = useCallback(async () => {
     try {
@@ -102,6 +105,7 @@ export function Principal({ sesion, onSalir }: Props) {
     (mensaje: string) => {
       setExito(mensaje);
       setSeleccionada(null);
+      setCobros((n) => n + 1);
       void cargarTablero();
     },
     [cargarTablero],
@@ -154,6 +158,7 @@ export function Principal({ sesion, onSalir }: Props) {
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-3 p-4">
+        <AvisoImpresora revision={cobros} />
         {aviso !== null && (
           <Aviso tipo="error" onCerrar={() => setAviso(null)}>
             {aviso}

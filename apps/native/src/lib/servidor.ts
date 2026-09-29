@@ -5,6 +5,7 @@ import {
   ClienteSchema,
   CotizacionHoraAdicionalRespuestaSchema,
   CotizacionIngresoRespuestaSchema,
+  EstadoImpresoraSchema,
   LoginRespuestaSchema,
   MetodoPagoSchema,
   MovimientoCajaRespuestaSchema,
@@ -264,4 +265,10 @@ export const servidor = {
       conId(RUTAS.reimprimirTicket, ticketId),
       ReimpresionRespuestaSchema,
     ),
+
+  // Impresora (RF-56): el servidor imprime; el POS solo muestra si algo falló y permite reintentar.
+  estadoImpresora: () =>
+    llamar("GET", RUTAS.estadoImpresora, EstadoImpresoraSchema),
+  reintentarImpresion: () =>
+    llamar("POST", RUTAS.reintentarImpresion, EstadoImpresoraSchema),
 };

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  CausaFallaImpresoraSchema,
   CodigoAutorizacionSchema,
+  EstadoImpresoraSchema,
+  MENSAJE_FALLA_IMPRESORA,
   AlquilerSchema,
   ClienteEntradaSchema,
   ClienteSchema,
@@ -491,5 +494,24 @@ describe("CodigoAutorizacion: el uso queda sobre la entidad de su operación (de
     expect(CodigoAutorizacionSchema.safeParse({ ...base, operacion: "REINTENTAR_CIERRE_TURNO", ticketId: null, turnoId: null }).success).toBe(
       false,
     );
+  });
+});
+
+describe("Falla de la impresora (RF-56, decisión 26)", () => {
+  it("cada causa tiene su mensaje en español, sin códigos a la vista", () => {
+    for (const causa of CausaFallaImpresoraSchema.options) {
+      const mensaje = MENSAJE_FALLA_IMPRESORA[causa];
+      expect(mensaje.length).toBeGreaterThan(20);
+      expect(mensaje).not.toMatch(/PRINTER_|DLE|EOT|0x/);
+    }
+  });
+
+  it("el estado admite una impresora sin configurar, lista o con una causa", () => {
+    const base = { configurada: true, causa: null, comprobantesEnEspera: 0, ultimoIntento: null };
+    const conCausa = { ...base, causa: "PRINTER_OUT_OF_PAPER", comprobantesEnEspera: 2, ultimoIntento: "2026-09-29T15:00:00.000Z" };
+    expect(EstadoImpresoraSchema.safeParse({ ...base, configurada: false }).success).toBe(true);
+    expect(EstadoImpresoraSchema.safeParse(conCausa).success).toBe(true);
+    expect(EstadoImpresoraSchema.safeParse({ ...base, causa: "SIN_PAPEL" }).success).toBe(false);
+    expect(EstadoImpresoraSchema.safeParse({ ...base, comprobantesEnEspera: -1 }).success).toBe(false);
   });
 });

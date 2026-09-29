@@ -2,7 +2,9 @@ import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { construirApp } from "./app.js";
 import { leerOrigenesPermitidos } from "./cors.js";
-import { transporteArchivo } from "./impresion/transporte.js";
+import { cargarLogo } from "./impresion/logo.js";
+import type { ImagenMonocromo } from "./impresion/imagen.js";
+import { leerDestinoImpresora, transporteDesdeDestino, type TransporteImpresora } from "./impresion/transporte.js";
 import { crearPrisma } from "./db.js";
 import { transporteSupabase } from "./espejo/supabase.js";
 import { instanciaDe, leerArranque } from "./instancia.js";
@@ -24,9 +26,25 @@ if (jwtSecret === undefined) {
 
 const prisma = crearPrisma(arranque.databaseUrl);
 const origenesPermitidos = leerOrigenesPermitidos(arranque.corsOrigins, produccion);
-const dispositivo = arranque.impresoraDispositivo;
 const paginaCodigos = arranque.impresoraPaginaCodigos === "WPC1252" ? "WPC1252" : "PC850";
-const impresora = dispositivo === undefined || dispositivo === "" ? null : transporteArchivo(dispositivo);
+// Un error en la configuración de la impresora o del logotipo no impide arrancar: sin servidor no hay cobros. Queda
+// como error en el registro, y los comprobantes en cola (o sin logotipo) hasta corregirlo.
+const mensajeDe = (error: unknown) => (error instanceof Error ? error.message : String(error));
+let impresora: TransporteImpresora | null = null;
+let problemaImpresora: string | null = null;
+try {
+  const destino = leerDestinoImpresora(arranque.impresoraDispositivo);
+  impresora = destino === null ? null : transporteDesdeDestino(destino);
+} catch (error) {
+  problemaImpresora = mensajeDe(error);
+}
+let logo: ImagenMonocromo | null = null;
+let problemaLogo: string | null = null;
+try {
+  logo = cargarLogo(arranque.impresoraLogo);
+} catch (error) {
+  problemaLogo = mensajeDe(error);
+}
 const configuracionEspejo = arranque.espejo;
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
 const espejo = {
@@ -39,11 +57,16 @@ const respaldos = arranque.respaldos;
 // El servicio de Windows fija REGISTRO_ARCHIVO: el registro va a ese archivo y rota por tamaño. Sin ella, a la consola.
 const archivoRegistro = process.env["REGISTRO_ARCHIVO"] || undefined;
 const logger = archivoRegistro === undefined ? true : { stream: registroRotativo(archivoRegistro) };
-const app = await construirApp({ prisma, jwtSecret, logger, origenesPermitidos, impresora, paginaCodigos, espejo, respaldos, capacitacion });
+const app = await construirApp({ prisma, jwtSecret, logger, origenesPermitidos, impresora, paginaCodigos, logo, espejo, respaldos, capacitacion });
 if (capacitacion) {
   app.log.warn({ base: respaldos.rutaBase, puerto: arranque.puerto }, "INSTANCIA DE CAPACITACIÓN: ningún dato de esta base es real");
 }
-app.log.info({ impresora: impresora?.descripcion ?? "sin configurar", paginaCodigos }, "Impresora de comprobantes");
+app.log.info(
+  { impresora: impresora?.descripcion ?? "sin configurar", paginaCodigos, logo: logo === null ? "sin logotipo" : `${logo.ancho}x${logo.alto}` },
+  "Impresora de comprobantes",
+);
+if (problemaImpresora !== null) app.log.error(`Impresora sin configurar, los comprobantes quedan en cola: ${problemaImpresora}`);
+if (problemaLogo !== null) app.log.error(`Comprobantes sin logotipo: ${problemaLogo}`);
 app.log.info({ origenesPermitidos }, "Orígenes permitidos (CORS)");
 if (espejo.transporte !== null) {
   app.log.info({ destino: espejo.transporte.descripcion, intervaloMinutos: espejo.intervaloMinutos }, "Espejo en la nube");
@@ -76,4 +99,5 @@ process.on("SIGTERM", cerrar);
 // 0.0.0.0: el POS, el Dashboard y la app de limpieza se conectan desde la red local (RES-04).
 await app.listen({ host: arranque.host, port: arranque.puerto });
 app.espejo.iniciar();
+app.impresion.iniciar();
 app.respaldos.iniciar();

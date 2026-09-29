@@ -136,6 +136,73 @@
     ]
   },
   {
+    "nombre": "ingreso-80mm-pc850-logo",
+    "paginaCodigos": "PC850",
+    "lineas": [
+      {
+        "texto": "             Hospedaje El Apurimeño",
+        "estilo": "negrita"
+      },
+      {
+        "texto": "          Jr. Ñaupa 123 — Andahuaylas",
+        "estilo": "normal"
+      },
+      {
+        "texto": "------------------------------------------------",
+        "estilo": "normal"
+      },
+      {
+        "texto": "Ticket 1045                    23/09/2026, 14:42",
+        "estilo": "normal"
+      },
+      {
+        "texto": "------------------------------------------------",
+        "estilo": "normal"
+      },
+      {
+        "texto": "Habitación 205 — 8 horas                S/ 40.00",
+        "estilo": "normal"
+      },
+      {
+        "texto": "Horas adicionales                       S/ 16.00",
+        "estilo": "normal"
+      },
+      {
+        "texto": "  2 x S/ 8.00",
+        "estilo": "normal"
+      },
+      {
+        "texto": "------------------------------------------------",
+        "estilo": "normal"
+      },
+      {
+        "texto": "TOTAL                                   S/ 56.00",
+        "estilo": "negrita"
+      },
+      {
+        "texto": "Efectivo                                S/ 56.00",
+        "estilo": "normal"
+      },
+      {
+        "texto": "  Recibido                              S/ 60.00",
+        "estilo": "normal"
+      },
+      {
+        "texto": "  Vuelto                                 S/ 4.00",
+        "estilo": "normal"
+      },
+      {
+        "texto": "------------------------------------------------",
+        "estilo": "normal"
+      },
+      {
+        "texto": "    Documento interno sin valor tributario.",
+        "estilo": "normal"
+      }
+    ],
+    "logo": "logo_apurimeno_bw_224x195.png"
+  },
+  {
     "nombre": "venta-copia-80mm-wpc1252",
     "paginaCodigos": "WPC1252",
     "lineas": [

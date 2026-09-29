@@ -112,6 +112,8 @@ export interface CasoComprobante {
   nombre: string;
   paginaCodigos: PaginaCodigos;
   lineas: LineaComprobante[];
+  /** Logotipo, un PNG de apps/server/recursos; generar_esperados.py lo decodifica por su cuenta. */
+  logo?: string;
 }
 
 export function casos(): CasoComprobante[] {
@@ -126,6 +128,12 @@ export function casos(): CasoComprobante[] {
       nombre: "venta-copia-58mm-pc850",
       paginaCodigos: "PC850",
       lineas: componerLineasComprobante(venta(), { datos: DATOS, anchoPapelMm: 58, metodosPago, esCopia: true }),
+    },
+    {
+      nombre: "ingreso-80mm-pc850-logo",
+      paginaCodigos: "PC850",
+      lineas: componerLineasComprobante(ingreso(), { datos: DATOS, anchoPapelMm: 80, metodosPago, esCopia: false }),
+      logo: "logo_apurimeno_bw_224x195.png",
     },
     {
       nombre: "venta-copia-80mm-wpc1252",

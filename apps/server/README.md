@@ -24,8 +24,9 @@ que ya esté definido en el entorno tiene prioridad, y un valor vacío cuenta co
 | `JWT_SECRET` | aleatorio por arranque | **Obligatorio en producción** (`NODE_ENV=production`), al menos 32 caracteres. En desarrollo, las sesiones se invalidan al reiniciar. |
 | `HOST` / `PORT` | `0.0.0.0` / `3001` | Escucha en la red local para el POS, el Dashboard y la app de limpieza (RES-04). |
 | `CORS_ORIGINS` | en desarrollo, `http://localhost` y `http://127.0.0.1` en los puertos 3000, 3002 y 3003; en producción, ninguno | Orígenes de navegador que pueden llamar a la API, separados por comas y exactos (esquema, host y puerto). No admite `*`: el servidor no arranca con un comodín o un origen mal formado. Para el celular de limpieza en la red del local: `CORS_ORIGINS=http://192.168.1.50:3002` (la IP de la máquina que sirve la app). |
-| `IMPRESORA_DISPOSITIVO` | — | Ruta a la que se escriben los comprobantes ESC/POS, p. ej. `/dev/usb/lp0` en Linux. Sin ella, quedan en cola (`PENDIENTE`). |
+| `IMPRESORA_DISPOSITIVO` | — | Dónde está la impresora: `COM5` (Bluetooth o USB como puerto serie), `usb` (USB directa), `windows:<nombre>` (impresora instalada en Windows) o una ruta (`/dev/usb/lp0` en Linux, o un archivo). `pnpm buscar-impresora` sugiere el valor. Sin ella, los comprobantes quedan en cola (`PENDIENTE`). Ver "Impresión". |
 | `IMPRESORA_PAGINA_CODIGOS` | `PC850` | `PC850` o `WPC1252`, según la página de prueba (`pnpm prueba-impresora`). |
+| `IMPRESORA_LOGO` | el del negocio | Vacío: `recursos/logo_apurimeno_bw_224x195.png`. `no`: sin logotipo. Otra cosa: la ruta de otro PNG en blanco y negro, de hasta 576 puntos de ancho. |
 | `SEED_ADMIN_USER` / `SEED_ADMIN_PASSWORD` | `admin` / — | Solo para `pnpm seed`. |
 | `ESPEJO_SUPABASE_URL`, `ESPEJO_SUPABASE_ANON_KEY` | — | Proyecto de Supabase del espejo en la nube y su clave **publicable**. Una clave secreta o `service_role` se rechaza. Ver "Espejo en la nube". |
 | `ESPEJO_SYNC_EMAIL` / `ESPEJO_SYNC_PASSWORD` | — | Cuenta de Supabase Auth con rol `sincronizador` (`supabase/README.md`). |
@@ -407,9 +408,37 @@ El periodo es `[desde, hasta)` en UTC. La agregación es de `@apurimeno/domain` 
   cambia el diseño del comprobante: `pnpm exec tsx test/impresion/volcar-casos.ts && python3
   test/impresion/generar_esperados.py`, y revisar el diff de los `.hex`.
 
+- **Fuente A explícita** (`ESC M 0`, 12 × 24 puntos, 48 columnas en 80 mm) después de `ESC @`: el reinicio vuelve
+  a la fuente "de fábrica", que en impresoras de este tipo se puede cambiar desde su utilidad de configuración.
+
 **Por confirmar con la impresora real:** qué página de códigos imprime bien las tildes (`pnpm
-prueba-impresora prueba.bin` genera una página con la misma línea en PC850 y WPC1252, el tamaño doble y
-una regla de 48 columnas), que `GS V 1` corte, y cuántas líneas de avance hacen falta antes del corte.
+prueba-impresora prueba.bin` genera una página con la cabecera con logotipo, la misma línea en PC850 y WPC1252, el
+tamaño doble y una regla de 48 columnas), que `GS V 1` corte, y cuántas líneas de avance hacen falta antes del corte.
+
+**Logotipo:** centrado arriba del nombre del negocio, en cada comprobante (original, copia y capacitación).
+- El archivo es `recursos/logo_apurimeno_bw_224x195.png`: blanco y negro puro, 224 × 195 puntos (28 × 24 mm a 203
+  ppp). `impresion/imagen.ts` lo lee sin dependencias (`node:zlib`) y lo reduce a un bit por punto; lo que no soporta
+  (PNG entrelazado, 16 bits por muestra) lo rechaza en vez de imprimir otra cosa. Se carga al arrancar: si falta o
+  no se puede leer, el servidor arranca igual, sin logotipo. Lo mismo con un `IMPRESORA_DISPOSITIVO` inválido:
+  arranca sin impresora y los comprobantes quedan en cola. Sin servidor no hay cobros. El error no queda solo en
+  el registro: `impresion/configuracion.ts` lo guarda y `GET /impresora/estado` lo devuelve (`problemaConfiguracion`,
+  `problemaLogo`), el Dashboard lo muestra en la Vista general con el motivo, y el POS le avisa al cajero que no
+  se imprimen comprobantes si la impresora quedó sin configurar.
+- Bytes: `ESC a 1` (centrar), `GS v 0` (imagen de un bit: 28 bytes por fila, 195 filas, 5460 bytes), `ESC a 0`,
+  `ESC J 8` (1 mm de separación) y el nombre del negocio de la configuración, en negrita y fuente A. El nombre es
+  texto de la impresora, no parte de la imagen.
+- **`GS v 0` con cada comprobante**, no una imagen guardada en la impresora: `ESC @` borra las descargadas con
+  `GS *`, y guardarla en la memoria no volátil (`FS q`, `GS ( L`) gasta ciclos de escritura. Son 5,5 KB más por
+  comprobante, nada para USB o Bluetooth.
+- En papel de 58 mm (384 puntos) el logotipo también cabe; uno más ancho que el papel se omite y el comprobante sale
+  igual, con un aviso en el registro.
+- El caso `ingreso-80mm-pc850-logo.hex` lo genera `generar_esperados.py` decodificando el PNG por su cuenta (con
+  `zlib` de Python), y coincide byte a byte con `escpos.ts`.
+
+**Vista previa sin impresora:** `pnpm vista-impresion archivo.bin` interpreta los bytes (los de `pnpm
+prueba-impresora`, o los que deja el servidor con `IMPRESORA_DISPOSITIVO` apuntando a un archivo) y escribe una
+página HTML con el papel a escala: 1 punto = 1 píxel, el logotipo tal como lo recibe la impresora y el texto en 48
+columnas. Sirve para revisar el diseño y que la imagen llegue completa; no reemplaza la prueba en papel.
 
 **Contenido configurable (CU-27):** nombre del negocio, dato adicional (dirección o mensaje) y la leyenda
 al pie (decisión 21 de contracts). La migración `leyenda_comprobante_configurable` completa las bases
@@ -423,9 +452,81 @@ transporte, un envío a la vez. Si la impresora falla, el trabajo queda en `ERRO
 (RF-56); sin `IMPRESORA_DISPOSITIVO`, queda `PENDIENTE`. Los tickets compensatorios de una anulación no
 se imprimen: CU-21 no lo pide.
 
-**Parte 2, pendiente (con el hardware):** hoy el único transporte escribe los bytes en una ruta
-(`transporteArchivo`, pensado para `/dev/usb/lp0`) y no se ha probado con la impresora. Falta probarlo con
-la RED-E803, Bluetooth, la impresora en Windows y reintentar los trabajos en `ERROR` o `PENDIENTE`.
+**Parte 2: conexión con la impresora, estado y reintentos.** Implementada y probada **solo con simulación y salida
+a archivo**; falta la prueba con la RED-E803 conectada (lista al final).
+
+`IMPRESORA_DISPOSITIVO` elige el transporte (`impresion/transporte.ts`):
+
+| Valor | Transporte | Estado de la impresora |
+|---|---|---|
+| `COM5` | Puerto COM. Bluetooth siempre aparece así (perfil de puerto serie); USB, si la impresora se instala como puerto serie. | Sí (`DLE EOT`) |
+| `usb` o `usb:VID_0483&PID_5743` | USB directa, sin controlador de impresora: el controlador de clase de Windows (`usbprint`). `usb` toma la única conectada; con varias, se indica cuál. | Sí (`DLE EOT`), si la impresora contesta por USB |
+| `windows:<nombre>` | Impresora instalada en Windows (controlador del fabricante o "Generic / Text Only"), en modo RAW: los bytes llegan sin pasar por el controlador. Tiene que estar instalada para todo el equipo: el servicio corre como `LocalSystem`. | Solo lo que informe el controlador; muchos no informan nada |
+| otra cosa | Se escriben los bytes en esa ruta (`/dev/usb/lp0` en Linux, o un archivo para inspeccionar). | No |
+| `USB001` | Rechazado (aviso en el Dashboard y el POS, comprobantes en cola): es un puerto de la cola de Windows, no una ruta; escribir ahí crearía un archivo. | — |
+
+- `pnpm buscar-impresora` lista los puertos COM, las impresoras USB conectadas y las instaladas en Windows, con el
+  valor para cada una. Solo lee (registro de Windows y WMI): no abre ningún puerto.
+- **En Windows**, COM, `usb` y `windows:` pasan por `impresion/impresora-windows.ps1` (PowerShell 5.1, que trae
+  Windows), un proceso por comprobante: abre el dispositivo, pide el estado (`DLE EOT 1` a `4`), lo informa al
+  servidor y espera la orden de enviar o cancelar. Cada espera tiene plazo, y si el proceso no responde (20 s al
+  abrir, 30 s al enviar) el servidor lo termina por su PID: un dispositivo colgado no bloquea el servidor. Sin
+  dependencias nativas nuevas (como `serialport` o `usb`), que traen los mismos problemas de compilación que
+  `better-sqlite3`.
+- **Antes de cada comprobante se lee el estado**, y si la impresora informa un problema no se envía nada. Después
+  de enviar no se vuelve a preguntar: si el papel se acaba a mitad del comprobante, la impresora lo termina sola al
+  cambiar el rollo, y reintentarlo lo imprimiría dos veces. Una impresora que no contesta `DLE EOT` (sin canal de
+  vuelta) imprime igual: solo un problema informado detiene la impresión.
+
+**Estados → mensaje para el cajero** (`impresion/estado.ts`; causas y mensajes en `@apurimeno/contracts`, decisión
+26). Las luces son las del manual de la RED-E803:
+
+| Qué informa la impresora | Causa | Luces |
+|---|---|---|
+| No se puede abrir el puerto, no existe o no contesta | `PRINTER_DISCONNECTED` | — |
+| Sensor del rollo sin papel (`DLE EOT 4`, bits 5 y 6) o impresión detenida por fin de papel (`DLE EOT 2`, bit 5) | `PRINTER_OUT_OF_PAPER` | Solo la de papel |
+| Tapa abierta (`DLE EOT 2`, bit 2) | `PRINTER_COVER_OPEN` | Papel y error parpadeando juntas |
+| Error que se recupera solo (`DLE EOT 3`, bit 6): la temperatura del cabezal | `PRINTER_OVERHEATED` | Papel y error parpadeando juntas |
+| Cuchilla (`DLE EOT 3`, bit 3), error irrecuperable (bit 5), cualquier otro error o fuera de línea sin causa | `PRINTER_ERROR` | — |
+
+"Papel por acabarse" (`DLE EOT 4`, bits 2 y 3) no detiene la impresión. `GET /impresora/estado` devuelve la causa
+del último intento y cuántos comprobantes esperan; el POS la muestra con su mensaje y un botón "Reintentar ahora"
+(`POST /impresora/reintento`). El estado lo ve quien ve el tablero (y el Administrador); reintentar, quien reimprime:
+solo vuelve a enviar comprobantes ya encolados. No se audita, igual que los reintentos automáticos.
+
+**Reintentos** (RF-56; `ESPERAS_REINTENTO_CONEXION_MS` y `REINTENTO_AUTOMATICO`):
+- **Sin conexión: 3 intentos, a los 0, 2 y 7 segundos.** Cubre lo que se arregla solo en segundos: la reconexión
+  de Bluetooth, el puerto ocupado un momento por la instancia de capacitación (comparten la impresora), un cable que
+  se vuelve a enchufar. Más intentos solo retrasarían el aviso al cajero.
+- **Un problema que informa la impresora (papel, tapa, temperatura) no se reintenta de inmediato:** lo resuelve una
+  persona. El trabajo queda en `ERROR`; la causa, en el estado que ve el POS y en el registro del servidor (no se
+  guarda en la base: es de la impresora, no del comprobante).
+- **Automático cada 30 s** (y al arrancar el servidor): los comprobantes en `PENDIENTE` o `ERROR` de los **últimos
+  15 minutos** pasan de `ERROR` a `PENDIENTE` (§20.5) y se envían en orden. Al primero que falla se detiene: con la
+  impresora sin papel, los demás fallarían igual. Pasados 15 minutos el cliente ya no está en el mostrador: el
+  trabajo queda en `ERROR` y, si hace falta, se reimprime una copia (CU-22). Así, una impresora apagada toda la
+  noche no imprime de golpe los comprobantes de horas atrás al encenderla.
+- Cada cobro nuevo intenta imprimir de inmediato aunque haya un problema anterior: así se nota enseguida que se
+  resolvió.
+
+**Para probar con la impresora conectada** (el día de la prueba en el local; nada de esto se probó todavía con la
+RED-E803):
+1. `pnpm buscar-impresora` y, con el valor sugerido en `apps/server/.env`, `pnpm enviar-impresora --estado`: debe
+   decir "lista para imprimir". Con la tapa abierta, sin papel y apagada, debe dar cada mensaje del cuadro.
+2. `pnpm prueba-impresora prueba.bin && pnpm enviar-impresora prueba.bin`: el logotipo completo, centrado y nítido,
+   el nombre debajo, la página de códigos con tildes correctas, el tamaño doble, la regla de 48 columnas y el corte.
+3. Probar por USB y por Bluetooth: cuál transporte (COM, `usb`, `windows:`) funciona con cada uno, si contesta
+   `DLE EOT` (si no contesta, se imprime pero sin aviso de papel ni tapa) y cuánto tarda en conectar el Bluetooth.
+4. Un cobro con la tapa abierta: aviso en el POS; al cerrarla, "Reintentar ahora" lo imprime.
+5. Confirmar los bits de estado de la RED-E803 contra su manual de comandos si alguna causa sale cambiada.
+
+### Recursos
+
+Los archivos que el servidor usa al ejecutarse sin ser código (hoy, el logotipo del comprobante) van en
+`apps/server/recursos/`, junto a `src/`, y se leen con una ruta relativa al módulo (`new URL("../../recursos/…",
+import.meta.url)`), no al directorio de trabajo: así funcionan igual con `pnpm start`, con el servicio de Windows y
+en las pruebas. No había una convención anterior en el repositorio (`packages/formato` es solo código); los íconos
+de `apps/native/src-tauri/icons` son de Tauri y siguen su propia estructura.
 
 ### Respuestas de error
 

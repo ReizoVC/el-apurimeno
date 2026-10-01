@@ -118,7 +118,7 @@ const ticket = resultado.data;
 | `tienda.ts` | `Producto`, `CategoriaProducto`, `MovimientoInventario` | RN-20 a RN-26, RES-02 |
 | `usuarios.ts` | `Usuario`, `Rango` | RN-40, RN-41 |
 | `auditoria.ts` | `RegistroAuditoria`, `AccionAuditoria`, `CodigoAutorizacion` | RN-42, RN-46, §23 |
-| `comprobantes.ts` | `TrabajoImpresion` | RN-38, RN-39, §20.5 |
+| `comprobantes.ts` | `TrabajoImpresion`, `CausaFallaImpresora` y sus mensajes, `EstadoImpresora` | RN-38, RN-39, §20.5, RF-56, RNF-OBS-01 |
 | `configuracion.ts` | `ConfiguracionGlobal` | RN-43, §26 |
 | `espejo.ts` | `ResumenDia`, `ResumenTurno` y sus filas de Postgres, `EstadoEspejo` (estado de la sincronización) | ADR-06, RN-45, RF-60, RF-61 |
 | `respaldo.ts` | Frecuencias y retención de los respaldos, `EstadoRespaldos`, `RespaldarEntrada` | Planos §14.3, RNF-BKP-01, RNF-REC-02 |
@@ -311,6 +311,25 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     - El código se consume aunque el intento vuelva a rechazarse: el rechazo se confirma en la transacción y el error
       se responde después.
     - El cierre forzado de un turno ajeno (CU-20) no cambia.
+
+26. **Por qué no se imprimió un comprobante, en palabras del cajero** (`CausaFallaImpresora`,
+    `MENSAJE_FALLA_IMPRESORA`, `EstadoImpresora`; RF-56, §20.5, RNF-OBS-01, §24.1). El SRS pide reintentar y que el
+    cobro siga firme, pero no dice qué ve el cajero. Cambio **aditivo**: tipos nuevos y dos rutas nuevas
+    (`/impresora/estado`, `/impresora/reintento`); `TrabajoImpresion` no cambia.
+    - Cinco causas, con códigos en inglés como los de error: `PRINTER_DISCONNECTED`, `PRINTER_OUT_OF_PAPER`,
+      `PRINTER_COVER_OPEN`, `PRINTER_OVERHEATED` y `PRINTER_ERROR` (el resto). El servidor las deduce del estado de la
+      impresora (ESC/POS `DLE EOT`) o de la falta de conexión; cada una tiene un mensaje que dice qué pasa y qué hacer,
+      sin códigos ni luces. La tapa y la temperatura son causas distintas aunque en la RED-E803 prendan las mismas
+      luces: la impresora las informa por separado, y lo que hay que hacer es distinto.
+    - La causa es del **último intento**, no de cada trabajo: es un estado de la impresora. No se guarda en la base;
+      el trabajo sigue con `PENDIENTE`, `IMPRESO` o `ERROR`.
+    - `comprobantesEnEspera` cuenta los `PENDIENTE` y `ERROR` de los últimos 15 minutos: los que el servidor todavía
+      reintenta solo. Los más viejos quedan en `ERROR` y se reimprimen como copia si hace falta (CU-22). Los detalles
+      (intentos, esperas) están en `apps/server/README.md`, "Impresión".
+    - `problemaConfiguracion` y `problemaLogo`: un error en `IMPRESORA_DISPOSITIVO` o en `IMPRESORA_LOGO` no detiene
+      el servidor (sin servidor no hay cobros), pero tampoco puede quedar solo en el registro: el Dashboard lo
+      muestra en la Vista general, y el POS avisa al cajero si la impresora quedó sin configurar. Son textos para la
+      persona que instala, no causas para el cajero: no llevan código.
 
 ## Decisiones pendientes que afectan el contrato
 

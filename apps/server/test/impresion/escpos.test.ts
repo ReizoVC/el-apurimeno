@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { COMANDO, codificarTexto, comandosComprobante } from "../../src/impresion/escpos.js";
+import { leerPngMonocromo } from "../../src/impresion/imagen.js";
 import { casos, type CasoComprobante } from "./casos.js";
 
 const aqui = (archivo: string) => new URL(`./${archivo}`, import.meta.url);
@@ -26,7 +27,8 @@ describe("Comprobante ESC/POS byte a byte (Planos ADR-05, §13)", () => {
   });
 
   it.each(casos().map((c) => [c.nombre, c] as const))("%s coincide con el .hex generado aparte", (nombre, caso) => {
-    const generado = comandosComprobante(caso.lineas, { paginaCodigos: caso.paginaCodigos, lineasAntesDelCorte: 4 });
+    const logo = caso.logo === undefined ? null : leerPngMonocromo(readFileSync(new URL(`../../recursos/${caso.logo}`, import.meta.url)));
+    const generado = comandosComprobante(caso.lineas, { paginaCodigos: caso.paginaCodigos, lineasAntesDelCorte: 4, logo });
     // Se compara como texto hexadecimal para que un fallo muestre en qué byte difiere.
     expect(hex(generado)).toBe(hex(leerHex(nombre)));
   });
@@ -38,9 +40,9 @@ describe("Comprobante ESC/POS byte a byte (Planos ADR-05, §13)", () => {
     }
   });
 
-  it("empieza reiniciando y eligiendo la página de códigos; termina avanzando y cortando", () => {
+  it("empieza reiniciando y eligiendo la página de códigos y la fuente A; termina avanzando y cortando", () => {
     const bytes = [...comandosComprobante([{ texto: "Hola", estilo: "normal" }])];
-    expect(hex(bytes.slice(0, 5))).toBe("1b 40 1b 74 02");
+    expect(hex(bytes.slice(0, 8))).toBe("1b 40 1b 74 02 1b 4d 00");
     expect(hex(bytes.slice(-6))).toBe(hex([...COMANDO.avanzarLineas(4), ...COMANDO.cortarParcial]));
   });
 });

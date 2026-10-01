@@ -1,8 +1,9 @@
 import type { LineaComprobante } from "@apurimeno/domain";
+import type { ImagenMonocromo } from "./imagen.js";
 
 // Comandos ESC/POS del comprobante para la REDPOS RED-E803 (80 mm, ESC/POS; Planos ADR-05). Funciones puras:
-// reciben las líneas que compone el dominio y devuelven los bytes exactos a enviar. El envío (USB o
-// Bluetooth), la cola y los reintentos van en otra capa, que se prueba con la impresora real.
+// reciben las líneas que compone el dominio (y el logotipo) y devuelven los bytes exactos a enviar. El envío
+// (USB o Bluetooth), la cola y los reintentos van en transporte.ts y cola.ts.
 
 /**
  * Página de códigos para tildes y "ñ" (Planos §13: no asumir UTF-8). PC850 es la opción por defecto: cubre
@@ -23,15 +24,42 @@ export const COMANDO = {
   inicializar: [ESC, 0x40],
   /** ESC t n: selecciona la página de códigos. */
   paginaCodigos: (n: number) => [ESC, 0x74, n],
+  /**
+   * ESC M 0: fuente A (12 × 24 puntos, 48 columnas en 80 mm). ESC @ vuelve a la fuente "de fábrica", que en
+   * impresoras de este tipo se puede cambiar desde su utilidad de configuración: se elige de forma explícita.
+   */
+  fuenteA: [ESC, 0x4d, 0],
+  /** ESC a n: alineación de lo que sigue (0 izquierda, 1 centro). Las líneas de texto ya vienen centradas con espacios. */
+  alinear: (n: 0 | 1) => [ESC, 0x61, n],
   /** ESC E n: negrita encendida o apagada. */
   negrita: (encendida: boolean) => [ESC, 0x45, encendida ? 1 : 0],
   /** GS ! n: tamaño de carácter. 0x01 = doble alto con ancho normal; 0x00 = normal. */
   tamano: (dobleAlto: boolean) => [GS, 0x21, dobleAlto ? 0x01 : 0x00],
   /** ESC d n: avanza n líneas. Antes del corte, para que el texto pase la cuchilla. */
   avanzarLineas: (n: number) => [ESC, 0x64, n],
+  /** ESC J n: avanza n puntos (1/203 de pulgada cada uno, unos 0,125 mm). */
+  avanzarPuntos: (n: number) => [ESC, 0x4a, n],
   /** GS V 1: corte parcial (deja una pestaña, el papel no cae). */
   cortarParcial: [GS, 0x56, 0x01],
+  /**
+   * GS v 0 m xL xH yL yH d…: transmite e imprime una imagen de un bit (modo normal, m = 0). x son los bytes por
+   * fila y y las filas; los datos van fila por fila, el bit más alto a la izquierda, 1 = punto negro. La imagen
+   * viaja con cada comprobante: ESC @ borra las imágenes descargadas con GS *, y guardarla en la memoria no
+   * volátil (FS q, GS ( L) gasta ciclos de escritura de la impresora.
+   */
+  imagenRaster: (imagen: ImagenMonocromo) => [
+    GS, 0x76, 0x30, 0,
+    imagen.bytesPorFila & 0xff, imagen.bytesPorFila >> 8,
+    imagen.alto & 0xff, imagen.alto >> 8,
+    ...imagen.datos,
+  ],
 } as const;
+
+/** Puntos por línea a 203 ppp (8 puntos por mm): 72 mm útiles en papel de 80 mm, 48 mm en papel de 58 mm. */
+export const PUNTOS_POR_LINEA: Readonly<Record<58 | 80, number>> = { 58: 384, 80: 576 };
+
+/** Separación entre el logotipo y el nombre del negocio, en puntos (1 mm). */
+export const ESPACIO_BAJO_LOGO = 8;
 
 /** Letras del español y signos habituales, fuera de ASCII, en cada página de códigos. */
 // prettier-ignore
@@ -96,23 +124,45 @@ export function codificarTexto(texto: string, pagina: PaginaCodigos): number[] {
   return bytes;
 }
 
+/** Lo inverso de `codificarTexto`, para la vista previa: un byte fuera de ASCII y de la tabla se muestra como "?". */
+export function decodificarTexto(bytes: Iterable<number>, pagina: PaginaCodigos): string {
+  const inversa = new Map([...TABLAS[pagina]].map(([caracter, byte]) => [byte, caracter]));
+  let texto = "";
+  for (const b of bytes) texto += b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : (inversa.get(b) ?? "?");
+  return texto;
+}
+
 export interface OpcionesEscPos {
   paginaCodigos: PaginaCodigos;
   /** Líneas en blanco antes del corte, para que el final del comprobante pase la cuchilla. */
   lineasAntesDelCorte: number;
+  /**
+   * Logotipo centrado arriba del nombre del negocio (recursos/, ver README). null: sin logotipo. Tiene que caber
+   * en el ancho del papel (`PUNTOS_POR_LINEA`); la cola lo omite si no cabe.
+   */
+  logo?: ImagenMonocromo | null;
 }
 
-export const OPCIONES_ESCPOS_POR_DEFECTO: OpcionesEscPos = { paginaCodigos: "PC850", lineasAntesDelCorte: 4 };
+export const OPCIONES_ESCPOS_POR_DEFECTO: OpcionesEscPos = { paginaCodigos: "PC850", lineasAntesDelCorte: 4, logo: null };
 
 /**
- * Bytes completos de un comprobante: inicializa, elige la página de códigos, imprime cada línea con su estilo
- * (y vuelve al normal después), avanza y corta. Cada línea ya viene al ancho del papel desde el dominio.
+ * Bytes completos de un comprobante: inicializa, elige la página de códigos y la fuente A, imprime el logotipo
+ * centrado (si hay), cada línea con su estilo (y vuelve al normal después), avanza y corta. Cada línea ya viene
+ * al ancho del papel desde el dominio; la primera es el nombre del negocio, que queda justo debajo del logotipo.
  */
 export function comandosComprobante(
   lineas: readonly LineaComprobante[],
   opciones: OpcionesEscPos = OPCIONES_ESCPOS_POR_DEFECTO,
 ): Uint8Array {
-  const bytes: number[] = [...COMANDO.inicializar, ...COMANDO.paginaCodigos(NUMERO_PAGINA_CODIGOS[opciones.paginaCodigos])];
+  const bytes: number[] = [
+    ...COMANDO.inicializar,
+    ...COMANDO.paginaCodigos(NUMERO_PAGINA_CODIGOS[opciones.paginaCodigos]),
+    ...COMANDO.fuenteA,
+  ];
+  const logo = opciones.logo ?? null;
+  if (logo !== null) {
+    for (const b of comandosLogo(logo)) bytes.push(b);
+  }
   for (const { texto, estilo } of lineas) {
     if (estilo !== "normal") bytes.push(...COMANDO.negrita(true));
     if (estilo === "grande") bytes.push(...COMANDO.tamano(true));
@@ -123,4 +173,9 @@ export function comandosComprobante(
   }
   bytes.push(...COMANDO.avanzarLineas(opciones.lineasAntesDelCorte), ...COMANDO.cortarParcial);
   return Uint8Array.from(bytes);
+}
+
+/** Logotipo centrado y la separación hasta el texto; la alineación vuelve a la izquierda para las líneas. */
+export function comandosLogo(logo: ImagenMonocromo): number[] {
+  return [...COMANDO.alinear(1), ...COMANDO.imagenRaster(logo), ...COMANDO.alinear(0), ...COMANDO.avanzarPuntos(ESPACIO_BAJO_LOGO)];
 }

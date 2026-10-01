@@ -9,14 +9,16 @@ import { SIN_ESPEJO, crearControlEspejo, type ControlEspejo, type OpcionesEspejo
 import type { ConfiguracionRespaldos } from "./respaldo/configuracion.js";
 import { SIN_RESPALDOS, crearControlRespaldos, type ControlRespaldos } from "./respaldo/control.js";
 import { manejarError } from "./errores.js";
-import { despacharPendientes } from "./impresion/cola.js";
+import { crearColaImpresion, type ColaImpresion, type ProblemasImpresion } from "./impresion/cola.js";
 import { OPCIONES_ESCPOS_POR_DEFECTO, type PaginaCodigos } from "./impresion/escpos.js";
+import type { ImagenMonocromo } from "./impresion/imagen.js";
 import type { TransporteImpresora } from "./impresion/transporte.js";
 import { registrarRutas } from "./rutas.js";
 import { registrarRutasClientes } from "./rutas-clientes.js";
 import { registrarRutasConfiguracion } from "./rutas-configuracion.js";
 import { registrarRutasEspejo } from "./rutas-espejo.js";
 import { registrarRutasHabitaciones } from "./rutas-habitaciones.js";
+import { registrarRutasImpresora } from "./rutas-impresora.js";
 import { registrarRutasRespaldos } from "./rutas-respaldos.js";
 import { registrarRutasUsuarios } from "./rutas-usuarios.js";
 
@@ -24,6 +26,8 @@ declare module "fastify" {
   interface FastifyInstance {
     /** Promesa del último envío a la impresora: las pruebas la esperan antes de revisar el resultado. */
     colaImpresion: () => Promise<void>;
+    /** Cola de impresión con su reintento automático; `index.ts` lo inicia, las pruebas llaman `reintentar`. */
+    impresion: ColaImpresion;
     /** Sincronización con el espejo en la nube; `index.ts` la inicia, las pruebas la llaman a mano. */
     espejo: ControlEspejo;
     /** Respaldos de la base; `index.ts` los inicia, las pruebas los llaman a mano. */
@@ -47,6 +51,12 @@ export interface OpcionesApp {
   impresora?: TransporteImpresora | null;
   /** Página de códigos de la impresora; por defecto PC850. */
   paginaCodigos?: PaginaCodigos;
+  /** Logotipo del comprobante (recursos/); sin él, el comprobante empieza con el nombre del negocio. */
+  logo?: ImagenMonocromo | null;
+  /** Esperas entre intentos de conexión con la impresora; las pruebas las acortan. */
+  esperasReintentoImpresionMs?: readonly number[];
+  /** Errores de IMPRESORA_DISPOSITIVO e IMPRESORA_LOGO al arrancar (impresion/configuracion.ts), para el Dashboard y el POS. */
+  problemasImpresion?: ProblemasImpresion;
   /** Espejo en la nube (ADR-06). Sin él, el servidor funciona igual, sin sincronizar. */
   espejo?: OpcionesEspejo;
   /** Respaldos de la base (Planos §14.3). Sin ellos, el servidor no copia nada (pruebas). */
@@ -73,17 +83,25 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   registrarAutenticacion(app, opciones.prisma, ahora);
   // Secreto de los códigos de autorización, derivado del de JWT para no exigir otra variable de entorno.
   const secretoCodigos = createHmac("sha256", opciones.jwtSecret).update("codigos-autorizacion").digest();
-  // Un envío a la vez: dos cobros casi simultáneos no deben mezclar sus bytes en la misma impresora.
-  const opcionesEscPos = { ...OPCIONES_ESCPOS_POR_DEFECTO, paginaCodigos: opciones.paginaCodigos ?? OPCIONES_ESCPOS_POR_DEFECTO.paginaCodigos };
-  let cola: Promise<void> = Promise.resolve();
-  const imprimir = (ticketId: string) => {
-    cola = cola
-      .then(() =>
-        despacharPendientes(opciones.prisma, opciones.impresora ?? null, ticketId, app.log, opcionesEscPos, opciones.capacitacion === true),
-      )
-      .catch((err: unknown) => app.log.error({ err, ticketId }, "Error en la cola de impresión"));
-  };
-  app.decorate("colaImpresion", () => cola);
+  const impresion = crearColaImpresion({
+    prisma: opciones.prisma,
+    transporte: opciones.impresora ?? null,
+    registro: app.log,
+    ahora,
+    opcionesEscPos: {
+      ...OPCIONES_ESCPOS_POR_DEFECTO,
+      paginaCodigos: opciones.paginaCodigos ?? OPCIONES_ESCPOS_POR_DEFECTO.paginaCodigos,
+      logo: opciones.logo ?? null,
+    },
+    esCapacitacion: opciones.capacitacion === true,
+    ...(opciones.problemasImpresion === undefined ? {} : { problemas: opciones.problemasImpresion }),
+    ...(opciones.esperasReintentoImpresionMs === undefined ? {} : { esperasReintentoMs: opciones.esperasReintentoImpresionMs }),
+  });
+  const imprimir = (ticketId: string) => impresion.imprimir(ticketId);
+  app.decorate("impresion", impresion);
+  app.decorate("colaImpresion", () => impresion.terminada());
+  app.addHook("onClose", async () => impresion.detener());
+  registrarRutasImpresora(app, impresion);
   registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir, opciones.capacitacion === true);
   registrarRutasHabitaciones(app, opciones.prisma, ahora);
   registrarRutasClientes(app, opciones.prisma, ahora);

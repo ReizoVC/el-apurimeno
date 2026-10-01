@@ -1,0 +1,219 @@
+1b 40  # ESC @
+1b 74 02  # ESC t 2
+1b 4d 00  # ESC M 0 (fuente A)
+1b 61 01  # ESC a 1 (centrar)
+1d 76 30 00 1c 00 c3 00  # GS v 0: 28 bytes por fila, 195 filas
+00 00 00 00 00 00 00 00 00 00 00 00 00 7c 00 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 0
+00 00 00 00 00 00 00 00 00 00 00 00 01 fe 00 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 1
+00 00 00 00 00 00 00 00 00 00 00 00 07 ff 80 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 2
+00 00 00 00 00 00 00 00 00 00 00 00 0f ff c0 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 3
+00 00 00 00 00 00 00 00 00 00 00 00 0f ff c0 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 4
+00 00 00 00 00 00 00 00 00 00 00 00 1f ff f0 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 5
+00 00 00 00 00 00 00 00 00 00 00 00 3f ff f0 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 6
+00 00 00 00 00 00 00 00 00 00 00 00 3f ff f8 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 7
+00 00 00 00 00 00 00 00 00 00 00 00 7f ff fc 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 8
+00 00 00 00 00 00 00 00 00 00 00 00 ff ff fc 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 9
+00 00 00 00 00 00 00 00 00 00 00 01 ff ff fc 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 10
+00 00 00 00 00 00 00 00 00 00 00 01 ff ff fe 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 11
+00 00 00 00 00 00 00 00 00 00 00 03 ff ff fe 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 12
+00 00 00 00 00 00 00 00 00 00 00 03 ff ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00  # fila 13
+00 00 00 00 00 00 00 00 00 00 00 07 ff ff ff 80 00 00 00 00 00 00 00 00 00 00 00 00  # fila 14
+00 00 00 00 00 00 00 00 00 00 00 0f ff ff ff 80 00 00 00 00 00 00 00 00 00 00 00 00  # fila 15
+00 00 00 00 00 00 00 00 00 00 00 0f ff ff ff c0 00 00 00 00 00 00 00 00 00 00 00 00  # fila 16
+00 00 00 00 00 00 00 00 00 00 00 1f ff ff ff e0 00 00 00 00 00 00 00 00 00 00 00 00  # fila 17
+00 00 00 00 00 00 00 00 00 00 00 1f ff ff ff e0 00 00 00 00 00 00 00 00 00 00 00 00  # fila 18
+00 00 00 00 00 00 00 00 00 00 00 3f ff ff ff f0 00 00 00 00 00 00 00 00 00 00 00 00  # fila 19
+00 00 00 00 00 00 00 00 00 00 00 7f ff ff ff f0 00 00 00 00 00 00 00 00 00 00 00 00  # fila 20
+00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff f8 00 00 00 00 00 00 00 00 00 00 00 00  # fila 21
+00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff f8 00 00 00 00 00 00 00 00 00 00 00 00  # fila 22
+00 00 00 00 00 00 00 00 00 00 01 ff ff ff ff fc 00 00 00 00 00 00 00 00 00 00 00 00  # fila 23
+00 00 00 00 00 00 00 00 00 00 01 ff ff ff ff fe 00 00 00 00 00 00 00 00 00 00 00 00  # fila 24
+00 00 00 00 00 00 00 00 00 00 03 ff ff ff ff fe 00 00 00 00 00 00 00 00 00 00 00 00  # fila 25
+00 00 00 00 00 00 00 00 00 00 03 ff ff ff ff ff 00 00 00 00 00 00 00 00 00 00 00 00  # fila 26
+00 00 00 00 00 00 00 00 00 00 07 ff ff ff ff ff 00 00 00 00 00 00 00 00 00 00 00 00  # fila 27
+00 00 00 00 00 00 00 00 00 00 0f ff ff ff ff ff 80 00 00 00 00 00 00 00 00 00 00 00  # fila 28
+00 00 00 00 00 00 00 00 00 00 0f ff ff ff ff ff c0 00 00 00 00 00 00 00 00 00 00 00  # fila 29
+00 00 00 00 00 00 00 00 00 00 1f ff ff ff ff ff c0 00 00 00 00 00 00 00 00 00 00 00  # fila 30
+00 00 00 00 00 00 00 00 00 00 3f ff ff ff ff ff c0 00 00 00 00 00 00 00 00 00 00 00  # fila 31
+00 00 00 00 00 00 00 00 00 00 3f ff ff ff ff ff e0 00 00 00 00 00 00 00 00 00 00 00  # fila 32
+00 00 00 00 00 00 00 00 00 00 7f ff ff ff ff ff f0 00 00 00 00 00 00 00 00 00 00 00  # fila 33
+00 00 00 00 00 00 00 00 00 00 ff ff ff ff ff ff f8 00 00 00 00 00 00 00 00 00 00 00  # fila 34
+00 00 00 00 00 00 00 00 00 00 ff ff ff ff ff ff f8 00 00 00 00 00 00 00 00 00 00 00  # fila 35
+00 00 00 00 00 00 00 00 00 01 ff ff ff ff ff ff fc 00 00 00 00 00 00 00 00 00 00 00  # fila 36
+00 00 00 00 00 00 00 00 00 03 ff ff ff ff ff ff fc 00 00 00 00 00 00 00 00 00 00 00  # fila 37
+00 00 00 00 00 00 00 00 00 03 ff ff ff ff ff ff fc 00 00 00 00 00 00 00 00 00 00 00  # fila 38
+00 00 00 00 00 00 00 00 00 03 ff ff ff ff ff ff fe 00 00 00 00 00 00 00 00 00 00 00  # fila 39
+00 00 00 00 00 00 00 00 00 07 ff ff ff ff ff ff ff 00 00 00 00 00 00 00 00 00 00 00  # fila 40
+00 00 00 00 00 00 00 00 00 0f ff ff ff ff ff ff ff 00 00 00 00 00 00 00 00 00 00 00  # fila 41
+00 00 00 00 00 00 00 00 00 1f ff ff ff ff ff ff ff 80 00 00 00 00 00 00 00 00 00 00  # fila 42
+00 00 00 00 00 00 00 00 00 3f ff ff ff ff ff ff ff c0 00 00 00 00 00 00 00 00 00 00  # fila 43
+00 00 00 00 00 00 00 00 00 3f ff ff ff cf ff ff ff c0 00 00 00 00 00 00 00 00 00 00  # fila 44
+00 00 00 00 00 00 00 00 00 3f ff ff ff cf ff ff ff e0 00 00 00 00 00 00 00 00 00 00  # fila 45
+00 00 00 00 00 00 00 00 00 7f ff ff ff 87 ff ff ff e0 00 00 00 00 00 00 00 00 00 00  # fila 46
+00 00 00 00 00 00 00 00 00 ff ff ff ff 03 ff ff ff f0 00 00 00 00 00 00 00 00 00 00  # fila 47
+00 00 00 00 00 00 00 00 00 ff ff ff fe 03 ff ff ff f0 00 00 00 00 00 00 00 00 00 00  # fila 48
+00 00 00 00 00 00 00 00 01 ff ff ff fe 01 ff ff ff f8 00 00 00 c0 00 00 00 00 00 00  # fila 49
+00 00 00 00 00 00 00 00 03 ff ff ff fc 01 ff ff ff f8 00 00 07 f8 00 00 00 00 00 00  # fila 50
+00 00 00 00 00 00 00 00 03 ff ff ff f8 00 ff ff ff fc 00 00 0f f8 00 00 00 00 00 00  # fila 51
+00 00 00 00 00 00 00 00 07 ff ff ff f8 00 7f ff ff fe 00 00 1f fc 00 00 00 00 00 00  # fila 52
+00 00 00 00 00 00 00 00 0f ff ff ff f0 00 7f ff ff fe 00 00 3f fc 00 00 00 00 00 00  # fila 53
+00 00 00 00 00 00 00 00 0f ff ff ff e0 00 3f ff ff ff 00 00 7f fe 00 00 00 00 00 00  # fila 54
+00 00 00 00 00 00 00 00 1f ff ff ff c0 00 3f ff ff ff 00 00 ff fe 00 00 00 00 00 00  # fila 55
+00 00 00 00 00 00 00 00 3f ff ff ff 80 00 1f ff ff ff 80 01 ff ff 00 00 00 00 00 00  # fila 56
+00 00 00 00 00 00 00 00 3f ff ff ff 00 00 0f ff ff ff c0 03 ff ff 00 00 00 00 00 00  # fila 57
+00 00 00 00 00 00 00 00 7f ff ff ff 00 00 07 ff ff ff c0 07 ff ff 80 00 00 00 00 00  # fila 58
+00 00 00 00 00 00 00 00 7f ff ff fe 00 00 07 ff ff ff c0 0f ff ff 80 00 00 00 00 00  # fila 59
+00 00 00 00 00 00 00 00 ff ff ff fc 00 00 03 ff ff ff e0 3f ff ff 80 00 00 00 00 00  # fila 60
+00 00 00 00 00 00 00 00 ff ff ff fc 00 00 03 ff ff ff f0 7f ff ff c0 00 00 00 00 00  # fila 61
+00 00 00 00 00 00 00 01 ff ff ff f8 00 00 01 ff ff ff f8 ff ff ff c0 00 00 00 00 00  # fila 62
+00 00 00 00 00 00 00 03 ff ff ff f0 00 00 01 ff ff ff f9 ff ff ff c0 00 00 00 00 00  # fila 63
+00 00 00 00 00 00 00 07 ff ff ff e0 00 00 00 ff ff ff ff ff ff ff e0 00 00 00 00 00  # fila 64
+00 00 00 00 00 00 00 07 ff ff ff e0 00 00 00 ff ff ff ff ff ff ff e0 00 00 00 00 00  # fila 65
+00 00 00 00 00 00 00 0f ff ff ff c0 00 00 00 7f ff ff ff ff ff ff e0 00 00 00 00 00  # fila 66
+00 00 00 00 00 00 00 0f ff ff ff 80 00 00 00 3f ff ff ff ff ff ff f0 00 00 00 00 00  # fila 67
+00 00 00 00 00 00 00 1f ff ff ff 80 00 00 00 1f ff ff ff ff ff ff f0 00 00 00 00 00  # fila 68
+00 00 00 00 00 00 00 3f ff ff ff 00 00 00 00 1f ff ff ff ff ff ff f8 00 00 00 00 00  # fila 69
+00 00 00 00 00 00 00 3f ff ff fe 00 00 00 00 0f ff ff ff ff ff ff f8 00 00 00 00 00  # fila 70
+00 00 00 00 00 00 00 7f ff ff fc 00 00 00 00 0f ff ff ff ff ff ff fc 00 00 00 00 00  # fila 71
+00 00 00 00 00 00 00 7f ff ff f8 00 00 00 00 07 ff ff ff ff ff ff fc 00 00 00 00 00  # fila 72
+00 00 00 00 00 00 00 ff ff ff f0 00 00 00 00 03 ff ff ff ff ff ff fc 00 00 00 00 00  # fila 73
+00 00 00 00 00 00 01 ff ff ff f0 00 00 00 00 03 ff ff ff ff ff ff fc 00 00 00 00 00  # fila 74
+00 00 00 00 00 00 03 ff ff ff e0 00 00 00 00 03 ff ff ff ff ff ff fe 00 00 00 00 00  # fila 75
+00 00 00 00 00 00 03 ff ff ff c0 00 00 00 00 01 ff ff ff ff ff ff fe 00 00 00 00 00  # fila 76
+00 00 00 00 00 00 07 ff ff ff c0 00 00 00 00 00 ff ff ff ff ff ff ff 00 00 00 00 00  # fila 77
+00 00 00 00 00 00 07 ff ff ff 80 00 00 00 00 00 7f ff ff ff ff ff ff 00 00 00 00 00  # fila 78
+00 00 00 00 00 00 0f ff ff ff 00 00 00 00 00 00 3f ff ff ff ff ff ff 80 00 00 00 00  # fila 79
+00 00 00 00 00 00 0f ff ff fe 00 00 00 00 00 00 3f ff ff ff ff ff ff 80 00 00 00 00  # fila 80
+00 00 00 00 00 00 1f ff ff fe 00 00 00 00 00 00 3f ff ff ff ff ff ff 80 00 00 00 00  # fila 81
+00 00 00 00 00 00 3f ff ff fc 00 00 00 00 00 00 1f ff ff ff ff ff ff c0 00 00 00 00  # fila 82
+00 00 00 00 00 00 3f ff ff f8 00 00 00 00 00 00 0f ff ff ff ff ff ff c0 00 00 00 00  # fila 83
+00 00 00 00 00 00 7f ff ff f8 00 00 00 00 00 00 0f ff ff ff ff ff ff c0 00 00 00 00  # fila 84
+00 00 00 00 00 00 ff ff ff f0 00 00 00 00 00 00 07 ff ff ff ff ff ff e0 00 00 00 00  # fila 85
+00 00 00 00 00 01 ff ff ff e0 00 00 00 00 00 00 07 ff ff ff ff ff ff e0 00 00 00 00  # fila 86
+00 00 00 00 00 01 ff ff ff c0 00 00 00 00 00 00 03 ff ff ff ff ff ff e0 00 00 00 00  # fila 87
+00 00 00 00 00 03 ff ff ff 80 00 00 00 00 00 00 01 ff ff ff ff ff ff f0 00 00 00 00  # fila 88
+00 00 00 00 00 03 ff ff ff 00 00 00 00 00 00 00 01 ff ff ff ff ff ff f0 00 00 00 00  # fila 89
+00 00 00 00 00 07 ff ff ff 00 00 00 00 00 00 00 00 ff ff ff ff ff ff f8 00 00 00 00  # fila 90
+00 00 00 00 00 07 ff ff fe 00 00 00 00 00 00 00 00 7f ff ff ff ff ff f8 00 00 00 00  # fila 91
+00 00 00 00 00 0f ff ff fc 00 00 00 00 00 00 00 00 3f ff ff ff ff ff fc 00 00 00 00  # fila 92
+00 00 00 00 00 1f ff ff fc 00 00 00 00 00 00 00 00 1f ff ff ff ff ff fc 00 00 00 00  # fila 93
+00 00 00 00 00 1f ff ff f8 00 00 00 00 00 00 00 00 07 ff ff ff ff ff fc 00 00 00 00  # fila 94
+00 00 00 00 00 3f ff ff f0 00 00 00 00 00 00 00 00 03 ff ff ff ff ff fc 00 00 00 00  # fila 95
+00 00 00 00 00 7f ff ff f0 00 00 00 00 00 00 00 00 01 ff ff ff ff ff fe 00 00 00 00  # fila 96
+00 00 00 00 00 7f ff ff e0 00 00 00 00 00 00 00 00 00 7f ff ff ff ff fe 00 00 00 00  # fila 97
+00 00 00 00 00 ff ff ff c0 00 00 00 00 00 00 00 00 00 3f ff ff ff ff ff 00 00 00 00  # fila 98
+00 00 00 00 01 ff ff ff c0 00 00 00 00 00 00 00 00 00 0f ff ff ff ff ff 00 00 00 00  # fila 99
+00 00 00 00 01 ff ff ff 80 00 00 00 00 00 00 00 00 00 07 ff ff ff ff ff 00 00 00 00  # fila 100
+00 00 00 00 03 ff ff ff 00 00 00 00 00 00 00 00 00 00 01 ff ff ff ff ff 80 00 00 00  # fila 101
+00 00 00 00 03 ff ff fe 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff ff 80 00 00 00  # fila 102
+00 00 00 00 07 ff ff fc 00 00 00 00 00 00 00 00 00 00 00 3f ff ff ff ff c0 00 00 00  # fila 103
+00 00 00 00 0f ff ff f8 00 00 00 00 00 00 00 00 00 00 00 1f ff ff ff ff c0 00 00 00  # fila 104
+00 00 00 00 0f ff ff f8 00 00 00 00 00 00 00 00 00 00 00 0f ff ff ff ff c0 00 00 00  # fila 105
+00 00 00 00 00 ff ff f0 00 00 00 00 00 00 00 00 00 00 00 07 ff ff ff ff c0 00 00 00  # fila 106
+00 00 00 00 00 1f ff e0 00 00 00 00 00 00 00 00 00 00 00 01 ff ff ff ff e0 00 00 00  # fila 107
+00 00 00 00 00 01 ff c0 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff e0 00 00 00  # fila 108
+00 00 00 00 00 00 0f c0 00 00 00 00 00 00 00 00 00 00 00 00 3f ff ff ff f0 00 00 00  # fila 109
+00 00 00 00 00 00 00 80 00 00 00 00 00 00 00 00 00 00 00 00 1f ff ff ff f0 00 00 00  # fila 110
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 07 ff ff ff f8 00 00 00  # fila 111
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 07 ff ff ff f8 00 00 00  # fila 112
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 ff ff ff fc 00 00 00  # fila 113
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 ff ff ff fc 00 00 00  # fila 114
+00 00 00 00 00 00 00 00 00 00 00 00 07 ff 80 00 00 00 00 00 03 ff ff ff fc 00 00 00  # fila 115
+00 00 00 00 00 00 00 00 00 00 00 00 3f ff e0 00 00 00 00 00 01 ff ff ff fc 00 00 00  # fila 116
+00 00 00 00 00 00 00 00 00 00 00 00 ff ff fe 00 00 00 00 00 00 ff ff ff fe 00 00 00  # fila 117
+00 00 00 00 00 00 00 00 00 00 00 01 ff ff ff 00 00 00 00 00 00 ff ff ff fe 00 00 00  # fila 118
+00 00 00 00 00 00 00 00 00 00 00 07 ff ff ff c0 00 00 00 00 00 7f ff ff ff 00 00 00  # fila 119
+00 00 00 00 00 00 00 00 20 00 00 0f ff ff ff e0 00 00 30 00 00 3f ff ff ff 00 00 00  # fila 120
+00 00 00 00 00 00 00 00 60 00 00 1f ff ff ff f0 00 00 3c 00 00 3f ff ff ff 00 00 00  # fila 121
+00 00 00 00 00 00 00 00 e0 00 00 3f ff ff ff f8 00 00 3f 00 00 3f ff ff ff 80 00 00  # fila 122
+00 00 00 00 00 00 00 01 e0 00 00 7f ff ff ff fc 00 00 3f 80 00 1f ff ff ff 80 00 00  # fila 123
+00 00 00 00 00 00 00 03 e0 00 00 ff ff ff ff fc 00 00 3f c0 00 1f ff ff ff c0 00 00  # fila 124
+00 00 00 00 00 00 00 07 e0 00 01 ff ff ff ff fe 00 00 3f f0 00 0f ff ff ff c0 00 00  # fila 125
+00 00 00 00 00 00 00 0f e0 00 01 ff ff ff ff ff 00 00 3f f8 00 07 ff ff ff c0 00 00  # fila 126
+00 00 00 00 00 00 00 3f e0 00 03 ff ff ff ff ff 00 00 3f fc 00 07 ff ff ff c0 00 00  # fila 127
+00 00 00 00 00 00 00 7f e0 00 07 ff ff ff ff ff 80 00 3f ff 00 03 ff ff ff e0 00 00  # fila 128
+00 00 00 00 00 00 00 ff e0 00 07 ff ff ff ff ff 80 00 3f ff 80 03 ff ff ff e0 00 00  # fila 129
+00 00 00 00 00 00 01 ff e0 00 0f ff fe 01 ff ff c0 00 3f ff e0 03 ff ff ff f0 00 00  # fila 130
+00 00 00 00 00 00 03 ff e0 00 0f ff fc 00 7f ff c0 00 3f ff f0 01 ff ff ff f0 00 00  # fila 131
+00 00 00 00 00 00 07 ff e0 00 0f ff f8 00 3f ff e0 00 3f ff fc 00 ff ff ff f8 00 00  # fila 132
+00 00 00 00 00 00 0f ff e0 00 1f ff f0 00 1f ff e0 00 3f ff ff 00 ff ff ff f8 00 00  # fila 133
+00 00 00 00 00 00 1f ff e0 00 1f ff e0 00 0f ff e0 00 3f ff ff 80 7f ff ff f8 00 00  # fila 134
+00 00 00 00 00 00 3f ff e0 00 3f ff c0 00 07 ff f0 00 3f ff ff c0 3f ff ff fc 00 00  # fila 135
+00 00 00 00 00 00 7f ff e0 00 3f ff 80 00 07 ff f0 00 3f ff ff e0 3f ff ff fc 00 00  # fila 136
+00 00 00 00 00 00 ff ff e0 00 3f ff 80 00 03 ff f0 00 3f ff ff f8 3f ff ff fc 00 00  # fila 137
+00 00 00 00 00 01 ff ff e0 00 3f ff 00 00 03 ff f8 00 3f ff ff fc 1f ff ff fe 00 00  # fila 138
+00 00 00 00 00 03 ff ff e0 00 3f ff 00 00 03 ff f8 00 3f ff ff fe 1f ff ff fe 00 00  # fila 139
+00 00 00 00 00 07 ff ff e0 00 3f ff 00 00 01 ff f8 00 3f ff ff ff 8f ff ff fe 00 00  # fila 140
+00 00 00 00 00 0f ff ff e0 00 7f fe 00 00 01 ff f8 00 3f ff ff ff ef ff ff ff 00 00  # fila 141
+00 00 00 00 00 1f ff ff e0 00 7f fe 00 00 01 ff f8 00 3f ff ff ff f7 ff ff ff 80 00  # fila 142
+00 00 00 00 00 3f ff ff e0 00 7f fe 00 00 01 ff fc 00 3f ff ff ff ff ff ff ff 80 00  # fila 143
+00 00 00 00 00 7f ff ff e0 00 7f fe 00 00 01 ff fc 00 3f ff ff ff ff ff ff ff 80 00  # fila 144
+00 00 00 00 00 ff ff ff e0 00 7f fe 00 00 01 ff fc 00 3f ff ff ff ff ff ff ff c0 00  # fila 145
+00 00 00 00 01 ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff c0 00  # fila 146
+00 00 00 00 03 ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff c0 00  # fila 147
+00 00 00 00 07 ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff e0 00  # fila 148
+00 00 00 00 0f ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff e0 00  # fila 149
+00 00 00 00 1f ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff e0 00  # fila 150
+00 00 00 00 3f ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff f0 00  # fila 151
+00 00 00 00 ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff f0 00  # fila 152
+00 00 00 01 ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff f8 00  # fila 153
+00 00 00 03 ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff f8 00  # fila 154
+00 00 00 07 ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff fc 00  # fila 155
+00 00 00 0f ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff fc 00  # fila 156
+00 00 00 1f ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff fc 00  # fila 157
+00 00 00 3f ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff fc 00  # fila 158
+00 00 00 7f ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff fe 00  # fila 159
+00 00 00 ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff fe 00  # fila 160
+00 00 01 ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff 00  # fila 161
+00 00 03 ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff 00  # fila 162
+00 00 07 ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff 00  # fila 163
+00 00 1f ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff 80  # fila 164
+00 00 3f ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff 80  # fila 165
+00 00 7f ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff c0  # fila 166
+00 00 ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff c0  # fila 167
+00 01 ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff c0  # fila 168
+00 03 ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff c0  # fila 169
+00 07 ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff e0  # fila 170
+00 0f ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff e0  # fila 171
+00 1f ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff f0  # fila 172
+00 3f ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff f0  # fila 173
+00 7f ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff f8  # fila 174
+00 ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff f8  # fila 175
+03 ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fc  # fila 176
+07 ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fc  # fila 177
+07 ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fc  # fila 178
+0f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fc  # fila 179
+1f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fe  # fila 180
+1f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fe  # fila 181
+3f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fe  # fila 182
+3f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fe  # fila 183
+7f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff ff  # fila 184
+7f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff ff  # fila 185
+7f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff ff  # fila 186
+ff ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff ff  # fila 187
+ff ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff ff  # fila 188
+ff ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff ff  # fila 189
+ff ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fe  # fila 190
+ff ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fe  # fila 191
+7f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff fc  # fila 192
+3f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff f8  # fila 193
+0f ff ff ff ff ff ff ff e0 00 7f fc 00 00 00 ff fc 00 3f ff ff ff ff ff ff ff ff e0  # fila 194
+1b 61 00  # ESC a 0
+1b 4a 08  # ESC J 8 (1 mm)
+1b 45 01 20 20 20 20 20 20 20 20 20 20 20 20 20 48 6f 73 70 65 64 61 6a 65 20 45 6c 20 41 70 75 72 69 6d 65 a4 6f 1b 45 00 0a  # Hospedaje El Apurimeño
+20 20 20 20 20 20 20 20 20 20 4a 72 2e 20 a5 61 75 70 61 20 31 32 33 20 2d 20 41 6e 64 61 68 75 61 79 6c 61 73 0a  # Jr. Ñaupa 123 — Andahuaylas
+2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 0a  # ------------------------------------------------
+54 69 63 6b 65 74 20 31 30 34 35 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 32 33 2f 30 39 2f 32 30 32 36 2c 20 31 34 3a 34 32 0a  # Ticket 1045                    23/09/2026, 14:42
+2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 0a  # ------------------------------------------------
+48 61 62 69 74 61 63 69 a2 6e 20 32 30 35 20 2d 20 38 20 68 6f 72 61 73 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 53 2f 20 34 30 2e 30 30 0a  # Habitación 205 — 8 horas                S/ 40.00
+48 6f 72 61 73 20 61 64 69 63 69 6f 6e 61 6c 65 73 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 53 2f 20 31 36 2e 30 30 0a  # Horas adicionales                       S/ 16.00
+20 20 32 20 78 20 53 2f 20 38 2e 30 30 0a  # 2 x S/ 8.00
+2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 0a  # ------------------------------------------------
+1b 45 01 54 4f 54 41 4c 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 53 2f 20 35 36 2e 30 30 1b 45 00 0a  # TOTAL                                   S/ 56.00
+45 66 65 63 74 69 76 6f 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 53 2f 20 35 36 2e 30 30 0a  # Efectivo                                S/ 56.00
+20 20 52 65 63 69 62 69 64 6f 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 53 2f 20 36 30 2e 30 30 0a  # Recibido                              S/ 60.00
+20 20 56 75 65 6c 74 6f 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 53 2f 20 34 2e 30 30 0a  # Vuelto                                 S/ 4.00
+2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 0a  # ------------------------------------------------
+20 20 20 20 44 6f 63 75 6d 65 6e 74 6f 20 69 6e 74 65 72 6e 6f 20 73 69 6e 20 76 61 6c 6f 72 20 74 72 69 62 75 74 61 72 69 6f 2e 0a  # Documento interno sin valor tributario.
+1b 64 04  # ESC d 4
+1d 56 01  # GS V 1

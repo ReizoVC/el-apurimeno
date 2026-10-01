@@ -19,7 +19,10 @@ falta, qué decisiones esperan a la propietaria) está en `docs/ESTADO_ACTUAL.md
   (`PERMISO_POR_OPERACION` en domain).
 - Nombres, textos de pantalla y comentarios en castellano. Mensajes de commit en inglés con prefijo
   `feat(ámbito):` / `fix(ámbito):` / `docs(ámbito):`; los PR se integran de a uno, en el orden en que se abrieron.
-- No se toca la impresión parte 2 (transporte USB/Bluetooth/Windows) sin la impresora física conectada.
+- La impresión parte 2 (transporte USB/Bluetooth/Windows) se puede cambiar probándola con simulación y salida a
+  archivo, pero nunca se da por confirmada sin la impresora física: lo que falta probar con la RED-E803 queda
+  escrito en `apps/server/README.md` ("Impresión") y en la descripción del PR. Las pruebas nunca abren un puerto
+  real (COM, USB o impresora de Windows) que exista en el equipo.
 
 ## Puertos
 

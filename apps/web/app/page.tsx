@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@apurimeno/ui/components/card";
+import { AvisoImpresora } from "../src/componentes/AvisoImpresora";
 import { Aviso, Encabezado } from "../src/componentes/comunes";
 import { useSesion } from "../src/componentes/Shell";
 import { useCarga } from "../src/lib/carga";
@@ -104,6 +105,7 @@ export default function VistaGeneral() {
             : `Hoy ${hoy ?? ""} · actualizado ${hora(tablero.datos.ahora)} (se refresca cada 30 s)`
         }
       />
+      <AvisoImpresora />
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>

@@ -4,6 +4,7 @@ import {
   ClienteSchema,
   ConfiguracionRespuestaSchema,
   EstadoEspejoSchema,
+  EstadoImpresoraSchema,
   EstadoRespaldosSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
   HabitacionSchema,
@@ -322,6 +323,8 @@ export const servidor = {
   tickets: (c: { numero?: number; desde?: string; hasta?: string }) =>
     llamar("GET", `${RUTAS.tickets}${query(c)}`, TicketSchema.array()),
   estadoEspejo: () => llamar("GET", RUTAS.estadoEspejo, EstadoEspejoSchema),
+  estadoImpresora: () =>
+    llamar("GET", RUTAS.estadoImpresora, EstadoImpresoraSchema),
   /** Espera a que termine la vuelta: devuelve el resultado, o el error en `estado.ultimoError`. */
   sincronizarEspejo: (completo: boolean) =>
     llamar(

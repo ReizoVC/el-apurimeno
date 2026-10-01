@@ -38,6 +38,7 @@ export interface Arranque {
   corsOrigins: string | undefined;
   impresoraDispositivo: string | undefined;
   impresoraPaginaCodigos: string | undefined;
+  impresoraLogo: string | undefined;
   espejo: ConfiguracionEspejo;
   respaldos: ConfiguracionRespaldos;
 }
@@ -63,6 +64,7 @@ export function leerArranque(env: NodeJS.ProcessEnv, instancia: Instancia): Arra
     corsOrigins: env["CORS_ORIGINS"],
     impresoraDispositivo: env["IMPRESORA_DISPOSITIVO"],
     impresoraPaginaCodigos: env["IMPRESORA_PAGINA_CODIGOS"],
+    impresoraLogo: env["IMPRESORA_LOGO"],
   };
 
   if (instancia === "PRODUCCION") {

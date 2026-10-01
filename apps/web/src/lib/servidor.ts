@@ -9,6 +9,7 @@ import {
   GenerarCodigoAutorizacionRespuestaSchema,
   HabitacionSchema,
   LoginRespuestaSchema,
+  LogoComprobanteSchema,
   MetodoPagoRespuestaSchema,
   PrecioEspecialRespuestaSchema,
   ProductoSchema,
@@ -325,6 +326,9 @@ export const servidor = {
   estadoEspejo: () => llamar("GET", RUTAS.estadoEspejo, EstadoEspejoSchema),
   estadoImpresora: () =>
     llamar("GET", RUTAS.estadoImpresora, EstadoImpresoraSchema),
+  /** El logotipo que imprime el servidor, para la vista previa de la Configuración; null si imprime sin él. */
+  logoComprobante: () =>
+    llamar("GET", RUTAS.logoComprobante, LogoComprobanteSchema),
   /** Espera a que termine la vuelta: devuelve el resultado, o el error en `estado.ultimoError`. */
   sincronizarEspejo: (completo: boolean) =>
     llamar(

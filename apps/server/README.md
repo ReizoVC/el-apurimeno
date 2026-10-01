@@ -432,6 +432,9 @@ tamaño doble y una regla de 48 columnas), que `GS V 1` corte, y cuántas línea
   comprobante, nada para USB o Bluetooth.
 - En papel de 58 mm (384 puntos) el logotipo también cabe; uno más ancho que el papel se omite y el comprobante sale
   igual, con un aviso en el registro.
+- `GET /impresora/logo` devuelve el logotipo cargado (PNG de un punto por píxel, en base64), o null si el servidor
+  imprime sin él. La vista previa de la Configuración del Dashboard lo dibuja con el texto, para que coincida con el
+  papel (decisión 27 de contracts). Lo pide quien edita la Configuración (`CONFIGURAR_PARAMETROS`).
 - El caso `ingreso-80mm-pc850-logo.hex` lo genera `generar_esperados.py` decodificando el PNG por su cuenta (con
   `zlib` de Python), y coincide byte a byte con `escpos.ts`.
 
@@ -525,8 +528,8 @@ RED-E803):
 Los archivos que el servidor usa al ejecutarse sin ser código (hoy, el logotipo del comprobante) van en
 `apps/server/recursos/`, junto a `src/`, y se leen con una ruta relativa al módulo (`new URL("../../recursos/…",
 import.meta.url)`), no al directorio de trabajo: así funcionan igual con `pnpm start`, con el servicio de Windows y
-en las pruebas. No había una convención anterior en el repositorio (`packages/formato` es solo código); los íconos
-de `apps/native/src-tauri/icons` son de Tauri y siguen su propia estructura.
+en las pruebas. Los originales de la marca que comparten varias apps (el ícono maestro) van en `recursos/`, en la
+raíz del monorepo; los íconos de las apps se generan desde ahí (ver `recursos/README.md`).
 
 ### Respuestas de error
 

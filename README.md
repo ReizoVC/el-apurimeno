@@ -23,6 +23,7 @@ fuera.
 | `packages/formato` | Formatos de dinero y de fechas de Lima para las pantallas | — |
 | `packages/ui` | Componentes de interfaz compartidos (shadcn/ui + Tailwind) | — |
 | `supabase` | SQL del espejo en la nube (tablas, row-level security) y cómo instalarlo | Supabase |
+| `recursos` | Originales de la marca (el ícono maestro) y el script que genera los íconos de las apps (`pnpm iconos`) | — |
 
 Cada app tiene su README con la conexión, las pantallas y las decisiones de diseño.
 

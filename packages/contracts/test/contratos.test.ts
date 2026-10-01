@@ -3,6 +3,7 @@ import {
   CausaFallaImpresoraSchema,
   CodigoAutorizacionSchema,
   EstadoImpresoraSchema,
+  LogoComprobanteSchema,
   MENSAJE_FALLA_IMPRESORA,
   AlquilerSchema,
   ClienteEntradaSchema,
@@ -517,5 +518,15 @@ describe("Falla de la impresora (RF-56, decisión 26)", () => {
     expect(EstadoImpresoraSchema.safeParse({ configurada: true, causa: null, comprobantesEnEspera: 0, ultimoIntento: null }).success).toBe(false);
     expect(EstadoImpresoraSchema.safeParse({ ...base, causa: "SIN_PAPEL" }).success).toBe(false);
     expect(EstadoImpresoraSchema.safeParse({ ...base, comprobantesEnEspera: -1 }).success).toBe(false);
+  });
+
+  it("el logotipo de la vista previa es un PNG con sus medidas en puntos, o null si no se imprime (decisión 27)", () => {
+    const logo = { ancho: 224, alto: 195, pngBase64: "iVBORw0KGgo=" };
+    expect(LogoComprobanteSchema.safeParse({ logo }).success).toBe(true);
+    expect(LogoComprobanteSchema.safeParse({ logo: null }).success).toBe(true);
+    // "Sin logotipo" es null, no un campo ausente.
+    expect(LogoComprobanteSchema.safeParse({}).success).toBe(false);
+    expect(LogoComprobanteSchema.safeParse({ logo: { ...logo, ancho: 0 } }).success).toBe(false);
+    expect(LogoComprobanteSchema.safeParse({ logo: { ...logo, pngBase64: "" } }).success).toBe(false);
   });
 });

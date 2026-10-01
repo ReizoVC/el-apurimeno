@@ -275,7 +275,7 @@ export function describirDestino(destino: DestinoImpresora): string {
 export function transporteDesdeDestino(destino: DestinoImpresora, plataforma: NodeJS.Platform = process.platform): TransporteImpresora {
   if (destino.tipo === "archivo") return transporteArchivo(destino.ruta);
   const descripcion = describirDestino(destino);
-  if (plataforma !== "win32") throw new Error(`IMPRESORA_DISPOSITIVO: la ${descripcion} solo se puede usar en Windows.`);
+  if (plataforma !== "win32") throw new Error(`IMPRESORA_DISPOSITIVO: ${descripcion} solo se puede usar en Windows.`);
   const argumentos =
     destino.tipo === "puerto"
       ? ["-Tipo", "puerto", "-Valor", destino.puerto]

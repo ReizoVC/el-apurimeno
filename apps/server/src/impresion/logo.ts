@@ -17,9 +17,23 @@ export function cargarLogo(valor: string | undefined): ImagenMonocromo | null {
   const v = (valor ?? "").trim();
   if (v.toLowerCase() === "no") return null;
   const ruta = v === "" ? LOGO_POR_DEFECTO : v;
-  const logo = leerPngMonocromo(readFileSync(ruta));
+  let archivo: Buffer;
+  try {
+    archivo = readFileSync(ruta);
+  } catch (error) {
+    const codigo = (error as NodeJS.ErrnoException).code;
+    throw new Error(
+      codigo === "ENOENT" ? `No existe el archivo del logotipo: ${ruta}.` : `No se pudo leer el archivo del logotipo ${ruta} (${codigo ?? "error"}).`,
+    );
+  }
+  let logo: ImagenMonocromo;
+  try {
+    logo = leerPngMonocromo(archivo);
+  } catch (error) {
+    throw new Error(`El logotipo ${ruta} no se puede usar: ${error instanceof Error ? error.message : String(error)}`);
+  }
   if (logo.ancho > PUNTOS_POR_LINEA[80]) {
-    throw new Error(`IMPRESORA_LOGO: ${ruta} mide ${logo.ancho} puntos de ancho; en papel de 80 mm caben ${PUNTOS_POR_LINEA[80]}.`);
+    throw new Error(`El logotipo ${ruta} mide ${logo.ancho} puntos de ancho; en papel de 80 mm caben ${PUNTOS_POR_LINEA[80]}.`);
   }
   return logo;
 }

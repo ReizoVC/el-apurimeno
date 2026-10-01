@@ -292,7 +292,16 @@ describe("Estados de la impresora: el cajero ve la causa, el cobro sigue firme (
     await levantar(null);
     await ingreso("clave-estado-10");
     await app.colaImpresion();
-    expect(await estadoImpresora()).toMatchObject({ configurada: false, causa: null });
+    expect(await estadoImpresora()).toMatchObject({ configurada: false, causa: null, problemaConfiguracion: null, problemaLogo: null });
+  });
+
+  it("un error de configuración al arrancar queda en el estado, para el Dashboard y el POS", async () => {
+    await levantar(null, { problemasImpresion: { configuracion: "IMPRESORA_DISPOSITIVO no es válido", logo: "No existe el archivo del logotipo" } });
+    expect(await estadoImpresora()).toMatchObject({
+      configurada: false,
+      problemaConfiguracion: "IMPRESORA_DISPOSITIVO no es válido",
+      problemaLogo: "No existe el archivo del logotipo",
+    });
   });
 
   it("el estado lo consulta quien usa el POS; reintentar, quien reimprime; limpieza, ninguno", async () => {

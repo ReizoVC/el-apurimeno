@@ -19,8 +19,9 @@ interface Props {
 /**
  * Aviso de la impresora (RF-56, decisión 26 de contracts): si el último comprobante no salió, dice por qué y qué
  * hacer, en palabras del cajero, nunca con códigos ni luces. Los comprobantes pendientes se imprimen solos al
- * resolverlo; "Reintentar ahora" no espera a la próxima vuelta. Sin impresora configurada no muestra nada: eso es
- * de la instalación, no del cajero.
+ * resolverlo; "Reintentar ahora" no espera a la próxima vuelta. Si la impresora quedó sin configurar por un error
+ * en el servidor, avisa que no sale nada (sin el detalle técnico, que está en el Dashboard). Sin impresora
+ * configurada a propósito, no muestra nada: eso es de la instalación, no del cajero.
  */
 export function AvisoImpresora({ revision }: Props) {
   const [estado, setEstado] = useState<EstadoImpresora | null>(null);
@@ -59,8 +60,25 @@ export function AvisoImpresora({ revision }: Props) {
     }
   };
 
-  if (estado === null || !estado.configurada || estado.causa === null)
-    return null;
+  if (estado === null) return null;
+  // Un error en la configuración del servidor no lo arregla el cajero, pero tiene que saber que no sale nada.
+  if (estado.problemaConfiguracion !== null)
+    return (
+      <div
+        role="alert"
+        className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+      >
+        <p className="font-semibold">
+          La impresora no está bien configurada: no se imprimen los
+          comprobantes.
+        </p>
+        <p>
+          Los cobros se registran igual. Avise a la administración para que la
+          revise.
+        </p>
+      </div>
+    );
+  if (!estado.configurada || estado.causa === null) return null;
   const pendientes = estado.comprobantesEnEspera;
   return (
     <div

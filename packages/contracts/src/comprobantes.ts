@@ -62,6 +62,13 @@ export const EstadoImpresoraSchema = z
     comprobantesEnEspera: z.number().int().nonnegative(),
     /** Último intento de impresión, bueno o malo; null si no hubo ninguno desde que arrancó el servidor. */
     ultimoIntento: FechaISOSchema.nullable(),
+    /**
+     * Error en `IMPRESORA_DISPOSITIVO` al arrancar: el servidor arrancó igual, sin impresora (`configurada` es
+     * false) y los comprobantes quedan en cola. null si no hubo error (también si la variable está vacía).
+     */
+    problemaConfiguracion: z.string().nullable(),
+    /** Error en `IMPRESORA_LOGO` al arrancar: los comprobantes salen sin logotipo. null si no hubo error. */
+    problemaLogo: z.string().nullable(),
   })
   .strict();
 export type EstadoImpresora = z.infer<typeof EstadoImpresoraSchema>;

@@ -9,7 +9,7 @@ import { SIN_ESPEJO, crearControlEspejo, type ControlEspejo, type OpcionesEspejo
 import type { ConfiguracionRespaldos } from "./respaldo/configuracion.js";
 import { SIN_RESPALDOS, crearControlRespaldos, type ControlRespaldos } from "./respaldo/control.js";
 import { manejarError } from "./errores.js";
-import { crearColaImpresion, type ColaImpresion } from "./impresion/cola.js";
+import { crearColaImpresion, type ColaImpresion, type ProblemasImpresion } from "./impresion/cola.js";
 import { OPCIONES_ESCPOS_POR_DEFECTO, type PaginaCodigos } from "./impresion/escpos.js";
 import type { ImagenMonocromo } from "./impresion/imagen.js";
 import type { TransporteImpresora } from "./impresion/transporte.js";
@@ -55,6 +55,8 @@ export interface OpcionesApp {
   logo?: ImagenMonocromo | null;
   /** Esperas entre intentos de conexión con la impresora; las pruebas las acortan. */
   esperasReintentoImpresionMs?: readonly number[];
+  /** Errores de IMPRESORA_DISPOSITIVO e IMPRESORA_LOGO al arrancar (impresion/configuracion.ts), para el Dashboard y el POS. */
+  problemasImpresion?: ProblemasImpresion;
   /** Espejo en la nube (ADR-06). Sin él, el servidor funciona igual, sin sincronizar. */
   espejo?: OpcionesEspejo;
   /** Respaldos de la base (Planos §14.3). Sin ellos, el servidor no copia nada (pruebas). */
@@ -92,6 +94,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
       logo: opciones.logo ?? null,
     },
     esCapacitacion: opciones.capacitacion === true,
+    ...(opciones.problemasImpresion === undefined ? {} : { problemas: opciones.problemasImpresion }),
     ...(opciones.esperasReintentoImpresionMs === undefined ? {} : { esperasReintentoMs: opciones.esperasReintentoImpresionMs }),
   });
   const imprimir = (ticketId: string) => impresion.imprimir(ticketId);

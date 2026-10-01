@@ -72,6 +72,8 @@ Cada cobro imprime su comprobante desde el servidor (ADR-05): el POS no habla co
 comprobante no salió, arriba de todas las pestañas aparece qué pasa y qué hacer ("La impresora no tiene papel.
 Coloque un rollo nuevo…"), cuántos comprobantes esperan y que el cobro ya quedó registrado, con un botón
 "Reintentar ahora". El estado se pide cada 10 s y 2,5 s después de cada cobro; el servidor reintenta solo cada
-30 s, así que el botón solo evita esperar. Sin impresora configurada no se muestra nada: es de la instalación, no
-del cajero. Probado en el navegador contra el servidor real con un puerto COM que no existe (aviso "sin conexión",
+30 s, así que el botón solo evita esperar. Si la impresora quedó sin configurar por un error en el servidor
+(`problemaConfiguracion`), avisa que no se imprimen comprobantes y que avise a la administración, sin el detalle
+técnico (que está en el Dashboard). Sin impresora configurada a propósito no se muestra nada: es de la
+instalación, no del cajero. Probado en el navegador contra el servidor real con un puerto COM que no existe (aviso "sin conexión",
 "Reintentar ahora") y, al reiniciarlo con salida a archivo, el comprobante pendiente salió solo.

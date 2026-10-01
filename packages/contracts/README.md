@@ -326,6 +326,10 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     - `comprobantesEnEspera` cuenta los `PENDIENTE` y `ERROR` de los últimos 15 minutos: los que el servidor todavía
       reintenta solo. Los más viejos quedan en `ERROR` y se reimprimen como copia si hace falta (CU-22). Los detalles
       (intentos, esperas) están en `apps/server/README.md`, "Impresión".
+    - `problemaConfiguracion` y `problemaLogo`: un error en `IMPRESORA_DISPOSITIVO` o en `IMPRESORA_LOGO` no detiene
+      el servidor (sin servidor no hay cobros), pero tampoco puede quedar solo en el registro: el Dashboard lo
+      muestra en la Vista general, y el POS avisa al cajero si la impresora quedó sin configurar. Son textos para la
+      persona que instala, no causas para el cajero: no llevan código.
 
 ## Decisiones pendientes que afectan el contrato
 

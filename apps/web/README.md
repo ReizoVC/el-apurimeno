@@ -34,7 +34,7 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 
 | Sección | Permiso | Qué hace |
 |---|---|---|
-| Vista general | `dashboard.access` | Ocupación de ahora, turnos abiertos e ingresos de hoy. Se refresca cada 30 s. |
+| Vista general | `dashboard.access` | Ocupación de ahora, turnos abiertos e ingresos de hoy. Se refresca cada 30 s. Arriba, el aviso de la impresora (para quien tiene `pos.access` o `settings.manage`), solo si algo falla: `IMPRESORA_DISPOSITIVO` o `IMPRESORA_LOGO` con error al arrancar (con el motivo y qué corregir), sin impresora configurada, o la causa del último comprobante que no salió. |
 | Reportes | `reports.view` | Ventas, arqueos y ocupación de un periodo. |
 | Habitaciones | `rooms.manage` | Alta, edición, bloqueo con motivo (`rooms.maintenance`) y reactivación. |
 | Clientes y precios | `client_pricing.manage` | Búsqueda, alta y edición de clientes; precios especiales por habitación. |

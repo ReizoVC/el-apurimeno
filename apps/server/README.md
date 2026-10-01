@@ -419,8 +419,11 @@ tamaño doble y una regla de 48 columnas), que `GS V 1` corte, y cuántas línea
 - El archivo es `recursos/logo_apurimeno_bw_224x195.png`: blanco y negro puro, 224 × 195 puntos (28 × 24 mm a 203
   ppp). `impresion/imagen.ts` lo lee sin dependencias (`node:zlib`) y lo reduce a un bit por punto; lo que no soporta
   (PNG entrelazado, 16 bits por muestra) lo rechaza en vez de imprimir otra cosa. Se carga al arrancar: si falta o
-  no se puede leer, el servidor arranca igual, sin logotipo, y lo deja como error en el registro. Lo mismo con un
-  `IMPRESORA_DISPOSITIVO` inválido: los comprobantes quedan en cola. Sin servidor no hay cobros.
+  no se puede leer, el servidor arranca igual, sin logotipo. Lo mismo con un `IMPRESORA_DISPOSITIVO` inválido:
+  arranca sin impresora y los comprobantes quedan en cola. Sin servidor no hay cobros. El error no queda solo en
+  el registro: `impresion/configuracion.ts` lo guarda y `GET /impresora/estado` lo devuelve (`problemaConfiguracion`,
+  `problemaLogo`), el Dashboard lo muestra en la Vista general con el motivo, y el POS le avisa al cajero que no
+  se imprimen comprobantes si la impresora quedó sin configurar.
 - Bytes: `ESC a 1` (centrar), `GS v 0` (imagen de un bit: 28 bytes por fila, 195 filas, 5460 bytes), `ESC a 0`,
   `ESC J 8` (1 mm de separación) y el nombre del negocio de la configuración, en negrita y fuente A. El nombre es
   texto de la impresora, no parte de la imagen.
@@ -460,7 +463,7 @@ a archivo**; falta la prueba con la RED-E803 conectada (lista al final).
 | `usb` o `usb:VID_0483&PID_5743` | USB directa, sin controlador de impresora: el controlador de clase de Windows (`usbprint`). `usb` toma la única conectada; con varias, se indica cuál. | Sí (`DLE EOT`), si la impresora contesta por USB |
 | `windows:<nombre>` | Impresora instalada en Windows (controlador del fabricante o "Generic / Text Only"), en modo RAW: los bytes llegan sin pasar por el controlador. Tiene que estar instalada para todo el equipo: el servicio corre como `LocalSystem`. | Solo lo que informe el controlador; muchos no informan nada |
 | otra cosa | Se escriben los bytes en esa ruta (`/dev/usb/lp0` en Linux, o un archivo para inspeccionar). | No |
-| `USB001` | Rechazado (error en el registro, comprobantes en cola): es un puerto de la cola de Windows, no una ruta; escribir ahí crearía un archivo. | — |
+| `USB001` | Rechazado (aviso en el Dashboard y el POS, comprobantes en cola): es un puerto de la cola de Windows, no una ruta; escribir ahí crearía un archivo. | — |
 
 - `pnpm buscar-impresora` lista los puertos COM, las impresoras USB conectadas y las instaladas en Windows, con el
   valor para cada una. Solo lee (registro de Windows y WMI): no abre ningún puerto.

@@ -29,6 +29,12 @@ export interface Registro {
  */
 export const REINTENTO_AUTOMATICO = { cadaMs: 30_000, ventanaMs: 15 * 60_000 } as const;
 
+/** Errores de configuración al arrancar: el servidor arrancó igual, y el estado los muestra (decisión 26). */
+export interface ProblemasImpresion {
+  configuracion: string | null;
+  logo: string | null;
+}
+
 export interface OpcionesCola {
   prisma: PrismaClient;
   /** null: sin impresora configurada; los comprobantes quedan PENDIENTE. */
@@ -40,6 +46,7 @@ export interface OpcionesCola {
   esCapacitacion?: boolean;
   /** Esperas entre intentos de conexión (transporte.ts); las pruebas las acortan. */
   esperasReintentoMs?: readonly number[];
+  problemas?: ProblemasImpresion;
 }
 
 export interface ColaImpresion {
@@ -171,6 +178,8 @@ export function crearColaImpresion(o: OpcionesCola): ColaImpresion {
         causa: ultimo?.causa ?? null,
         comprobantesEnEspera: await o.prisma.trabajoImpresion.count({ where: filtroEnEspera() }),
         ultimoIntento: ultimo?.en.toISOString() ?? null,
+        problemaConfiguracion: o.problemas?.configuracion ?? null,
+        problemaLogo: o.problemas?.logo ?? null,
       };
     },
 

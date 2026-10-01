@@ -85,6 +85,13 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
 6. **Piloto en paralelo con el cuaderno** (E4 de los Planos): 1 a 2 semanas usando ambos, con capacitación al
    personal, comparando cada cierre de turno con el cuaderno antes de dejarlo.
 
+### Pendientes técnicos
+
+- **`node_modules` del checkout de producción** (registrado el 30/09/2026): El checkout de producción tiene
+  `node_modules` desalineado con `pnpm-lock.yaml` desde el PR #25 (`autoprefixer` en `apps/native`, que no corre como
+  servicio en este checkout). Pendiente: correr `pnpm install` con los servicios detenidos en la próxima actualización
+  completa que ya la requiera por otro motivo, o antes de compilar el instalador del POS desde este checkout.
+
 ## Decisiones que necesitan tu respuesta
 
 | Tema | Cómo está hoy | Qué hace falta decidir |

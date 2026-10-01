@@ -11,6 +11,7 @@
     "test": "turbo test",
     "shadcn": "pnpm --filter @apurimeno/ui shadcn",
     "tauri": "pnpm --filter native tauri",
+    "iconos": "node recursos/generar-iconos.mjs",
     "preparar-capacitacion": "pnpm --filter server preparar-capacitacion",
     "reiniciar-capacitacion": "pnpm --filter server reiniciar-capacitacion"
   },

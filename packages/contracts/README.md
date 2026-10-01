@@ -118,7 +118,7 @@ const ticket = resultado.data;
 | `tienda.ts` | `Producto`, `CategoriaProducto`, `MovimientoInventario` | RN-20 a RN-26, RES-02 |
 | `usuarios.ts` | `Usuario`, `Rango` | RN-40, RN-41 |
 | `auditoria.ts` | `RegistroAuditoria`, `AccionAuditoria`, `CodigoAutorizacion` | RN-42, RN-46, §23 |
-| `comprobantes.ts` | `TrabajoImpresion`, `CausaFallaImpresora` y sus mensajes, `EstadoImpresora` | RN-38, RN-39, §20.5, RF-56, RNF-OBS-01 |
+| `comprobantes.ts` | `TrabajoImpresion`, `CausaFallaImpresora` y sus mensajes, `EstadoImpresora`, `LogoComprobante` | RN-38, RN-39, §20.5, RF-56, RNF-OBS-01 |
 | `configuracion.ts` | `ConfiguracionGlobal` | RN-43, §26 |
 | `espejo.ts` | `ResumenDia`, `ResumenTurno` y sus filas de Postgres, `EstadoEspejo` (estado de la sincronización) | ADR-06, RN-45, RF-60, RF-61 |
 | `respaldo.ts` | Frecuencias y retención de los respaldos, `EstadoRespaldos`, `RespaldarEntrada` | Planos §14.3, RNF-BKP-01, RNF-REC-02 |
@@ -330,6 +330,13 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
       el servidor (sin servidor no hay cobros), pero tampoco puede quedar solo en el registro: el Dashboard lo
       muestra en la Vista general, y el POS avisa al cajero si la impresora quedó sin configurar. Son textos para la
       persona que instala, no causas para el cajero: no llevan código.
+27. **La vista previa del comprobante muestra el logotipo del servidor** (`LogoComprobante`, `GET /impresora/logo`).
+    El logotipo no lo compone el dominio: lo agrega el servidor al armar los bytes ESC/POS, y depende de
+    `IMPRESORA_LOGO` en cada servidor (el del negocio, otro PNG o ninguno). Para que la vista previa de la
+    Configuración sea fiel al papel, el Dashboard le pide al servidor el logotipo que tiene cargado, en vez de llevar
+    una copia propia que podría no coincidir. Cambio **aditivo**: un tipo y una ruta nuevos, con el permiso de la
+    Configuración (`CONFIGURAR_PARAMETROS`). El Dashboard lo dibuja centrado y a la escala del texto (un carácter de
+    la fuente A = 12 puntos), y lo omite en un papel más angosto que el logotipo, igual que el servidor.
 
 ## Decisiones pendientes que afectan el contrato
 

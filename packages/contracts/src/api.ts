@@ -92,9 +92,11 @@ export const RUTAS = {
   // Respaldos de la base (Planos §14.3): estado y "copiar ahora" desde el Dashboard.
   estadoRespaldos: "/respaldos",
   respaldar: "/respaldos/copia",
-  // Impresora de comprobantes (RF-56): estado para el aviso del POS y "reintentar ahora".
+  // Impresora de comprobantes (RF-56): estado para el aviso del POS y "reintentar ahora"; el logotipo, para la
+  // vista previa de la Configuración.
   estadoImpresora: "/impresora/estado",
   reintentarImpresion: "/impresora/reintento",
+  logoComprobante: "/impresora/logo",
   salud: "/health",
 } as const;
 

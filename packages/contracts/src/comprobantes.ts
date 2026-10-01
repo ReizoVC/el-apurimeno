@@ -72,3 +72,24 @@ export const EstadoImpresoraSchema = z
   })
   .strict();
 export type EstadoImpresora = z.infer<typeof EstadoImpresoraSchema>;
+
+/**
+ * Logotipo que el servidor imprime arriba de cada comprobante (`IMPRESORA_LOGO`), para que la vista previa de la
+ * Configuración muestre lo mismo que sale en papel (decisión 27). `logo` es null si el servidor imprime sin
+ * logotipo: `IMPRESORA_LOGO="no"`, o un archivo que no se pudo cargar (el motivo está en `EstadoImpresora`).
+ */
+export const LogoComprobanteSchema = z
+  .object({
+    logo: z
+      .object({
+        /** En puntos de la impresora (203 ppp). Un carácter de la fuente A mide 12 puntos de ancho. */
+        ancho: z.number().int().positive(),
+        alto: z.number().int().positive(),
+        /** PNG en blanco y negro, un punto por píxel, en base64. */
+        pngBase64: z.string().min(1),
+      })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+export type LogoComprobante = z.infer<typeof LogoComprobanteSchema>;

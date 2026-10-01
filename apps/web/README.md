@@ -65,7 +65,11 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 - **Formularios validados con el contrato:** la configuración se valida en el navegador con
   `ConfiguracionEntradaSchema`, así que un término fiscal en el comprobante se marca antes de enviar.
 - **Leyenda del comprobante:** editable y obligatoria (decisión 21), con un enlace para restaurar la
-  original. La vista previa muestra el comprobante exacto en 58 u 80 mm.
+  original. La vista previa muestra el comprobante exacto en 58 u 80 mm, con el logotipo arriba: el que tiene
+  cargado el servidor (`GET /impresora/logo`, decisión 27), centrado y a la escala del texto (12 puntos por
+  carácter). Si el servidor imprime sin logotipo, o el logotipo no cabe en el papel, la vista previa lo dice.
+- **Íconos:** `app/favicon.ico`, `icon1.png`, `icon2.png` y `apple-icon.png` se generan con `pnpm iconos` desde el
+  ícono maestro (ver `recursos/README.md`); no se editan a mano.
 - **RN-43 visible:** junto a los parámetros de tiempo se aclara que solo rigen para los ingresos nuevos.
 - **`afectaCaja`** se elige al crear el método de pago; al editar queda bloqueado con la razón a la vista
   (decisión 20).

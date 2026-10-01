@@ -101,7 +101,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   app.decorate("impresion", impresion);
   app.decorate("colaImpresion", () => impresion.terminada());
   app.addHook("onClose", async () => impresion.detener());
-  registrarRutasImpresora(app, impresion);
+  registrarRutasImpresora(app, impresion, opciones.logo ?? null);
   registrarRutas(app, opciones.prisma, ahora, secretoCodigos, imprimir, opciones.capacitacion === true);
   registrarRutasHabitaciones(app, opciones.prisma, ahora);
   registrarRutasClientes(app, opciones.prisma, ahora);

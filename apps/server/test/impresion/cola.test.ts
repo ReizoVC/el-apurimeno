@@ -1,13 +1,14 @@
 import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CABECERA_IDEMPOTENCIA, EstadoImpresoraSchema, RUTAS, RegistrarIngresoRespuestaSchema, TicketSchema } from "@apurimeno/contracts";
+import { CABECERA_IDEMPOTENCIA, EstadoImpresoraSchema, LogoComprobanteSchema, RUTAS, RegistrarIngresoRespuestaSchema, TicketSchema } from "@apurimeno/contracts";
 import { componerLineasComprobante } from "@apurimeno/domain";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { construirApp, type OpcionesApp } from "../../src/app.js";
 import { comandosComprobante } from "../../src/impresion/escpos.js";
 import { RESPUESTAS_TIPICAS } from "../../src/impresion/estado.js";
+import { leerPngMonocromo } from "../../src/impresion/imagen.js";
 import { cargarLogo } from "../../src/impresion/logo.js";
 import {
   conexionSimulada,
@@ -330,6 +331,27 @@ describe("Logotipo en el comprobante impreso", () => {
     const nombre = bytes.subarray(19 + 5466, bytes.indexOf(0x0a, 19 + 5466) + 1);
     expect(nombre.toString("latin1")).toBe(`\x1bE\x01${" ".repeat(18)}El Apurime\xa4o\x1bE\x00\n`);
     expect(await trabajos(ticket.id)).toMatchObject([{ estado: "IMPRESO" }]);
+  });
+
+  it("la vista previa de la Configuración recibe el mismo logotipo que se imprime (decisión 27)", async () => {
+    const logo = cargarLogo(undefined);
+    await levantar(null, { logo });
+    const admin = await app.inject({ method: "POST", url: RUTAS.login, payload: { nombreUsuario: "admin", contrasena: CONTRASENA } });
+    const r = await app.inject({ method: "GET", url: RUTAS.logoComprobante, headers: { authorization: `Bearer ${admin.json<{ token: string }>().token}` } });
+    expect(r.statusCode).toBe(200);
+    const { logo: recibido } = LogoComprobanteSchema.parse(r.json());
+    expect(recibido).toMatchObject({ ancho: 224, alto: 195 });
+    // El PNG, leído de vuelta, da exactamente los puntos que van en GS v 0.
+    expect(Buffer.from(leerPngMonocromo(Buffer.from(recibido?.pngBase64 ?? "", "base64")).datos).equals(Buffer.from(logo?.datos ?? []))).toBe(true);
+    // El cajero no edita la Configuración: no la necesita.
+    expect((await llamar("GET", RUTAS.logoComprobante)).statusCode).toBe(403);
+  });
+
+  it("sin logotipo (IMPRESORA_LOGO=\"no\" o un archivo que falló), la vista previa recibe null", async () => {
+    await levantar(null, { logo: null });
+    const admin = await app.inject({ method: "POST", url: RUTAS.login, payload: { nombreUsuario: "admin", contrasena: CONTRASENA } });
+    const r = await app.inject({ method: "GET", url: RUTAS.logoComprobante, headers: { authorization: `Bearer ${admin.json<{ token: string }>().token}` } });
+    expect(LogoComprobanteSchema.parse(r.json())).toEqual({ logo: null });
   });
 
   it("en papel de 58 mm, un logotipo más ancho que el papel se omite y el comprobante sale igual", async () => {

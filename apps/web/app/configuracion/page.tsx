@@ -8,7 +8,7 @@ import {
   type MetodoPago,
   type Ticket,
 } from "@apurimeno/contracts";
-import { componerLineasComprobante } from "@apurimeno/domain";
+import { columnasPorAncho, componerLineasComprobante } from "@apurimeno/domain";
 import { Button } from "@apurimeno/ui/components/button";
 import {
   Card,
@@ -84,6 +84,13 @@ function desdeBorrador(b: Borrador) {
     ),
   });
 }
+
+/**
+ * Escala del logotipo en la vista previa: la impresora usa la fuente A, de 12 puntos de ancho por carácter, y deja
+ * 8 puntos (1 mm) entre el logotipo y el nombre del negocio (apps/server/src/impresion/escpos.ts).
+ */
+const PUNTOS_POR_CARACTER = 12;
+const ESPACIO_BAJO_LOGO_PUNTOS = 8;
 
 /** Ticket de ejemplo para la vista previa; nunca se envía al servidor. */
 const TICKET_EJEMPLO = (metodoId: string): Ticket => ({
@@ -436,7 +443,10 @@ function VistaPrevia({
   borrador: Borrador;
   metodos: MetodoPago[];
 }) {
+  // El logotipo lo pone el servidor al imprimir (IMPRESORA_LOGO), no el dominio: se le pide el que tiene cargado.
+  const cargaLogo = useCarga(() => servidor.logoComprobante(), []);
   const efectivo = metodos.find((m) => m.afectaCaja) ?? metodos[0];
+  const anchoPapelMm = borrador.anchoPapelMm === "58" ? 58 : 80;
   const lineas = componerLineasComprobante(
     TICKET_EJEMPLO(efectivo?.id ?? "efectivo"),
     {
@@ -448,21 +458,54 @@ function VistaPrevia({
             : borrador.datosAdicionales.trim(),
         leyenda: borrador.leyenda.trim() || "—",
       },
-      anchoPapelMm: borrador.anchoPapelMm === "58" ? 58 : 80,
+      anchoPapelMm,
       metodosPago: metodos,
       esCopia: false,
     },
   );
+  // El servidor omite un logotipo más ancho que el papel; la vista previa, igual.
+  const columnas = columnasPorAncho(anchoPapelMm);
+  const logo = cargaLogo.datos?.logo ?? null;
+  const logoVisible =
+    logo !== null && logo.ancho <= columnas * PUNTOS_POR_CARACTER ? logo : null;
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Vista previa</CardTitle>
         <CardDescription>
           Un ingreso de ejemplo en papel de {borrador.anchoPapelMm} mm.
+          {cargaLogo.error !== null
+            ? ` No se pudo obtener el logotipo del servidor: ${cargaLogo.error}`
+            : cargaLogo.datos === null
+              ? ""
+              : logo === null
+                ? " El servidor imprime sin logotipo: así está configurado, o no pudo cargarlo (ver la Vista general)."
+                : logoVisible === null
+                  ? ` El logotipo no cabe en papel de ${borrador.anchoPapelMm} mm: se imprime sin él.`
+                  : ""}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <pre className="rounded-md border bg-white p-3 font-mono text-xs leading-snug text-black">
+          {logoVisible && (
+            // Centrado en el ancho del papel (las columnas), no en el del panel; a la escala del texto.
+            <div
+              className="flex justify-center"
+              style={{
+                width: `${columnas}ch`,
+                marginBottom: `${ESPACIO_BAJO_LOGO_PUNTOS / PUNTOS_POR_CARACTER}ch`,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- PNG en base64 del servidor, sin optimizar */}
+              <img
+                src={`data:image/png;base64,${logoVisible.pngBase64}`}
+                alt="Logotipo del comprobante"
+                style={{
+                  width: `${logoVisible.ancho / PUNTOS_POR_CARACTER}ch`,
+                }}
+              />
+            </div>
+          )}
           {lineas.map((l, i) => (
             <div
               key={i}

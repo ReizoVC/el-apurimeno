@@ -171,7 +171,7 @@ El script **compila primero, con los servicios funcionando**:
 **Solo si las dos compilaron, reemplaza:**
 
 - **La interrupción:** detiene los servicios, cambia `.next` por el build nuevo (un cambio de nombre, instantáneo) y los vuelve a iniciar. Los tres servicios del local, y `ApurimenoCapacitacion` si está instalado, se interrumpen **solo durante ese reemplazo**, no mientras compila. El POS tampoco puede cobrar durante ese intervalo, porque el servidor se reinicia.
-- **Duración:** el script informa cuánto duró la interrupción. Se calcula en unos 15 a 30 s, por los tiempos de arranque medidos: unos 7 s el servidor y 6,5 s cada app de Next.
+- **Duración:** el script informa cuánto duró la interrupción. **Medida el 30/09/2026 en el equipo de desarrollo, con los cuatro servicios: 45 s**, desde que empieza a detenerlos hasta que los cuatro responden con el código nuevo. La estimación anterior, de 15 a 30 s, sumaba solo los arranques (unos 7 s el servidor y 6,5 s cada app de Next). Se quedaba corta porque no contaba la detención de los servicios, que se inician y verifican uno tras otro. Contar con alrededor de 1 minuto sin cobros en el POS.
 - **Si algo no responde:** si una app no responde con su build nuevo en 40 s, vuelve sola al anterior y queda funcionando con él. El build que falló queda en `.next-fallido` para revisarlo, y el script lo informa como error. Las demás apps siguen con su build nuevo. En ese caso la interrupción se alarga unos 50 s. El build anterior de una app que sí respondió queda en `.next-anterior`.
 - **Cómo se probó la vuelta atrás:** `apps/server/scripts/probar-reversion-recompilar.ps1`. Corre el reemplazo real del script con `next start` en los puertos 3100 y 3102 en vez de los servicios, y con un build nuevo del Dashboard que no arranca. Resultado del 28/09/2026: 12 de 12 comprobaciones.
 
@@ -182,9 +182,12 @@ El script **compila primero, con los servicios funcionando**:
 
   La prueba se corre en un clon o worktree de desarrollo: se niega a correr en el checkout de producción.
 
-**Tiempos medidos** el 28/09/2026 en el equipo de desarrollo:
+**Tiempos medidos** en el equipo de desarrollo:
 
-- **Compilación:** Dashboard unos 30 s, Limpieza unos 20 a 28 s; en total, alrededor de 1 minuto. El PC del local puede tardar más.
+- **Compilación:** el 28/09/2026, Dashboard unos 30 s y Limpieza unos 20 a 28 s. El 30/09/2026, en la primera corrida real del script, con la compilación en frío, el Dashboard tardó 62 s (el doble) y Limpieza 25 s.
+  - **El tiempo de compilación varía** entre corridas, y el PC del local puede tardar más.
+  - **No alarga la interrupción:** se compila con los servicios funcionando, y solo se espera más antes de que empiece el reemplazo.
+- **Interrupción:** 45 s el 30/09/2026 (ver "Duración", arriba).
 - **Cómo medirlo allí sin tocar nada:** correr el script con `-SoloCompilar`, que no toca ningún servicio ni exige administrador. Deja `.next-nuevo` listo e informa los tiempos.
 
 **El script se detiene sin tocar nada** si el checkout no está en `main` sin cambios, si falta un servicio, o si alguna base (la del local o la de capacitación) tiene migraciones pendientes. En ese último caso, usar la actualización completa.

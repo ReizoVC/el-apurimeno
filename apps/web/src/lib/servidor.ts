@@ -265,6 +265,16 @@ export const servidor = {
     llamar("POST", RUTAS.categoriasProducto, CategoriaProductoSchema, {
       nombre,
     }),
+  renombrarCategoriaProducto: (id: string, nombre: string) =>
+    llamar("PUT", conId(RUTAS.categoriaProducto, id), CategoriaProductoSchema, {
+      nombre,
+    }),
+  eliminarCategoriaProducto: (id: string, moverA: string | undefined) =>
+    llamar(
+      "DELETE",
+      `${conId(RUTAS.categoriaProducto, id)}${query({ moverA })}`,
+      SIN_CUERPO,
+    ),
   /** Todos los productos, también los inactivos: es la vista de gestión. */
   productos: () =>
     llamar(

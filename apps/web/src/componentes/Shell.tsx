@@ -200,6 +200,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const { sesion } = estado;
   const visibles = SECCIONES.filter((s) => tienePermiso(sesion, s.permiso));
   const grupos = [...new Set(visibles.map((s) => s.grupo))];
+  // Una subzona (Productos › Categorías) deja marcada su sección.
+  const activa = (href: string) =>
+    ruta === href || (href !== "/" && ruta.startsWith(`${href}/`));
   return (
     <ContextoSesion.Provider value={sesion}>
       <MarcoCapacitacion activo={sesion.entorno === "CAPACITACION"}>
@@ -226,8 +229,8 @@ export function Shell({ children }: { children: ReactNode }) {
                       <Link
                         key={s.href}
                         href={s.href}
-                        aria-current={ruta === s.href ? "page" : undefined}
-                        className={`rounded-md px-2 py-1.5 hover:bg-muted ${ruta === s.href ? "bg-muted font-medium" : ""}`}
+                        aria-current={activa(s.href) ? "page" : undefined}
+                        className={`rounded-md px-2 py-1.5 hover:bg-muted ${activa(s.href) ? "bg-muted font-medium" : ""}`}
                       >
                         {s.etiqueta}
                       </Link>

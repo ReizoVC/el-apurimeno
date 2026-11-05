@@ -337,6 +337,12 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     una copia propia que podría no coincidir. Cambio **aditivo**: un tipo y una ruta nuevos, con el permiso de la
     Configuración (`CONFIGURAR_PARAMETROS`). El Dashboard lo dibuja centrado y a la escala del texto (un carácter de
     la fuente A = 12 puntos), y lo omite en un papel más angosto que el logotipo, igual que el servidor.
+28. **Las categorías se renombran y se eliminan; una con productos, solo moviéndolos a otra**
+    (`PUT` y `DELETE /categorias-producto/:id`, `EliminarCategoriaConsulta.moverA`). El SRS solo pide crear productos
+    y asignarles categoría (CU-29). Solo `Producto` referencia a la categoría, y los tickets y reportes no guardan su
+    nombre, así que eliminarla no altera ninguna venta: no hace falta un estado "inactiva". Los productos inactivos
+    también cuentan, porque usan la categoría igual. Se audita con `CATEGORIA_RENOMBRADA` y `CATEGORIA_ELIMINADA`
+    (cuántos productos se movieron y a dónde). Cambio **aditivo**, con el permiso de `GESTIONAR_PRODUCTOS`.
 
 ## Decisiones pendientes que afectan el contrato
 

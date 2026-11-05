@@ -38,7 +38,7 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 | Reportes | `reports.view` | Ventas, arqueos y ocupación de un periodo. |
 | Habitaciones | `rooms.manage` | Alta, edición, bloqueo con motivo (`rooms.maintenance`) y reactivación. |
 | Clientes y precios | `client_pricing.manage` | Búsqueda, alta y edición de clientes; precios especiales por habitación. |
-| Productos | `inventory.manage` | Categorías, alta y edición de productos con sus dos precios, activar y desactivar, y reposición de stock. |
+| Productos | `inventory.manage` | Pestaña Productos: alta y edición con sus dos precios, activar y desactivar, y reposición de stock. Pestaña Categorías: crear, renombrar y eliminar. |
 | Usuarios | `users.manage` | Alta, edición, desactivación, rangos y cambio de contraseña. |
 | Rangos | `users.manage` | Alta y edición de la combinación de permisos. |
 | Configuración | `settings.manage` | Parámetros de alquiler, comprobante, impresora y tienda. |
@@ -98,6 +98,8 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
   producto para encontrarlo; el Enter del lector no envía nada. Un producto inactivo sale del POS y aquí queda
   oculto salvo con "Mostrar inactivos", para reactivarlo. "Sin stock" va en rojo si es 0 o negativo. "Nuevo
   producto" espera a que exista una categoría.
+- **Categorías:** tienen su propia pestaña dentro de Productos, para que no queden debajo de una lista larga. Eliminar
+  una vacía pide confirmar; una con productos pide elegir a qué categoría moverlos, incluidos los inactivos.
 - **Respaldos:** el mismo patrón que el espejo: la hora de la última copia en grande, "Desactualizado" en
   ámbar y el error del último intento con su causa. Si la copia externa no está configurada, se muestra en
   rojo, porque sin ella una falla del disco se lleva la base y sus copias locales. Restaurar no se hace desde

@@ -48,6 +48,7 @@ export const RUTAS = {
   registrarSalida: "/alquileres/:id/salida",
   registrarSalidaSinPago: "/alquileres/:id/salida-sin-pago",
   categoriasProducto: "/categorias-producto",
+  categoriaProducto: "/categorias-producto/:id",
   productos: "/productos",
   producto: "/productos/:id",
   reponerProducto: "/productos/:id/reposicion",
@@ -301,6 +302,10 @@ export type SalidaRespuesta = z.infer<typeof SalidaRespuestaSchema>;
 
 export const CategoriaProductoEntradaSchema = z.object({ nombre: TextoRequeridoSchema }).strict();
 export type CategoriaProductoEntrada = z.infer<typeof CategoriaProductoEntradaSchema>;
+
+/** `moverA`: categoría que recibe los productos de la que se elimina (decisión 28). */
+export const EliminarCategoriaConsultaSchema = z.object({ moverA: IdSchema.optional() }).strict();
+export type EliminarCategoriaConsulta = z.infer<typeof EliminarCategoriaConsultaSchema>;
 
 /** Alta o edición de un producto (RF-53). El stock no se edita aquí: solo cambia con ventas, reposiciones y anulaciones. */
 export const ProductoEntradaSchema = z

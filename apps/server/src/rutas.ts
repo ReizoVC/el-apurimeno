@@ -8,6 +8,7 @@ import {
   CotizacionHoraAdicionalRespuestaSchema,
   CotizacionIngresoRespuestaSchema,
   CotizarIngresoEntradaSchema,
+  EliminarCategoriaConsultaSchema,
   ForzarCierreTurnoEntradaSchema,
   GenerarCodigoAutorizacionEntradaSchema,
   GenerarCodigoAutorizacionRespuestaSchema,
@@ -60,9 +61,11 @@ import {
   crearCategoria,
   crearProducto,
   editarProducto,
+  eliminarCategoria,
   listarCategorias,
   listarProductos,
   registrarVentaServicio,
+  renombrarCategoria,
   reponerProducto,
 } from "./servicios/tienda.js";
 import {
@@ -183,6 +186,16 @@ export function registrarRutas(
     const categoria = await crearCategoria(ctx(request), validar(CategoriaProductoEntradaSchema, request.body));
     void reply.status(201);
     return CategoriaProductoSchema.parse(categoria);
+  });
+
+  app.put(RUTAS.categoriaProducto, { config: { operacion: "GESTIONAR_PRODUCTOS" } }, async (request: ConId) =>
+    CategoriaProductoSchema.parse(await renombrarCategoria(ctx(request), request.params.id, validar(CategoriaProductoEntradaSchema, request.body))),
+  );
+
+  app.delete(RUTAS.categoriaProducto, { config: { operacion: "GESTIONAR_PRODUCTOS" } }, async (request: ConId, reply) => {
+    const { moverA } = validar(EliminarCategoriaConsultaSchema, request.query);
+    await eliminarCategoria(ctx(request), request.params.id, moverA);
+    return reply.status(204).send();
   });
 
   app.get(RUTAS.productos, { config: { operacion: ["VENDER", "GESTIONAR_PRODUCTOS"] } }, async (request) => {

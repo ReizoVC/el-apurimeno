@@ -199,6 +199,7 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /alquileres/:id/salida-sin-pago` | `REGISTRAR_SALIDA_SIN_PAGO` | — |
 | `GET /categorias-producto` | `VENDER` o `GESTIONAR_PRODUCTOS` | — |
 | `POST /categorias-producto` | `GESTIONAR_PRODUCTOS` | — |
+| `PUT /categorias-producto/:id`, `DELETE /categorias-producto/:id?moverA=` | `GESTIONAR_PRODUCTOS` | — |
 | `GET /productos?codigoBarras=&incluirInactivos=` | `VENDER` o `GESTIONAR_PRODUCTOS`; `incluirInactivos=true` exige `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos`, `PUT /productos/:id` | `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos/:id/reposicion` | `REPONER_INVENTARIO` | — |

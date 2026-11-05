@@ -150,6 +150,66 @@ export async function crearCategoria(ctx: ContextoServicio, entrada: CategoriaPr
   }
 }
 
+/** Renombrar solo cambia la etiqueta: los productos la referencian por id y los tickets no la guardan. */
+export async function renombrarCategoria(ctx: ContextoServicio, id: string, entrada: CategoriaProductoEntrada): Promise<CategoriaProducto> {
+  try {
+    return await ctx.prisma.$transaction(async (tx) => {
+      const previa = await tx.categoriaProducto.findUnique({ where: { id } });
+      if (previa === null) throw noEncontrado("La categoría");
+      const categoria = aCategoria(await tx.categoriaProducto.update({ where: { id }, data: { nombre: entrada.nombre } }));
+      await auditar(
+        tx,
+        {
+          usuarioId: ctx.usuario.id,
+          accion: "CATEGORIA_RENOMBRADA",
+          tipoEntidad: "CATEGORIA_PRODUCTO",
+          entidadId: id,
+          valorPrevio: { nombre: previa.nombre },
+          valorNuevo: { nombre: categoria.nombre },
+        },
+        ctx.ahora,
+      );
+      return categoria;
+    });
+  } catch (error) {
+    if (esViolacionUnica(error)) throw new ErrorApi("VALIDACION", "nombre: ya existe una categoría con ese nombre.");
+    throw error;
+  }
+}
+
+/** Solo se elimina vacía; con `moverA`, sus productos (también los inactivos) pasan antes a esa categoría (decisión 28). */
+export async function eliminarCategoria(ctx: ContextoServicio, id: string, moverA: string | undefined): Promise<void> {
+  if (moverA === id) throw new ErrorApi("VALIDACION", "moverA: debe ser otra categoría.");
+  await ctx.prisma.$transaction(async (tx) => {
+    const previa = await tx.categoriaProducto.findUnique({ where: { id } });
+    if (previa === null) throw noEncontrado("La categoría");
+    let movidos = 0;
+    let destino: string | null = null;
+    if (moverA === undefined) {
+      const productos = await tx.producto.count({ where: { categoriaId: id } });
+      if (productos > 0) throw new ErrorApi("VALIDACION", `La categoría tiene ${productos} producto(s): muévalos a otra antes de eliminarla.`);
+    } else {
+      const fila = await tx.categoriaProducto.findUnique({ where: { id: moverA } });
+      if (fila === null) throw noEncontrado("La categoría de destino");
+      destino = fila.nombre;
+      movidos = (await tx.producto.updateMany({ where: { categoriaId: id }, data: { categoriaId: moverA } })).count;
+    }
+    await tx.categoriaProducto.delete({ where: { id } });
+    await auditar(
+      tx,
+      {
+        usuarioId: ctx.usuario.id,
+        accion: "CATEGORIA_ELIMINADA",
+        tipoEntidad: "CATEGORIA_PRODUCTO",
+        entidadId: id,
+        valorPrevio: { nombre: previa.nombre },
+        valorNuevo: { productosMovidos: movidos, movidosA: destino },
+      },
+      ctx.ahora,
+    );
+  });
+}
+
 async function validarProducto(ctx: ContextoServicio, entrada: ProductoEntrada, id: string | null): Promise<void> {
   if ((await ctx.prisma.categoriaProducto.findUnique({ where: { id: entrada.categoriaId } })) === null) {
     throw noEncontrado("La categoría");

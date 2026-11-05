@@ -39,7 +39,8 @@ type AvisoPantalla = { tipo: "error" | "exito"; texto: string } | null;
 
 /**
  * Productos e inventario (RF-53, CU-12, CU-29): alta y edición de productos con sus dos precios (RN-20, RN-21),
- * categorías y reposición de stock. El stock no se edita a mano: un producto nuevo empieza en 0 y solo cambia con
+ * y reposición de stock; las categorías tienen su pestaña. El stock no se edita a mano: un producto nuevo empieza en 0
+ * y solo cambia con
  * reposiciones, ventas y anulaciones, cada una en el kardex (RN-25). Un producto inactivo sale del catálogo del POS
  * pero sigue aquí para reactivarlo.
  */
@@ -281,24 +282,13 @@ export default function Productos() {
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   {productos.datos.length === 0
                     ? (categorias.datos ?? []).length === 0
-                      ? "Todavía no hay productos. Primero cree una categoría (abajo); después, Nuevo producto."
+                      ? "Todavía no hay productos. Primero cree una categoría en la pestaña Categorías; después, Nuevo producto."
                       : "Todavía no hay productos. Use Nuevo producto."
                     : "Ningún producto coincide con la búsqueda."}
                 </p>
               )}
             </CardContent>
           </Card>
-          <Categorias
-            categorias={categorias.datos ?? []}
-            onCreada={async (c) => {
-              setAviso({
-                tipo: "exito",
-                texto: `Categoría "${c.nombre}" creada.`,
-              });
-              await categorias.recargar();
-            }}
-            onError={(texto) => setAviso({ tipo: "error", texto })}
-          />
         </div>
         {editando !== null && (
           <FormularioProducto
@@ -326,72 +316,6 @@ function Stock({ producto }: { producto: Producto }) {
       </Badge>
     );
   return <span className="font-medium">{producto.stock}</span>;
-}
-
-function Categorias({
-  categorias,
-  onCreada,
-  onError,
-}: {
-  categorias: CategoriaProducto[];
-  onCreada: (c: CategoriaProducto) => Promise<void>;
-  onError: (texto: string) => void;
-}) {
-  const [nombre, setNombre] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const crear = async () => {
-    setEnviando(true);
-    try {
-      const c = await servidor.crearCategoriaProducto(nombre.trim());
-      setNombre("");
-      await onCreada(c);
-    } catch (e) {
-      onError(mensajeDe(e));
-    } finally {
-      setEnviando(false);
-    }
-  };
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Categorías</CardTitle>
-        <CardDescription>Agrupan los productos en el POS.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-2">
-          {categorias.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Ninguna todavía.</p>
-          ) : (
-            categorias.map((c) => (
-              <Badge key={c.id} variant="outline">
-                {c.nombre}
-              </Badge>
-            ))
-          )}
-        </div>
-        <div className="flex items-end gap-2">
-          <Campo etiqueta="Nueva categoría">
-            <Input
-              className="w-64"
-              placeholder="Bebidas"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && nombre.trim() !== "") void crear();
-              }}
-            />
-          </Campo>
-          <Button
-            variant="outline"
-            disabled={nombre.trim() === "" || enviando}
-            onClick={() => void crear()}
-          >
-            Agregar
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 function FormularioProducto({

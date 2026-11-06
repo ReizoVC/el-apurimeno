@@ -11,6 +11,8 @@ import {
   LoginRespuestaSchema,
   LogoComprobanteSchema,
   MetodoPagoRespuestaSchema,
+  MovimientoHistorialSchema,
+  MovimientoStockRespuestaSchema,
   PrecioEspecialRespuestaSchema,
   ProductoSchema,
   RUTAS,
@@ -30,6 +32,7 @@ import {
   type AuditoriaConsulta,
   type ClienteEntrada,
   type ConfiguracionGlobal,
+  type ConteoStockEntrada,
   type DestinoRespaldo,
   type CrearUsuarioEntrada,
   type EditarUsuarioEntrada,
@@ -40,6 +43,7 @@ import {
   type PeriodoConsulta,
   type ProductoEntrada,
   type RangoEntrada,
+  type SalidaStockEntrada,
 } from "@apurimeno/contracts";
 import {
   entornoDeUsuario,
@@ -294,6 +298,26 @@ export const servidor = {
       {
         cantidad,
       },
+    ),
+  salidaStock: (id: string, e: SalidaStockEntrada) =>
+    llamar(
+      "POST",
+      conId(RUTAS.salidaStock, id),
+      MovimientoStockRespuestaSchema,
+      e,
+    ),
+  conteoStock: (id: string, e: ConteoStockEntrada) =>
+    llamar(
+      "POST",
+      conId(RUTAS.conteoStock, id),
+      MovimientoStockRespuestaSchema,
+      e,
+    ),
+  movimientosInventario: (productoId: string | undefined) =>
+    llamar(
+      "GET",
+      `${RUTAS.movimientosInventario}${query({ productoId })}`,
+      MovimientoHistorialSchema.array(),
     ),
 
   // Usuarios y rangos

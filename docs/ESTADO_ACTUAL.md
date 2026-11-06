@@ -1,23 +1,20 @@
 # Estado actual del proyecto
 
-Al 27/09/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
+Al 06/11/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
 decisiones esperan a la propietaria. El detalle técnico de cada parte está en el README de su carpeta.
 
 **En una línea:** el MVP de software está completo salvo la **prueba de la impresión con la impresora física**: la
 conexión (USB, Bluetooth, cola de Windows), la lectura de su estado, los reintentos, el aviso al cajero y el
-logotipo están hechos y probados con simulación y salida a archivo (PR de impresión parte 2). Los tres
-servicios de Windows y el respaldo externo quedaron probados en el equipo de desarrollo. Para instalar en el local
-solo falta: **impresión parte 2**, el **proyecto de Supabase de producción** y la **instalación con `-Produccion` en el
-equipo del local**. Después vienen los datos reales y el piloto con el cuaderno.
+logotipo están hechos y probados con simulación y salida a archivo (PR de impresión parte 2). Los servicios de Windows
+y el respaldo externo quedaron probados en el equipo de desarrollo. Para instalar en el local falta: **terminar
+Supabase de producción** y la **instalación con `-Produccion` en la mini PC del local**, que ya se está preparando.
+Antes del piloto faltan la **impresora**, **importar los productos** y los **datos reales**.
 
 ## Integrado
 
-Todo está en `main`, hasta el PR #21 inclusive: pantalla del espejo (#12), `apps/owner` con `aal2` y
-`@apurimeno/formato` (#13), revisión y este documento (#14), respaldos (local, externo cifrado y restauración) con la
-pantalla de productos e inventario (#15), correcciones de la auditoría (#16), el servidor como servicio de Windows
-(#17), su registro que rota por tamaño (#18), el Dashboard y Limpieza como servicios, la carpeta de respaldo
-sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19), la actualización de este documento
-(#20) y la decisión sobre el espacio en Google Drive (#21). No quedan ramas con trabajo sin integrar.
+Todo está en `main`, hasta el PR #31 inclusive. Los últimos: categorías que se renombran y se eliminan en su propia
+pestaña (#29) y la actualización remota del PC del local, ensayada con servicios reales (#31). Los anteriores están en
+el historial de git.
 
 ## Completo y probado
 
@@ -28,7 +25,7 @@ sincronizada por Drive y el rechazo de copias a medio escribir al restaurar (#19
 | `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
 | `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión con conexión a la impresora (COM, USB directa, cola de Windows), lectura de su estado, reintentos y logotipo (probada con simulación y salida a archivo) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 301 pruebas contra SQLite real; pruebas de concurrencia; la impresión, con una impresora simulada que responde como una real y con el ayudante de Windows real contra puertos que no existen |
 | `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
-| `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
+| `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario (entrada, salida, conteo e historial de stock), usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
 | Espejo en la nube | El servidor publica cada 30 min ventas, anulados, ocupación por día y arqueos por turno; nunca clientes, tickets ni el estado en vivo | Contra el proyecto `apurimeno-prueba`: primera sincronización, cambios, anulación de días anteriores, sin internet y vuelta, re-sincronización completa |
 | `apps/owner` | Resumen remoto para la propietaria: contraseña + TOTP obligatorio, franja "Datos al…", Hoy/Ayer/7 días/Mes, ventas, arqueos y ocupación | De punta a punta en Chrome de celular contra `apurimeno-prueba`, servida con las cabeceras reales de Cloudflare Pages; cifras iguales a lo publicado |
@@ -43,7 +40,7 @@ base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema 
 detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
 iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (599 pruebas). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (642 pruebas al 06/11). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
 ## Qué falta para reemplazar el cuaderno
 
@@ -61,9 +58,8 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
 
 ### Puesta en marcha
 
-2. **Proyecto de Supabase de producción**, siguiendo `supabase/README.md`: aplicar las dos migraciones en orden,
-   cerrar el registro público, verificar que TOTP esté habilitado, crear la cuenta del servidor (contraseña
-   larga) y las de la propietaria y su hija.
+2. **Terminar el proyecto de Supabase de producción**, siguiendo `supabase/README.md`: falta asignar el rol
+   `sincronizador` a la cuenta del servidor y crear las cuentas de la propietaria y su hija.
 3. **Publicar `apps/owner` en Cloudflare Pages** con las credenciales de producción (pasos exactos en
    `apps/owner/README.md`).
 4. **Instalación con `-Produccion` en el equipo del local**, siguiendo `docs/INSTALACION_LOCAL.md` (los servicios y
@@ -82,9 +78,10 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
    - **Actualización remota:** Tailscale, SSH solo por esa red y el ensayo con servicios reales
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
-5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, productos (desde el
-   Dashboard → Productos), las cuentas del personal con sus rangos, y el nombre, la dirección y la leyenda del
-   comprobante.
+5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
+   con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
+   Loyverse, cuyo stock está desfasado. Falta un comando de importación que traiga nombres, precios, categorías y
+   códigos, sin el stock; el stock inicial sale de un conteo físico con Contar (decisión 29).
 6. **Piloto en paralelo con el cuaderno** (E4 de los Planos): 1 a 2 semanas usando ambos, con capacitación al
    personal, comparando cada cierre de turno con el cuaderno antes de dejarlo.
 

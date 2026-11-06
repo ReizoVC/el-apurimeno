@@ -52,7 +52,8 @@ const CONFIGURACION = ConfiguracionGlobalSchema.parse({
     leyenda: LEYENDA_COMPROBANTE_POR_DEFECTO,
   },
   impresora: { anchoPapelMm: 80, conexion: "USB" },
-  permitirStockNegativo: false,
+  // Decisión 29 de contracts: se puede vender sin stock, con aviso y confirmación del cajero.
+  permitirStockNegativo: true,
   // RF-65 pide "algunos minutos" sin fijar un valor: 5 es un valor inicial ajustable desde la configuración.
   minutosVigenciaCodigoAutorizacion: 5,
 });

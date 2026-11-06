@@ -81,11 +81,13 @@ export const TipoMovimientoCajaSchema = z.enum(["INGRESO", "RETIRO"]);
 export type TipoMovimientoCaja = z.infer<typeof TipoMovimientoCajaSchema>;
 export const TipoMovimientoCaja = TipoMovimientoCajaSchema.enum;
 
-/** Causa de un cambio de stock (§18.1: venta, anulación de venta o reposición). */
+/** Causa de un cambio de stock (§18.1: venta, anulación de venta o reposición; salida y conteo, decisión 29). */
 export const TipoMovimientoInventarioSchema = z.enum([
   "REPOSICION",
   "VENTA",
   "ANULACION_VENTA",
+  "SALIDA",
+  "CONTEO",
 ]);
 export type TipoMovimientoInventario = z.infer<typeof TipoMovimientoInventarioSchema>;
 export const TipoMovimientoInventario = TipoMovimientoInventarioSchema.enum;

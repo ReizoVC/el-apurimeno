@@ -203,6 +203,9 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `GET /productos?codigoBarras=&incluirInactivos=` | `VENDER` o `GESTIONAR_PRODUCTOS`; `incluirInactivos=true` exige `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos`, `PUT /productos/:id` | `GESTIONAR_PRODUCTOS` | — |
 | `POST /productos/:id/reposicion` | `REPONER_INVENTARIO` | — |
+| `POST /productos/:id/salida` | `REGISTRAR_SALIDA_STOCK` | No: `stockVisto` rechaza la repetición |
+| `POST /productos/:id/conteo` | `CONTAR_STOCK` | No: `stockVisto` rechaza la repetición |
+| `GET /movimientos-inventario?productoId=` | `CONSULTAR_MOVIMIENTOS_INVENTARIO` | — |
 | `POST /ventas` | `VENDER` | Sí |
 | `POST /codigos-autorizacion` (cuerpo opcional `{ operacion }`: `ANULAR_TICKET` por defecto o `REINTENTAR_CIERRE_TURNO`) | `GENERAR_CODIGO_AUTORIZACION` | — |
 | `POST /tickets/:id/anulacion` | `ANULAR_TICKET` o `ANULAR_TICKET_CON_CODIGO` | Sí |

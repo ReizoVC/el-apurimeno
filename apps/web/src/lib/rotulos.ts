@@ -6,10 +6,22 @@ import type {
   OrigenTicket,
   Permiso,
   TipoEntidadAuditada,
+  TipoMovimientoInventario,
 } from "@apurimeno/contracts";
 
 // Textos en castellano para valores del contrato. Los tipos vienen de @apurimeno/contracts: si el catálogo
 // cambia, TypeScript exige completar estos textos.
+
+export const TIPO_MOVIMIENTO_INVENTARIO: Record<
+  TipoMovimientoInventario,
+  string
+> = {
+  REPOSICION: "Entrada",
+  VENTA: "Venta",
+  ANULACION_VENTA: "Venta anulada",
+  SALIDA: "Salida",
+  CONTEO: "Conteo",
+};
 
 /** Descripción de cada permiso (Planos §5, anexo §41.3). */
 export const PERMISO: Record<Permiso, string> = {
@@ -66,6 +78,9 @@ export const ACCION: Record<AccionAuditoria, string> = {
   AJUSTE_PUNTUAL_APLICADO: "Ajuste puntual",
   VENTA_REGISTRADA: "Venta",
   MERCADERIA_INGRESADA: "Ingreso de mercadería",
+  STOCK_SALIDA: "Salida de mercadería",
+  STOCK_CONTADO: "Conteo de stock",
+  VENTA_SIN_STOCK: "Venta sin stock",
   HABITACION_CREADA: "Habitación creada",
   HABITACION_EDITADA: "Habitación editada",
   HABITACION_ESTADO_CAMBIADO: "Cambio de estado de habitación",

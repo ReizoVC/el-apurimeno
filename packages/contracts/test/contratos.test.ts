@@ -313,10 +313,23 @@ describe("Tienda", () => {
   });
 
   it("una venta descuenta stock y referencia su ticket", () => {
-    const m = { id: "mi1", productoId: "prod-1", tipo: "VENTA", cantidad: -3, ticketId: "ticket-9", creadoPorId: "cajero-1", creadoEn: "2026-09-23T15:00:00.000Z" };
+    const m = { id: "mi1", productoId: "prod-1", tipo: "VENTA", cantidad: -3, ticketId: "ticket-9", motivo: null, creadoPorId: "cajero-1", creadoEn: "2026-09-23T15:00:00.000Z" };
     expect(MovimientoInventarioSchema.safeParse(m).success).toBe(true);
     expect(MovimientoInventarioSchema.safeParse({ ...m, cantidad: 3 }).success).toBe(false);
     expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "REPOSICION", cantidad: 10 }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivo: "No lleva" }).success).toBe(false);
+  });
+
+  it("una salida resta con motivo y sin ticket; un conteo admite 0 y una nota (decisión 29)", () => {
+    const m = { id: "mi1", productoId: "prod-1", tipo: "SALIDA", cantidad: -3, ticketId: null, motivo: "Vencido", creadoPorId: "admin-1", creadoEn: "2026-09-23T15:00:00.000Z" };
+    expect(MovimientoInventarioSchema.safeParse(m).success).toBe(true);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivo: null }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, cantidad: 3 }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, ticketId: "ticket-9" }).success).toBe(false);
+    for (const cantidad of [-2, 0, 2]) {
+      expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "CONTEO", cantidad, motivo: null }).success).toBe(true);
+    }
+    expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "CONTEO", cantidad: 0, motivo: "Nota" }).success).toBe(true);
   });
 });
 

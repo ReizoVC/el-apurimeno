@@ -43,7 +43,7 @@ interface Props {
  * Venta de tienda (CU-11). El lector de código de barras USB escribe como un teclado y termina con Enter: el
  * campo de código busca el producto por código exacto y lo agrega al carrito. Huésped o público lo indica el
  * cajero (RN-22). El total que se muestra lo calcula `cotizarVenta` del dominio; el servidor lo recalcula al
- * cobrar y valida el stock (RN-26).
+ * cobrar y valida el stock (RN-26). Vender más de lo que hay pide confirmar un aviso (decisión 29 de contracts).
  */
 export function Tienda({ sesion, metodos, ocupadas }: Props) {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -57,6 +57,9 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [sinStockConfirmado, setSinStockConfirmado] = useState<string | null>(
+    null,
+  );
   const [clave, renovarClave] = useClaveIdempotencia();
   const campoCodigo = useRef<HTMLInputElement>(null);
 
@@ -107,6 +110,20 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
   });
   const cotizacion = items.length === 0 ? null : cotizarVenta(items, esHuesped);
   const total = ajuste?.montoAjustado ?? cotizacion?.total ?? 0;
+  const excedidos = items.filter(
+    ({ producto, cantidad }) =>
+      producto.controlaStock && cantidad > producto.stock,
+  );
+  // La confirmación vale para este carrito y este stock: si cambia cualquiera de los dos, hay que confirmar de nuevo.
+  const firmaExcedidos = excedidos
+    .map(
+      ({ producto, cantidad }) =>
+        `${producto.id}:${cantidad}:${producto.stock}`,
+    )
+    .join();
+  const hayExcedidos = excedidos.length > 0;
+  const sinStockAprobado =
+    !hayExcedidos || sinStockConfirmado === firmaExcedidos;
   const filtrados = productos.filter((p) =>
     p.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()),
   );
@@ -126,6 +143,7 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
           habitacionReferenciaId: esHuesped ? habitacionId : null,
           ajuste,
           pagos: [{ ...pago, monto: total }],
+          confirmarSinStock: hayExcedidos,
         },
         clave,
       );
@@ -141,10 +159,13 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
       setAjuste(null);
       setEsHuesped(false);
       setHabitacionId(null);
+      setSinStockConfirmado(null);
       cargar();
       campoCodigo.current?.focus();
     } catch (e) {
       setError(mensajeDe(e));
+      // El stock pudo cambiar en otro equipo: al recargarlo aparece el aviso de los productos que ya no alcanzan.
+      cargar();
     } finally {
       setEnviando(false);
     }
@@ -311,6 +332,38 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
               })}
             </ul>
           )}
+          {hayExcedidos && (
+            <div
+              role="alert"
+              className="flex flex-col gap-2 rounded-md border border-amber-500/50 bg-amber-50 p-3 text-amber-900"
+            >
+              <p className="font-medium">Stock insuficiente</p>
+              <ul>
+                {excedidos.map(({ producto, cantidad }) => (
+                  <li key={producto.id}>
+                    {producto.nombre}: hay {producto.stock}, se venden{" "}
+                    {cantidad}
+                  </li>
+                ))}
+              </ul>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={sinStockAprobado}
+                  onChange={(e) =>
+                    setSinStockConfirmado(
+                      e.target.checked ? firmaExcedidos : null,
+                    )
+                  }
+                />
+                <span>
+                  Vender de todos modos. El stock quedará negativo y la venta
+                  quedará registrada a mi nombre.
+                </span>
+              </label>
+            </div>
+          )}
           {cotizacion !== null && (
             <>
               <div className="flex justify-between text-base font-semibold">
@@ -335,7 +388,12 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
         <CardFooter className="flex gap-2">
           <Button
             className="flex-1"
-            disabled={cotizacion === null || pago === null || enviando}
+            disabled={
+              cotizacion === null ||
+              pago === null ||
+              enviando ||
+              !sinStockAprobado
+            }
             onClick={() => void cobrar()}
           >
             {enviando ? "Cobrando…" : `Cobrar ${soles(total)}`}
@@ -343,7 +401,10 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
           <Button
             variant="outline"
             disabled={items.length === 0}
-            onClick={() => setCarrito(new Map())}
+            onClick={() => {
+              setCarrito(new Map());
+              setSinStockConfirmado(null);
+            }}
           >
             Vaciar
           </Button>

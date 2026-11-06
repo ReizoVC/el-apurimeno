@@ -32,7 +32,7 @@ Mismo patrón que `apps/cleaning`:
 |---|---|
 | (sin turno) | Abrir turno con el efectivo inicial. Sin turno no se cobra (RN-32). |
 | Habitaciones | Tablero por piso. Libre → panel de ingreso; ocupada → estado en vivo, hora adicional, salida, anular, reimprimir. |
-| Tienda | Lector de código de barras, búsqueda, carrito, huésped o público, cobro. |
+| Tienda | Lector de código de barras, búsqueda, carrito, huésped o público, cobro. Vender más de lo que hay pide confirmar un aviso. |
 | Caja | Movimientos manuales y cierre con arqueo ciego. |
 
 ## Decisiones de interfaz

@@ -402,7 +402,8 @@ export default function Configuracion() {
                   <span>
                     Permitir vender sin stock
                     <span className="block text-xs text-muted-foreground">
-                      El stock puede quedar negativo (RN-26).
+                      El POS avisa y el cajero confirma; el stock queda negativo
+                      y la venta, en la auditoría (RN-26).
                     </span>
                   </span>
                 </label>

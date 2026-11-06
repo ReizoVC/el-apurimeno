@@ -11,7 +11,7 @@ import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cifrarArchivo, descifrarArchivo, ErrorClave, generarClaves, leerClavePrivada, leerClavePublica, publicaDePrivada } from "../src/respaldo/cifrado.js";
 import { leerConfiguracionRespaldos, type ConfiguracionRespaldos } from "../src/respaldo/configuracion.js";
-import { fechaDeCopia, listarCopias, nombreCopia, verificarBase } from "../src/respaldo/copia.js";
+import { COPIAS_PREVIAS_GUARDADAS, fechaDeCopia, listarCopias, nombreCopia, tomarCopiaPrevia, verificarBase } from "../src/respaldo/copia.js";
 import { copiasDisponibles, restaurar } from "../src/respaldo/restauracion.js";
 import { efectivo, prepararEntorno, type Entorno } from "./entorno.js";
 
@@ -95,6 +95,36 @@ describe("Configuración de los respaldos", () => {
         base,
       ).problemaExterno,
     ).toMatch(/misma carpeta/);
+  });
+});
+
+describe("Copia antes de una actualización", () => {
+  function baseDePrueba(): string {
+    const ruta = join(dir, "apurimeno.db");
+    const db = new Database(ruta);
+    db.exec(`create table "Ticket" ("creadoEn" text); create table "Alquiler" ("estado" text); create table "Turno" ("estado" text); create table "Usuario" (id int)`);
+    db.close();
+    return ruta;
+  }
+
+  it("deja una copia sana, con la versión en el nombre, y guarda solo las últimas", async () => {
+    const base = baseDePrueba();
+    const carpeta = join(dir, "antes-de-actualizar");
+    let ultima = "";
+    for (let i = 0; i < COPIAS_PREVIAS_GUARDADAS + 2; i++) {
+      ultima = await tomarCopiaPrevia(base, carpeta, `v1.0.${i}`, new Date(Date.UTC(2026, 10, 5, 3, i)));
+      expect(ultima).toContain(`apurimeno-antes-v1.0.${i}-20261105-03`);
+      expect(verificarBase(ultima).tickets).toBe(0);
+    }
+    const quedan = readdirSync(carpeta);
+    expect(quedan).toHaveLength(COPIAS_PREVIAS_GUARDADAS);
+    expect(quedan.map((n) => join(carpeta, n))).toContain(ultima);
+  });
+
+  it("una etiqueta rara no sale de la carpeta", async () => {
+    const ruta = await tomarCopiaPrevia(baseDePrueba(), join(dir, "previas"), "../../fuera", new Date("2026-11-05T03:00:00Z"));
+    expect(ruta.startsWith(join(dir, "previas"))).toBe(true);
+    expect(readdirSync(join(dir, "previas"))).toHaveLength(1);
   });
 });
 

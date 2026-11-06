@@ -178,7 +178,8 @@ function Principal {
   # El servidor se reinicia con el código nuevo: si faltan migraciones, arrancaría con la base vieja. No se migra aquí
   # (hace falta la copia previa y el procedimiento completo); solo se comprueba.
   $bases = @(@{ Nombre = "la base del local"; Entorno = $null })
-  if (Test-Path $baseCapacitacion) {
+  # OmitirCapacitacion: actualizar-produccion.ps1, si falló la migración de la base de práctica. El local sigue sin ella.
+  if ((Test-Path $baseCapacitacion) -and -not $script:OmitirCapacitacion) {
     $bases += @{ Nombre = "la base de capacitación"; Entorno = "file:" + $baseCapacitacion.Replace("\", "/") }
   }
   $pendientes = @()
@@ -237,10 +238,11 @@ function Principal {
   # 3. Reemplazo.
   # -------------------------------------------------------------------------------------------------------------------
   $servidores = @(@{ Servicio = "ApurimenoServidor"; Url = "http://127.0.0.1:$(Puerto-De 'PORT' 3001)/health" })
-  if (Existe-Servicio "ApurimenoCapacitacion") {
+  if ((Existe-Servicio "ApurimenoCapacitacion") -and -not $script:OmitirCapacitacion) {
     # Corre el mismo código del servidor: también se reinicia.
     $servidores += @{ Servicio = "ApurimenoCapacitacion"; Url = "http://127.0.0.1:$(Puerto-De 'CAPACITACION_PORT' 3011)/health" }
   }
+  $script:ReemplazoEmpezado = $true   # actualizar-produccion.ps1: desde aquí, ya no basta con volver al código anterior.
   $resultado = Reemplazar-Builds $pantallas $servidores
 
   Write-Host ("Compilación: Dashboard {0:N0} s, Limpieza {1:N0} s (con los servicios funcionando)." -f $tiempos["Dashboard"], $tiempos["Limpieza"])

@@ -1,4 +1,4 @@
-import { readdir, rename, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { CodigoErrorRespaldo, DestinoRespaldo } from "@apurimeno/contracts";
 import Database from "better-sqlite3";
@@ -148,6 +148,29 @@ export async function tomarCopia(rutaBase: string, destino: string): Promise<Res
 }
 
 /** Traduce un error del sistema de archivos al código que ve el Dashboard. */
+export const COPIAS_PREVIAS_GUARDADAS = 5;
+
+/**
+ * Copia de la base justo antes de una actualización del sistema, en `carpeta`. Va aparte de las copias de cada 15
+ * minutos porque esas se borran a las 24 horas, y un problema de una versión nueva puede notarse más tarde. Guarda las
+ * últimas COPIAS_PREVIAS_GUARDADAS. Se restaura con `pnpm restaurar <archivo>`.
+ */
+export async function tomarCopiaPrevia(rutaBase: string, carpeta: string, etiqueta: string, ahora: Date): Promise<string> {
+  await mkdir(carpeta, { recursive: true });
+  const fecha = ahora.toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15);
+  const destino = join(carpeta, `apurimeno-antes-${etiqueta.replace(/[^\w.-]/g, "_")}-${fecha}.db`);
+  await tomarCopia(rutaBase, destino);
+
+  const copias = await Promise.all(
+    (await readdir(carpeta))
+      .filter((n) => n.startsWith("apurimeno-antes-") && n.endsWith(".db"))
+      .map(async (n) => ({ ruta: join(carpeta, n), hora: (await stat(join(carpeta, n))).mtimeMs })),
+  );
+  copias.sort((a, b) => b.hora - a.hora);
+  await Promise.all(copias.filter((c) => c.ruta !== destino).slice(COPIAS_PREVIAS_GUARDADAS - 1).map((c) => rm(c.ruta, { force: true })));
+  return destino;
+}
+
 export function clasificarError(error: unknown): ErrorRespaldo {
   if (error instanceof ErrorRespaldo) return error;
   const codigo = error instanceof Error && "code" in error ? String(error.code) : "";

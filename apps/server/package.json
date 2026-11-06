@@ -14,6 +14,7 @@
     "enviar-impresora": "tsx --env-file-if-exists=.env src/scripts/enviar-impresora.ts",
     "clave-respaldo": "tsx src/scripts/clave-respaldo.ts",
     "restaurar": "tsx --env-file-if-exists=.env src/scripts/restaurar.ts",
+    "copia-previa": "tsx --env-file-if-exists=.env src/scripts/copia-previa.ts",
     "dev": "prisma migrate deploy && tsx watch --env-file-if-exists=.env src/index.ts",
     "start": "tsx --env-file-if-exists=.env src/index.ts",
     "start:capacitacion": "tsx --env-file-if-exists=.env src/index.ts --capacitacion",

@@ -152,6 +152,8 @@ Para aplicar cambios de `apps/server/.env`, como administrador: `& 'C:\Program F
 
 **No correr `pnpm dev` del Dashboard ni de Limpieza en la carpeta de los servicios.** `next dev` escribe en la misma carpeta `.next` que el build de producción y lo reemplaza, y el servicio deja de arrancar la próxima vez que se inicie. Si pasa, volver a compilar la app y reiniciar su servicio. Ocurrió durante la prueba del 26/09: el instalador lo detectó y no tocó nada.
 
+**Actualizar a distancia:** `docs/ACTUALIZACION_REMOTA.md`. El script de esa guía automatiza los dos procedimientos de abajo, incluido el POS. Estos siguen sirviendo para hacerlo a mano en el PC.
+
 **Actualizar el código (lo habitual): `recompilar-produccion.ps1`.** Cada actualización de código necesita recompilar el Dashboard y Limpieza y reiniciar los servicios. Hacerlo **en un horario de baja ocupación del local**:
 
 1. Hacer antes una copia con "Copiar ahora".
@@ -392,6 +394,7 @@ Borra todo lo operativo (alquileres, tickets, turnos, movimientos, auditoría, c
 - [ ] La carpeta de respaldos sincroniza con una cuenta de Google solo para respaldos, y la revisión mensual de su espacio (con la papelera) está agendada.
 - [ ] Capacitación: `pnpm preparar-capacitacion` y `-Capacitacion` instalados; se entra con `capacitacion.admin` y aparece el banner; `pnpm reiniciar-capacitacion` deja todo limpio.
 - [ ] Restauración ensayada de forma separada siguiendo la guía, sin sustituir la base operativa.
+- [ ] Actualización remota preparada y ensayada (`docs/ACTUALIZACION_REMOTA.md`, secciones 1 y "Ensayo").
 - [ ] Pendientes explícitos: impresión física, Supabase de producción y piloto con cuaderno.
 
 Fuentes locales: `apps/server/scripts/instalar-servicio.ps1`, `src/registro.ts`, `src/respaldo/copia.ts`, `src/respaldo/control.ts`, `src/respaldo/restauracion.ts`, `apps/server/package.json`, `.env.example`, `prisma.config.ts`, `src/index.ts`, `src/cors.ts`, `src/scripts/sembrar.ts`, `src/semilla.ts`, `src/respaldo/`, `src/espejo/configuracion.ts`; README y configuraciones de web, cleaning y native; WiX y build del POS; `docs/RESPALDO_Y_RESTAURACION.md`.

@@ -79,6 +79,9 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
      C++".
    - Respaldos: la clave pública y la carpeta sincronizada en `apps/server/.env`, y comprobar en el Dashboard que
      salen las dos copias (`docs/RESPALDO_Y_RESTAURACION.md`, "Configuración").
+   - **Actualización remota:** Tailscale, SSH solo por esa red y el ensayo con servicios reales
+     (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
+     silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, productos (desde el
    Dashboard → Productos), las cuentas del personal con sus rangos, y el nombre, la dirección y la leyenda del
    comprobante.

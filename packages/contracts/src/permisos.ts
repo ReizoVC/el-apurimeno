@@ -30,6 +30,8 @@ export const PermisoSchema = z.enum([
   "users.manage",
   "settings.manage",
   "audit.view",
+  /** Ver el aviso de versiones nuevas (decisión 30). */
+  "system.update",
 ]);
 export type Permiso = z.infer<typeof PermisoSchema>;
 export const PERMISOS = PermisoSchema.options;

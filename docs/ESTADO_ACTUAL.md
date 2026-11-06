@@ -40,7 +40,7 @@ base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema 
 detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
 iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (642 pruebas al 06/11). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (671 pruebas al 06/11). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
 ## Qué falta para reemplazar el cuaderno
 
@@ -78,6 +78,8 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
    - **Actualización remota:** Tailscale, SSH solo por esa red y el ensayo con servicios reales
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
+     El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). Faltan el botón "Actualizar", que el
+     actualizador compruebe la firma y el panel para publicar.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
    Loyverse, cuyo stock está desfasado. Falta un comando de importación que traiga nombres, precios, categorías y

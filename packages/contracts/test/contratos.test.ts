@@ -346,7 +346,7 @@ describe("Clientes, usuarios y permisos", () => {
   });
 
   it("el catálogo tiene los 23 permisos de §41.3 más store.manual_adjustment", () => {
-    expect(PERMISOS).toHaveLength(24);
+    expect(PERMISOS).toHaveLength(25);
     expect(PERMISOS).toContain("store.manual_adjustment");
     expect(RANGOS_INICIALES.ADMINISTRADOR.permisos).toEqual(PERMISOS);
   });

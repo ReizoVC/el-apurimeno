@@ -49,6 +49,7 @@ export const PERMISO: Record<Permiso, string> = {
   "users.manage": "Gestionar usuarios y rangos",
   "settings.manage": "Configuración y métodos de pago",
   "audit.view": "Ver la auditoría",
+  "system.update": "Ver el aviso de versiones nuevas del sistema",
 };
 
 export const ORIGEN_TICKET: Record<OrigenTicket, string> = {

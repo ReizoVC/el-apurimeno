@@ -3,6 +3,7 @@ import {
   CategoriaProductoSchema,
   ClienteSchema,
   ConfiguracionRespuestaSchema,
+  EstadoActualizacionSchema,
   EstadoEspejoSchema,
   EstadoImpresoraSchema,
   EstadoRespaldosSchema,
@@ -261,6 +262,10 @@ export const servidor = {
       ),
       SIN_CUERPO,
     ),
+
+  // Aviso de versiones nuevas (decisión 30)
+  estadoActualizacion: () =>
+    llamar("GET", RUTAS.estadoActualizacion, EstadoActualizacionSchema),
 
   // Productos e inventario (RF-53, CU-12, CU-29)
   categoriasProducto: () =>

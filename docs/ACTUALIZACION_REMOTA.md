@@ -55,16 +55,28 @@ Se hace con el PC delante, como parte de la instalación (`docs/INSTALACION_LOCA
 
 5. **Que el equipo no se suspenda** ya está en la instalación: si se suspende, Tailscale tampoco llega.
 
+6. **Aviso de versiones nuevas.** En el equipo de desarrollo, una sola vez, con un archivo **fuera del repositorio**:
+
+   ```bash
+   pnpm clave-actualizacion --privada-en <archivo>
+   ```
+
+   Guardar una copia de la clave privada en el gestor de contraseñas y dejar `ACTUALIZACION_CLAVE_PRIVADA_ARCHIVO` con la ruta de ese archivo en las variables de entorno de tu usuario. La línea `ACTUALIZACION_CLAVE_PUBLICA` que muestra el comando va en `apps/server/.env` del PC del local, y hay que reiniciar `ApurimenoServidor`. Sin ella, el Dashboard no anuncia nada.
+
+   Si se pierde la clave privada: generar otra y cambiar la pública en el PC del local, por SSH o estando allá.
+
 ## 2. Publicar una versión
 
 1. En el PR de la versión, subir `version` en `apps/native/src-tauri/tauri.conf.json`. Es el número de la versión; Windows solo reemplaza el POS si es mayor.
 2. Integrado el PR, en un worktree o clon en el último commit de `origin/main` (con Visual Studio y Rust):
 
    ```bash
-   pnpm publicar-version
+   pnpm publicar-version --notas "Qué cambia, en palabras del personal"
    ```
 
-   Compila el MSI y crea la etiqueta y la publicación de GitHub con el instalador y su SHA-256. El repositorio es público: el instalador también. No debe llevar secretos (no los lleva: el POS solo trae la dirección de su servidor).
+   Compila el MSI, firma su manifiesto y crea la etiqueta y la publicación de GitHub con el instalador, su SHA-256 y el manifiesto firmado. La nota es lo que lee el personal en el aviso; el máximo es 500 caracteres. El repositorio es público: el instalador también. No debe llevar secretos (no los lleva: el POS solo trae la dirección de su servidor).
+
+**El aviso.** El servidor del local revisa GitHub al arrancar y cada 6 horas. Quien tenga el permiso `system.update` ve en el Dashboard la versión, la nota y si la actualización es rápida o completa. Lo que no tenga una firma válida no se ofrece y muestra una alerta roja. Por ahora solo avisa: **la instalación sigue siendo por SSH, y el actualizador todavía no comprueba la firma.**
 
 Si la publicación se corta y hay que repetirla, y dice que hay cambios sin commit: Tauri reescribe `apps/native/src-tauri/Cargo.toml` con otros finales de línea al compilar. Se restaura con `git checkout -- apps/native/src-tauri/Cargo.toml`.
 
@@ -155,10 +167,12 @@ Ensayado el 05/11/2026, con una migración que falla por SQL inválido. Una migr
 - [ ] Cortar la conexión SSH de verdad a la mitad.
 - [ ] Una versión publicada en GitHub: la descarga real del instalador y `pnpm publicar-version` sin `--solo-compilar`.
 - [ ] Con esa versión: el POS abierto, con y sin `-CerrarPOS`.
+- [ ] Con esa versión y la clave real: que el Dashboard del local la anuncie.
 
 ## Seguridad
 
 - **Quién puede actualizar:** quien tenga la clave SSH y acceso a la cuenta de Tailscale. Quien puede publicar en GitHub no puede instalar nada por sí solo: la orden siempre sale de una sesión SSH.
+- **Clave de versiones:** la privada solo está en el equipo de quien publica y en su gestor de contraseñas. Quien entre a la cuenta de GitHub no puede firmar, así que el Dashboard no anunciaría su versión.
 - **Qué se instala:** solo etiquetas `vX.Y.Z` que estén en `origin/main` y sean posteriores a la instalada.
 - **El SHA-256 del POS detecta una descarga dañada,** no un ataque: se publica en el mismo lugar que el MSI. El MSI no está firmado, y `msiexec` en modo silencioso no lo pide.
 - **`.env` y claves:** no se tocan ni se muestran. La clave privada de respaldo sigue sin estar en el PC.

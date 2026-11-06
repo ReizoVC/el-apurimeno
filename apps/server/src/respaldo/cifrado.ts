@@ -50,11 +50,11 @@ export class ErrorClave extends Error {
 const control = (prefijo: string, bytes: Buffer) => createHash("sha256").update(prefijo).update(bytes).digest().subarray(0, 4);
 
 /** Clave en texto: prefijo + base64url(32 bytes + 4 de control). El control detecta una clave mal copiada. */
-function aTexto(prefijo: string, bytes: Buffer): string {
+export function aTexto(prefijo: string, bytes: Buffer): string {
   return prefijo + Buffer.concat([bytes, control(prefijo, bytes)]).toString("base64url");
 }
 
-function desdeTexto(prefijo: string, texto: string, nombre: string): Buffer {
+export function desdeTexto(prefijo: string, texto: string, nombre: string): Buffer {
   const limpio = texto.trim();
   if (!limpio.startsWith(prefijo)) {
     throw new ErrorClave(`La ${nombre} debe empezar con "${prefijo}".`);

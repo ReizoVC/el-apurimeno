@@ -63,6 +63,8 @@ export const PERMISO_POR_OPERACION = {
   /** Estado de los respaldos y "copiar ahora" (Planos §14.3), también parte de la configuración del sistema. */
   CONSULTAR_ESTADO_RESPALDOS: "settings.manage",
   RESPALDAR: "settings.manage",
+  /** Aviso de versiones nuevas (decisión 30). */
+  CONSULTAR_ACTUALIZACION: "system.update",
 } as const satisfies Record<string, Permiso>;
 
 export type Operacion = keyof typeof PERMISO_POR_OPERACION;

@@ -51,6 +51,7 @@ const app = await construirApp({
   problemasImpresion: { configuracion: problemaImpresora, logo: problemaLogo },
   espejo,
   respaldos,
+  actualizacion: arranque.actualizacion,
   capacitacion,
 });
 if (capacitacion) {
@@ -83,6 +84,8 @@ if (respaldos.externo !== null) {
   app.log.warn("Respaldo externo sin configurar (RESPALDO_CARPETA_EXTERNA y RESPALDO_CLAVE_PUBLICA): solo hay copias en este equipo.");
 }
 
+if (arranque.actualizacion.problema !== null) app.log.error(`Aviso de versiones apagado: ${arranque.actualizacion.problema}`);
+
 const cerrar = async () => {
   await app.close();
   await prisma.$disconnect();
@@ -96,3 +99,4 @@ await app.listen({ host: arranque.host, port: arranque.puerto });
 app.espejo.iniciar();
 app.impresion.iniciar();
 app.respaldos.iniciar();
+app.actualizacion.iniciar();

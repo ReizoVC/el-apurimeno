@@ -44,7 +44,7 @@ export const CONTRASENA = "contrasena-de-prueba";
 /** Base SQLite real en un archivo temporal, migrada y sembrada, con la app lista para recibir solicitudes. */
 export async function prepararEntorno(
   inicio = "2026-09-23T14:00:00.000Z",
-  extra: Pick<OpcionesApp, "espejo"> & { respaldos?: (rutaBase: string) => ConfiguracionRespaldos } = {},
+  extra: Pick<OpcionesApp, "espejo" | "actualizacion"> & { respaldos?: (rutaBase: string) => ConfiguracionRespaldos } = {},
 ): Promise<Entorno> {
   const dir = mkdtempSync(join(tmpdir(), "apurimeno-"));
   const ruta = join(dir, "prueba.db");
@@ -64,6 +64,7 @@ export async function prepararEntorno(
     ahora: () => reloj.ahora,
     costoBcrypt: 4,
     espejo: extra.espejo,
+    actualizacion: extra.actualizacion,
     respaldos: extra.respaldos?.(ruta),
   });
 

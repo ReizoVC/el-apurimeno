@@ -37,6 +37,7 @@ import {
   leerSesion,
   type Sesion,
 } from "../lib/sesion";
+import { AvisoActualizacion } from "./AvisoActualizacion";
 import { Aviso, Campo } from "./comunes";
 
 const ContextoSesion = createContext<Sesion | null>(null);
@@ -256,6 +257,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           </aside>
           <main className="flex min-w-0 flex-1 flex-col gap-4 p-6">
+            {tienePermiso(sesion, "system.update") && <AvisoActualizacion />}
             {children}
           </main>
         </div>

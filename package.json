@@ -13,6 +13,7 @@
     "tauri": "pnpm --filter native tauri",
     "iconos": "node recursos/generar-iconos.mjs",
     "publicar-version": "node apps/native/scripts/publicar-version.mjs",
+    "clave-actualizacion": "pnpm --filter server clave-actualizacion",
     "preparar-capacitacion": "pnpm --filter server preparar-capacitacion",
     "reiniciar-capacitacion": "pnpm --filter server reiniciar-capacitacion"
   },

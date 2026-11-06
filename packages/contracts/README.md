@@ -361,6 +361,24 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
 
     Todo exige `inventory.manage`, salvo vender. Cambio **aditivo** para los clientes viejos, porque
     `confirmarSinStock` vale `false` si no llega. `MovimientoInventario.motivo` es un campo nuevo de la respuesta.
+30. **Aviso de versiones nuevas, con firma** (`actualizacion.ts`, `GET /actualizacion`, permiso `system.update`). Pedido
+    para que el local reciba las versiones sin depender de una orden por SSH. Quien entra a la cuenta de GitHub no debe
+    poder ofrecerle al local una versión falsa, así que cada publicación lleva un `ManifiestoVersion` firmado con Ed25519.
+    La clave privada solo está en el equipo de quien publica; el servidor tiene la pública en
+    `ACTUALIZACION_CLAVE_PUBLICA`. Sin ella, no se revisa nada (`SIN_CONFIGURAR`), igual que la instancia de capacitación.
+    - **Qué no se ofrece:** nada con la firma mala o sin firma, ni una etiqueta que no coincida con la versión firmada
+      (`FIRMA_INVALIDA`, alerta en el Dashboard). Tampoco lo que no sea posterior a la instalada.
+    - **Sin internet:** se conserva la última revisión, sin alerta. Solo sale hacia GitHub; no abre ningún puerto.
+    - **Versión instalada:** la de `apps/native/src-tauri/tauri.conf.json` del checkout, que solo avanza a etiquetas.
+    - **Rápida o completa:** es lo que se le anticipa al personal. `ManifiestoVersion.ultimaCompleta` guarda la última
+      versión que exigió detener los servicios, y por eso acierta aunque el local se salte versiones. El actualizador
+      sigue decidiendo por su cuenta con `git diff`.
+    - **Permiso nuevo:** se separa de `settings.manage` para poder dárselo a alguien sin darle la configuración. Una
+      migración lo agrega al rango Administrador en las bases que ya existen.
+
+    `ManifiestoVersion` no es `.strict()`: un servidor sin actualizar tiene que poder leer el manifiesto de una versión
+    que agregue campos. Cambio **aditivo**. Por ahora solo avisa: el botón y la verificación dentro del actualizador se
+    agregan después.
 
 ## Decisiones pendientes que afectan el contrato
 

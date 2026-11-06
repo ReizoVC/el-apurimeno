@@ -3,6 +3,8 @@ import fastifyCors from "@fastify/cors";
 import fastifyJwt from "@fastify/jwt";
 import { CABECERA_IDEMPOTENCIA } from "@apurimeno/contracts";
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from "fastify";
+import { ACTUALIZACION_APAGADA } from "./actualizacion/configuracion.js";
+import { crearControlActualizacion, type ControlActualizacion, type OpcionesActualizacion } from "./actualizacion/control.js";
 import { COSTO_BCRYPT, registrarAutenticacion } from "./auth.js";
 import type { PrismaClient } from "./db.js";
 import { SIN_ESPEJO, crearControlEspejo, type ControlEspejo, type OpcionesEspejo } from "./espejo/control.js";
@@ -14,6 +16,7 @@ import { OPCIONES_ESCPOS_POR_DEFECTO, type PaginaCodigos } from "./impresion/esc
 import type { ImagenMonocromo } from "./impresion/imagen.js";
 import type { TransporteImpresora } from "./impresion/transporte.js";
 import { registrarRutas } from "./rutas.js";
+import { registrarRutasActualizacion } from "./rutas-actualizacion.js";
 import { registrarRutasClientes } from "./rutas-clientes.js";
 import { registrarRutasConfiguracion } from "./rutas-configuracion.js";
 import { registrarRutasEspejo } from "./rutas-espejo.js";
@@ -32,6 +35,8 @@ declare module "fastify" {
     espejo: ControlEspejo;
     /** Respaldos de la base; `index.ts` los inicia, las pruebas los llaman a mano. */
     respaldos: ControlRespaldos;
+    /** Aviso de versiones nuevas; `index.ts` lo inicia, las pruebas llaman `revisar`. */
+    actualizacion: ControlActualizacion;
   }
 }
 
@@ -61,6 +66,8 @@ export interface OpcionesApp {
   espejo?: OpcionesEspejo;
   /** Respaldos de la base (Planos §14.3). Sin ellos, el servidor no copia nada (pruebas). */
   respaldos?: ConfiguracionRespaldos;
+  /** Aviso de versiones nuevas (decisión 30). Sin él, no se revisa nada. */
+  actualizacion?: OpcionesActualizacion;
   /** Instancia de capacitación (instancia.ts): todo comprobante impreso lleva la marca "CAPACITACIÓN". */
   capacitacion?: boolean;
 }
@@ -115,6 +122,10 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   app.decorate("respaldos", respaldos);
   app.addHook("onClose", async () => respaldos.detener());
   registrarRutasRespaldos(app, opciones.prisma, ahora, respaldos);
+  const actualizacion = crearControlActualizacion(opciones.actualizacion ?? ACTUALIZACION_APAGADA, ahora, app.log);
+  app.decorate("actualizacion", actualizacion);
+  app.addHook("onClose", async () => actualizacion.detener());
+  registrarRutasActualizacion(app, actualizacion);
   await app.ready();
   return app;
 }

@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ACTUALIZACION_APAGADA, leerConfiguracionActualizacion, type ConfiguracionActualizacion } from "./actualizacion/configuracion.js";
 import { rutaDesdeUrl } from "./db.js";
 import { leerConfiguracionEspejo, type ConfiguracionEspejo } from "./espejo/configuracion.js";
 import { leerConfiguracionRespaldos, type ConfiguracionRespaldos } from "./respaldo/configuracion.js";
@@ -41,6 +42,7 @@ export interface Arranque {
   impresoraLogo: string | undefined;
   espejo: ConfiguracionEspejo;
   respaldos: ConfiguracionRespaldos;
+  actualizacion: ConfiguracionActualizacion;
 }
 
 const mismaRuta = (a: string, b: string) => resolve(a).toLowerCase() === resolve(b).toLowerCase();
@@ -51,7 +53,7 @@ const mismaRuta = (a: string, b: string) => resolve(a).toLowerCase() === resolve
  * Producción: la de siempre, desde las variables de entorno.
  *
  * Capacitación: de las variables solo toma las que no pueden llevar datos a ningún lado (HOST, CORS_ORIGINS, la
- * impresora y NODE_ENV). Ignora a propósito DATABASE_URL, PORT, JWT_SECRET, ESPEJO_* y RESPALDO_*, aunque estén
+ * impresora y NODE_ENV). Ignora a propósito DATABASE_URL, PORT, JWT_SECRET, ESPEJO_*, RESPALDO_* y ACTUALIZACION_*, aunque estén
  * definidas: base propia en una ruta fija, puerto 3011 (CAPACITACION_PORT lo cambia), secreto propio
  * (CAPACITACION_JWT_SECRET o uno por arranque), sin espejo y con copias solo locales, junto a su base.
  */
@@ -80,6 +82,7 @@ export function leerArranque(env: NodeJS.ProcessEnv, instancia: Instancia): Arra
       puerto: Number(env["PORT"] || 3001),
       espejo: leerConfiguracionEspejo(env),
       respaldos: leerConfiguracionRespaldos(env, rutaBase),
+      actualizacion: leerConfiguracionActualizacion(env),
     };
   }
 
@@ -92,5 +95,7 @@ export function leerArranque(env: NodeJS.ProcessEnv, instancia: Instancia): Arra
     espejo: { supabase: null, problema: ESPEJO_DESACTIVADO_EN_CAPACITACION, intervaloMinutos: 30 },
     // Sin leer RESPALDO_*: copias locales junto a la base de capacitación, ninguna externa.
     respaldos: leerConfiguracionRespaldos({}, BASE_CAPACITACION),
+    // Sin leer ACTUALIZACION_*: comparte el código con producción y no tiene nada que anunciar por su cuenta.
+    actualizacion: ACTUALIZACION_APAGADA,
   };
 }

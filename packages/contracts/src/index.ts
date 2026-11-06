@@ -14,4 +14,5 @@ export * from "./comprobantes.js";
 export * from "./configuracion.js";
 export * from "./espejo.js";
 export * from "./respaldo.js";
+export * from "./actualizacion.js";
 export * from "./api.js";

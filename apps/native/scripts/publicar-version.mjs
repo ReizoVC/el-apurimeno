@@ -1,8 +1,9 @@
-// Publica una versión para el PC del local (docs/ACTUALIZACION_REMOTA.md): compila el instalador del POS, crea la
-// etiqueta vX.Y.Z y la publicación de GitHub con el instalador y su SHA-256.
+// Publica una versión para el PC del local (docs/ACTUALIZACION_REMOTA.md): compila el instalador del POS, firma su
+// manifiesto, crea la etiqueta vX.Y.Z y la publicación de GitHub con el instalador, su SHA-256 y el manifiesto firmado.
 //
-//   pnpm publicar-version                 desde un worktree o clon, en el commit de origin/main
-//   pnpm publicar-version --solo-compilar compila y deja los archivos, sin etiqueta ni publicación
+//   pnpm publicar-version --notas "Qué cambia"   desde un worktree o clon, en el commit de origin/main. La nota es lo
+//                                                que lee el personal. Pide ACTUALIZACION_CLAVE_PRIVADA_ARCHIVO
+//   pnpm publicar-version --solo-compilar        compila y deja los archivos, sin firma, etiqueta ni publicación
 //
 // El número sale de apps/native/src-tauri/tauri.conf.json: se sube en el PR de la versión. Windows Installer solo
 // reemplaza el POS si el número es mayor.
@@ -14,6 +15,8 @@ import { fileURLToPath } from "node:url";
 
 const nativo = fileURLToPath(new URL("..", import.meta.url));
 const soloCompilar = process.argv.includes("--solo-compilar");
+const indiceNotas = process.argv.indexOf("--notas");
+const notas = indiceNotas === -1 ? "" : (process.argv[indiceNotas + 1] ?? "").trim();
 
 function fallar(mensaje) {
   console.error(`\nNo se publicó nada: ${mensaje}`);
@@ -34,6 +37,11 @@ for (const v of ["VITE_SERVIDOR_URL", "VITE_SERVIDOR_CAPACITACION_URL"]) {
 }
 
 if (!soloCompilar) {
+  if (notas === "") fallar('falta --notas "Qué cambia": es lo que lee el personal en el aviso.');
+  if (notas.length > 500) fallar(`la nota tiene ${notas.length} caracteres; el máximo es 500.`);
+  if (!process.env["ACTUALIZACION_CLAVE_PRIVADA_ARCHIVO"]) {
+    fallar("falta ACTUALIZACION_CLAVE_PRIVADA_ARCHIVO: el archivo de la clave privada de versiones (pnpm clave-actualizacion).");
+  }
   correr("git", ["fetch", "origin", "main", "--tags"]);
   if (correr("git", ["status", "--porcelain"]) !== "") fallar("hay cambios sin commit.");
   if (correr("git", ["rev-parse", "HEAD"]) !== correr("git", ["rev-parse", "origin/main"])) {
@@ -64,7 +72,22 @@ console.log(`${msi}\nSHA-256: ${hash}`);
 
 if (soloCompilar) process.exit(0);
 
+// Antes de la etiqueta: si la firma falla, no queda nada publicado a medias.
+const borrador = join(salida, "borrador-manifiesto.json");
+writeFileSync(
+  borrador,
+  JSON.stringify({ version, commit: correr("git", ["rev-parse", "HEAD"]), instaladorPos: { nombre, sha256: hash }, notas }),
+);
+const firmado = spawnSync("pnpm", ["--silent", "--filter", "server", "firmar-version", `"${borrador}"`], {
+  encoding: "utf8",
+  cwd: nativo,
+  shell: process.platform === "win32",
+});
+if (firmado.status !== 0) fallar(`no se pudo firmar el manifiesto.\n${firmado.stderr ?? ""}`);
+const [manifiesto, firma] = firmado.stdout.trim().split(/\r?\n/);
+if (manifiesto === undefined || firma === undefined) fallar("firmar-version no devolvió sus archivos.");
+
 correr("git", ["tag", "-a", etiqueta, "-m", `El Apurimeño ${version}`]);
 correr("git", ["push", "origin", etiqueta]);
-correr("gh", ["release", "create", etiqueta, msi, `${msi}.sha256`, "--verify-tag", "--title", `El Apurimeño ${version}`, "--generate-notes"]);
+correr("gh", ["release", "create", etiqueta, msi, `${msi}.sha256`, manifiesto, firma, "--verify-tag", "--title", `El Apurimeño ${version}`, "--notes", notas]);
 console.log(`\nPublicada ${etiqueta}. Para instalarla, ver docs/ACTUALIZACION_REMOTA.md.`);

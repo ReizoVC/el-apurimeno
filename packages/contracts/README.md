@@ -343,6 +343,24 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     nombre, así que eliminarla no altera ninguna venta: no hace falta un estado "inactiva". Los productos inactivos
     también cuentan, porque usan la categoría igual. Se audita con `CATEGORIA_RENOMBRADA` y `CATEGORIA_ELIMINADA`
     (cuántos productos se movieron y a dónde). Cambio **aditivo**, con el permiso de `GESTIONAR_PRODUCTOS`.
+29. **Corregir el stock y vender sin stock** (`SALIDA` y `CONTEO` en el kardex, `POST /productos/:id/salida` y
+    `/conteo`, `GET /movimientos-inventario`, `confirmarSinStock`). El SRS solo prevé venta, anulación y reposición, y
+    sin más no hay forma de registrar una merma ni de corregir un stock desfasado. La propietaria decidió además que
+    se pueda vender sin stock, con aviso y control:
+    - **Venta sin stock:** RN-26 la permite con una configuración, así que `permitirStockNegativo` sigue siendo el
+      interruptor, pero en una instalación nueva viene activado. Con él, además, el cajero tiene que confirmar el aviso
+      (`confirmarSinStock`); sin confirmar se rechaza con `INSUFFICIENT_STOCK`. No pide código de autorización, para
+      que nadie quede trabado de noche: el control es `VENTA_SIN_STOCK` en la auditoría y el stock negativo a la vista.
+    - **Salida:** resta con motivo obligatorio y no puede sacar más de lo que hay (`INSUFFICIENT_STOCK`): si lo físico
+      no cuadra con el sistema, corresponde un conteo.
+    - **Conteo:** deja el stock en lo contado y guarda la diferencia en el kardex, también si es 0, para que quede la
+      constancia de que se contó.
+    - **`stockVisto`:** si el stock cambió desde que la pantalla lo leyó, se rechaza (`INVALID_STATE_TRANSITION`).
+    - **Historial:** los últimos `LIMITE_MOVIMIENTOS_INVENTARIO`, sin paginar, con el saldo calculado desde el stock
+      actual. Los movimientos siguen sin editarse ni borrarse (RN-36): un error se corrige con otro movimiento.
+
+    Todo exige `inventory.manage`, salvo vender. Cambio **aditivo** para los clientes viejos, porque
+    `confirmarSinStock` vale `false` si no llega. `MovimientoInventario.motivo` es un campo nuevo de la respuesta.
 
 ## Decisiones pendientes que afectan el contrato
 

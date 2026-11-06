@@ -52,6 +52,9 @@ export const RUTAS = {
   productos: "/productos",
   producto: "/productos/:id",
   reponerProducto: "/productos/:id/reposicion",
+  salidaStock: "/productos/:id/salida",
+  conteoStock: "/productos/:id/conteo",
+  movimientosInventario: "/movimientos-inventario",
   registrarVenta: "/ventas",
   generarCodigoAutorizacion: "/codigos-autorizacion",
   anularTicket: "/tickets/:id/anulacion",
@@ -307,7 +310,7 @@ export type CategoriaProductoEntrada = z.infer<typeof CategoriaProductoEntradaSc
 export const EliminarCategoriaConsultaSchema = z.object({ moverA: IdSchema.optional() }).strict();
 export type EliminarCategoriaConsulta = z.infer<typeof EliminarCategoriaConsultaSchema>;
 
-/** Alta o edición de un producto (RF-53). El stock no se edita aquí: solo cambia con ventas, reposiciones y anulaciones. */
+/** Alta o edición de un producto (RF-53). El stock no se edita aquí: solo cambia con movimientos de kardex. */
 export const ProductoEntradaSchema = z
   .object({
     categoriaId: IdSchema,
@@ -346,6 +349,40 @@ export const ReposicionRespuestaSchema = z
   .strict();
 export type ReposicionRespuesta = z.infer<typeof ReposicionRespuestaSchema>;
 
+/**
+ * Salida y conteo (decisión 29). `stockVisto` es el stock que tenía la pantalla: si cambió, se rechaza, para no
+ * repetir una salida con un doble clic ni pisar una venta hecha mientras se contaba. El motivo lo exige el dominio.
+ */
+export const SalidaStockEntradaSchema = z
+  .object({ cantidad: z.number().int().positive(), motivo: z.string(), stockVisto: z.number().int() })
+  .strict();
+export type SalidaStockEntrada = z.infer<typeof SalidaStockEntradaSchema>;
+
+export const ConteoStockEntradaSchema = z
+  .object({ contado: z.number().int().nonnegative(), nota: z.string().nullable(), stockVisto: z.number().int() })
+  .strict();
+export type ConteoStockEntrada = z.infer<typeof ConteoStockEntradaSchema>;
+
+export const MovimientoStockRespuestaSchema = ReposicionRespuestaSchema;
+
+/** Cuántos movimientos devuelve el historial: los más recientes, de un producto o de todos. */
+export const LIMITE_MOVIMIENTOS_INVENTARIO = 200;
+
+export const MovimientosInventarioConsultaSchema = z.object({ productoId: IdSchema.optional() }).strict();
+export type MovimientosInventarioConsulta = z.infer<typeof MovimientosInventarioConsultaSchema>;
+
+/** Una fila del historial. `saldo` es el stock del producto justo después de ese movimiento. */
+export const MovimientoHistorialSchema = z
+  .object({
+    movimiento: MovimientoInventarioSchema,
+    productoNombre: TextoRequeridoSchema,
+    creadoPorNombre: TextoRequeridoSchema,
+    ticketNumero: z.number().int().positive().nullable(),
+    saldo: z.number().int(),
+  })
+  .strict();
+export type MovimientoHistorial = z.infer<typeof MovimientoHistorialSchema>;
+
 export const ItemVentaEntradaSchema = z
   .object({ productoId: IdSchema, cantidad: z.number().int().positive() })
   .strict();
@@ -353,6 +390,7 @@ export const ItemVentaEntradaSchema = z
 /**
  * Venta de tienda. `esHuesped` lo indica el cajero de forma explícita (RN-22): la tienda no infiere
  * alquileres (RES-02). Asociar una habitación es opcional (RN-24) y solo tiene sentido si es huésped.
+ * `confirmarSinStock`: el cajero vio el aviso y confirma vender más de lo que hay (decisión 29).
  */
 export const RegistrarVentaEntradaSchema = z
   .object({
@@ -361,6 +399,7 @@ export const RegistrarVentaEntradaSchema = z
     habitacionReferenciaId: IdSchema.nullable(),
     ajuste: AjusteEntradaSchema.nullable(),
     pagos: z.array(PagoEntradaSchema).min(1),
+    confirmarSinStock: z.boolean().default(false),
   })
   .strict()
   .refine((v) => v.habitacionReferenciaId === null || v.esHuesped, {

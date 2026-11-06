@@ -1,20 +1,28 @@
 import { randomUUID } from "node:crypto";
-import type {
-  CategoriaProducto,
-  CategoriaProductoEntrada,
-  Producto,
-  ProductoEntrada,
-  RegistrarVentaEntrada,
-  ReposicionRespuesta,
-  Ticket,
+import {
+  LIMITE_MOVIMIENTOS_INVENTARIO,
+  type AccionAuditoria,
+  type CategoriaProducto,
+  type CategoriaProductoEntrada,
+  type ConteoStockEntrada,
+  type MovimientoHistorial,
+  type Producto,
+  type ProductoEntrada,
+  type RegistrarVentaEntrada,
+  type ReposicionRespuesta,
+  type SalidaStockEntrada,
+  type Ticket,
 } from "@apurimeno/contracts";
 import {
   ErrorNegocio,
   aplicarAjustePuntual,
+  aplicarConteoStock,
   aplicarVentaAInventario,
   armarTicketCobro,
   cotizarVenta,
+  registrarSalidaStock,
   reponerStock,
+  type EfectoInventario,
 } from "@apurimeno/domain";
 import { exigir } from "../auth.js";
 import { auditar } from "../auditoria.js";
@@ -62,7 +70,7 @@ export async function registrarVentaServicio(ctx: ContextoServicio, entrada: Reg
           cotizacion = aplicarAjustePuntual(cotizacion, entrada.ajuste.montoAjustado, entrada.ajuste.motivo);
         }
         const { permitirStockNegativo } = await parametrosVigentes(tx);
-        const inventario = aplicarVentaAInventario(items, permitirStockNegativo);
+        const inventario = aplicarVentaAInventario(items, permitirStockNegativo, entrada.confirmarSinStock);
         const ticket = armarTicketCobro(
           {
             numero: await siguienteNumeroTicket(tx),
@@ -117,6 +125,19 @@ export async function registrarVentaServicio(ctx: ContextoServicio, entrada: Reg
           },
           ctx.ahora,
         );
+        if (inventario.sinStock.length > 0) {
+          await auditar(
+            tx,
+            {
+              usuarioId: ctx.usuario.id,
+              accion: "VENTA_SIN_STOCK",
+              tipoEntidad: "TICKET",
+              entidadId: ticket.id,
+              valorNuevo: { productos: inventario.sinStock.map((p) => ({ ...p })) },
+            },
+            ctx.ahora,
+          );
+        }
         return ticket;
       }),
   );
@@ -259,15 +280,27 @@ export async function editarProducto(ctx: ContextoServicio, id: string, entrada:
   });
 }
 
-/** Ingreso de mercadería (CU-12, RN-25, RF-35). */
-export async function reponerProducto(ctx: ContextoServicio, id: string, cantidad: number): Promise<ReposicionRespuesta> {
+/** Aplica un movimiento manual de stock: el cambio, su línea de kardex y su auditoría, en una transacción. */
+async function moverStock(
+  ctx: ContextoServicio,
+  id: string,
+  stockVisto: number | null,
+  accion: AccionAuditoria,
+  calcular: (producto: Producto) => EfectoInventario,
+): Promise<ReposicionRespuesta> {
   return ctx.prisma.$transaction(async (tx) => {
     const fila = await tx.producto.findUnique({ where: { id } });
     if (fila === null) throw noEncontrado("El producto");
-    const efecto = reponerStock(aProducto(fila), cantidad);
+    if (stockVisto !== null && stockVisto !== fila.stock) {
+      throw new ErrorNegocio(
+        "INVALID_STATE_TRANSITION",
+        `El stock de ${fila.nombre} cambió de ${stockVisto} a ${fila.stock} mientras tanto. Revíselo y vuelva a intentar.`,
+      );
+    }
+    const efecto = calcular(aProducto(fila));
     const [producto] = efecto.productos;
     const [movimiento] = efecto.movimientos;
-    if (producto === undefined || movimiento === undefined) throw new Error("reponerStock no devolvió su efecto.");
+    if (producto === undefined || movimiento === undefined) throw new Error("El dominio no devolvió el efecto del movimiento.");
 
     const { count } = await tx.producto.updateMany({ where: { id, stock: fila.stock }, data: { stock: producto.stock } });
     if (count === 0) throw new ErrorNegocio("INVALID_STATE_TRANSITION", "El stock cambió; vuelva a intentar.");
@@ -278,14 +311,59 @@ export async function reponerProducto(ctx: ContextoServicio, id: string, cantida
       tx,
       {
         usuarioId: ctx.usuario.id,
-        accion: "MERCADERIA_INGRESADA",
+        accion,
         tipoEntidad: "PRODUCTO",
         entidadId: id,
         valorPrevio: { stock: fila.stock },
-        valorNuevo: { stock: producto.stock, cantidad },
+        valorNuevo: { stock: producto.stock, cantidad: movimiento.cantidad },
+        motivo: movimiento.motivo ?? null,
       },
       ctx.ahora,
     );
     return { producto, movimiento: aMovimientoInventario(creado) };
+  });
+}
+
+/** Ingreso de mercadería (CU-12, RN-25, RF-35). */
+export function reponerProducto(ctx: ContextoServicio, id: string, cantidad: number): Promise<ReposicionRespuesta> {
+  return moverStock(ctx, id, null, "MERCADERIA_INGRESADA", (p) => reponerStock(p, cantidad));
+}
+
+/** Salida de mercadería con motivo (decisión 29). */
+export function salidaDeStock(ctx: ContextoServicio, id: string, e: SalidaStockEntrada): Promise<ReposicionRespuesta> {
+  return moverStock(ctx, id, e.stockVisto, "STOCK_SALIDA", (p) => registrarSalidaStock(p, e.cantidad, e.motivo));
+}
+
+/** Conteo físico: el stock queda en lo contado (decisión 29). */
+export function conteoDeStock(ctx: ContextoServicio, id: string, e: ConteoStockEntrada): Promise<ReposicionRespuesta> {
+  return moverStock(ctx, id, e.stockVisto, "STOCK_CONTADO", (p) => aplicarConteoStock(p, e.contado, e.nota));
+}
+
+/**
+ * Historial (kardex): los movimientos más recientes, de un producto o de todos. Para cada producto, el saldo se obtiene
+ * desde su stock actual, deshaciendo los movimientos del más nuevo al más viejo.
+ */
+export async function listarMovimientosInventario(ctx: ContextoServicio, productoId: string | undefined): Promise<MovimientoHistorial[]> {
+  const filas = await ctx.prisma.movimientoInventario.findMany({
+    where: productoId === undefined ? {} : { productoId },
+    orderBy: { creadoEn: "desc" },
+    take: LIMITE_MOVIMIENTOS_INVENTARIO,
+    include: {
+      producto: { select: { nombre: true, stock: true } },
+      creadoPor: { select: { nombreUsuario: true } },
+      ticket: { select: { numero: true } },
+    },
+  });
+  const saldos = new Map<string, number>();
+  return filas.map((fila) => {
+    const saldo = saldos.get(fila.productoId) ?? fila.producto.stock;
+    saldos.set(fila.productoId, saldo - fila.cantidad);
+    return {
+      movimiento: aMovimientoInventario(fila),
+      productoNombre: fila.producto.nombre,
+      creadoPorNombre: fila.creadoPor.nombreUsuario,
+      ticketNumero: fila.ticket?.numero ?? null,
+      saldo,
+    };
   });
 }

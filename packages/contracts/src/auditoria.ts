@@ -25,6 +25,10 @@ export const AccionAuditoriaSchema = z.enum([
   "AJUSTE_PUNTUAL_APLICADO",
   "VENTA_REGISTRADA",
   "MERCADERIA_INGRESADA",
+  "STOCK_SALIDA",
+  "STOCK_CONTADO",
+  /** El cajero confirmó vender más de lo que hay (decisión 29): qué productos y con cuánto stock. */
+  "VENTA_SIN_STOCK",
   "HABITACION_CREADA",
   "HABITACION_EDITADA",
   "HABITACION_ESTADO_CAMBIADO",
@@ -56,6 +60,7 @@ export const ACCIONES_CON_MOTIVO: readonly AccionAuditoria[] = [
   "AJUSTE_PUNTUAL_APLICADO",
   "TICKET_ANULADO",
   "MOVIMIENTO_CAJA_REGISTRADO",
+  "STOCK_SALIDA",
 ];
 
 export const TipoEntidadAuditadaSchema = z.enum([

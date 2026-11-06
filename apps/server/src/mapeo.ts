@@ -301,6 +301,7 @@ export function aMovimientoInventario(fila: Db.MovimientoInventario): Movimiento
     tipo: fila.tipo,
     cantidad: fila.cantidad,
     ticketId: fila.ticketId,
+    motivo: fila.motivo,
     creadoPorId: fila.creadoPorId,
     creadoEn: iso(fila.creadoEn),
   });

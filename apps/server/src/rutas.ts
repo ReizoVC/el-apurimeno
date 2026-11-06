@@ -5,6 +5,7 @@ import {
   CategoriaProductoEntradaSchema,
   CategoriaProductoSchema,
   CerrarTurnoEntradaSchema,
+  ConteoStockEntradaSchema,
   CotizacionHoraAdicionalRespuestaSchema,
   CotizacionIngresoRespuestaSchema,
   CotizarIngresoEntradaSchema,
@@ -14,6 +15,9 @@ import {
   GenerarCodigoAutorizacionRespuestaSchema,
   MovimientoCajaEntradaSchema,
   MovimientoCajaRespuestaSchema,
+  MovimientoHistorialSchema,
+  MovimientoStockRespuestaSchema,
+  MovimientosInventarioConsultaSchema,
   PeriodoConsultaSchema,
   ProductoEntradaSchema,
   ProductoSchema,
@@ -33,6 +37,7 @@ import {
   ReposicionRespuestaSchema,
   SalidaRespuestaSchema,
   SalidaSinPagoEntradaSchema,
+  SalidaStockEntradaSchema,
   TableroSchema,
   TicketSchema,
   TicketsConsultaSchema,
@@ -58,15 +63,18 @@ import { reimprimirTicketServicio } from "./servicios/comprobantes.js";
 import { creadorContexto } from "./servicios/contexto.js";
 import { reporteArqueosServicio, reporteOcupacionServicio, reporteVentasServicio } from "./servicios/reportes.js";
 import {
+  conteoDeStock,
   crearCategoria,
   crearProducto,
   editarProducto,
   eliminarCategoria,
   listarCategorias,
+  listarMovimientosInventario,
   listarProductos,
   registrarVentaServicio,
   renombrarCategoria,
   reponerProducto,
+  salidaDeStock,
 } from "./servicios/tienda.js";
 import {
   abrirTurno,
@@ -218,6 +226,19 @@ export function registrarRutas(
   app.post(RUTAS.reponerProducto, { config: { operacion: "REPONER_INVENTARIO" } }, async (request: ConId) => {
     const { cantidad } = validar(ReposicionEntradaSchema, request.body);
     return ReposicionRespuestaSchema.parse(await reponerProducto(ctx(request), request.params.id, cantidad));
+  });
+
+  app.post(RUTAS.salidaStock, { config: { operacion: "REGISTRAR_SALIDA_STOCK" } }, async (request: ConId) =>
+    MovimientoStockRespuestaSchema.parse(await salidaDeStock(ctx(request), request.params.id, validar(SalidaStockEntradaSchema, request.body))),
+  );
+
+  app.post(RUTAS.conteoStock, { config: { operacion: "CONTAR_STOCK" } }, async (request: ConId) =>
+    MovimientoStockRespuestaSchema.parse(await conteoDeStock(ctx(request), request.params.id, validar(ConteoStockEntradaSchema, request.body))),
+  );
+
+  app.get(RUTAS.movimientosInventario, { config: { operacion: "CONSULTAR_MOVIMIENTOS_INVENTARIO" } }, async (request) => {
+    const { productoId } = validar(MovimientosInventarioConsultaSchema, request.query);
+    return MovimientoHistorialSchema.array().parse(await listarMovimientosInventario(ctx(request), productoId));
   });
 
   app.post(RUTAS.registrarVenta, { config: { operacion: "VENDER" } }, async (request, reply) => {

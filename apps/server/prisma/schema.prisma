@@ -83,6 +83,8 @@ enum TipoMovimientoInventario {
   REPOSICION
   VENTA
   ANULACION_VENTA
+  SALIDA
+  CONTEO
 }
 
 enum EstadoTrabajoImpresion {
@@ -116,6 +118,9 @@ enum AccionAuditoria {
   AJUSTE_PUNTUAL_APLICADO
   VENTA_REGISTRADA
   MERCADERIA_INGRESADA
+  STOCK_SALIDA
+  STOCK_CONTADO
+  VENTA_SIN_STOCK
   HABITACION_CREADA
   HABITACION_EDITADA
   HABITACION_ESTADO_CAMBIADO
@@ -393,6 +398,7 @@ model MovimientoInventario {
   tipo        TipoMovimientoInventario
   cantidad    Int
   ticketId    String?
+  motivo      String?
   creadoPorId String
   creadoEn    DateTime
 

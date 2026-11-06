@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const PESTANAS = [
   { href: "/administracion/productos", etiqueta: "Productos" },
   { href: "/administracion/productos/categorias", etiqueta: "Categorías" },
+  { href: "/administracion/productos/movimientos", etiqueta: "Historial" },
 ];
 
 /** Subzonas de Productos: cada una tiene su página, para que las categorías no queden debajo de una lista larga. */

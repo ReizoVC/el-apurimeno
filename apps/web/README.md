@@ -38,7 +38,7 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
 | Reportes | `reports.view` | Ventas, arqueos y ocupación de un periodo. |
 | Habitaciones | `rooms.manage` | Alta, edición, bloqueo con motivo (`rooms.maintenance`) y reactivación. |
 | Clientes y precios | `client_pricing.manage` | Búsqueda, alta y edición de clientes; precios especiales por habitación. |
-| Productos | `inventory.manage` | Pestaña Productos: alta y edición con sus dos precios, activar y desactivar, y reposición de stock. Pestaña Categorías: crear, renombrar y eliminar. |
+| Productos | `inventory.manage` | Pestaña Productos: alta y edición con sus dos precios, activar y desactivar, y entrada, salida y conteo de stock. Pestaña Categorías: crear, renombrar y eliminar. Pestaña Historial: los movimientos de stock. |
 | Usuarios | `users.manage` | Alta, edición, desactivación, rangos y cambio de contraseña. |
 | Rangos | `users.manage` | Alta y edición de la combinación de permisos. |
 | Configuración | `settings.manage` | Parámetros de alquiler, comprobante, impresora y tienda. |
@@ -93,11 +93,15 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
   servidor, aclarando que el local sigue funcionando. "Re-sincronizar todo" pide confirmación, porque tarda más
   y solo hace falta si el espejo quedó desfasado. Sin las variables `ESPEJO_*`, la pantalla dice qué falta en
   vez de mostrar botones. El estado se refresca cada 30 s para ver las vueltas automáticas.
-- **Productos:** el stock no se edita: un producto nuevo empieza en 0 y "Reponer" suma unidades (el servidor
-  lo registra en el kardex). La búsqueda acepta nombre o código de barras, así que se puede escanear el
-  producto para encontrarlo; el Enter del lector no envía nada. Un producto inactivo sale del POS y aquí queda
-  oculto salvo con "Mostrar inactivos", para reactivarlo. "Sin stock" va en rojo si es 0 o negativo. "Nuevo
-  producto" espera a que exista una categoría.
+- **Productos:** el stock no se edita a mano: un producto nuevo empieza en 0 y cambia con "Entrada", "Salida" (con
+  motivo) y "Contar" (el servidor lo registra en el kardex). Si otra venta cambió el stock mientras tanto, el servidor
+  rechaza la salida o el conteo y la lista pasa a mostrar el stock actual. La búsqueda acepta nombre o código de barras,
+  así que se puede escanear el producto para encontrarlo; el Enter del lector no envía nada. Un producto inactivo sale
+  del POS y aquí queda oculto salvo con "Mostrar inactivos", para reactivarlo. "Sin stock" va en rojo si es 0 o
+  negativo, y "Solo sin stock o en negativo" deja solo esos, para contarlos. "Nuevo producto" espera a que exista una
+  categoría.
+- **Historial:** los últimos 200 movimientos, de todos los productos o de uno, con el stock que dejó cada uno. Una venta
+  que dejó el stock en negativo se marca "Sin stock". No se pagina: para ir más atrás, se filtra por producto.
 - **Categorías:** tienen su propia pestaña dentro de Productos, para que no queden debajo de una lista larga. Eliminar
   una vacía pide confirmar; una con productos pide elegir a qué categoría moverlos, incluidos los inactivos.
 - **Respaldos:** el mismo patrón que el espejo: la hora de la última copia en grande, "Desactualizado" en

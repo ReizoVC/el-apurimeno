@@ -65,7 +65,7 @@ try {
 | `clientes.ts` | `crearPrecioEspecial`, `editarPrecioEspecial` |
 | `habitaciones.ts` | `crearHabitacion`, `editarHabitacion`, `ocuparHabitacion`, `liberarPorSalida`, `marcarHabitacionLista`, `reportarMantenimiento`, `bloquearPorMantenimiento`, `reactivarHabitacion`, `liberarPorAnulacion` |
 | `caja.ts` | `asegurarTurnoAbierto`, `calcularEfectivoEsperado`, `cerrarTurno`, `forzarCierreTurno`, `prepararMovimientoCaja`, `editarMetodoPago` |
-| `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `revertirVentaEnInventario` |
+| `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `registrarSalidaStock`, `aplicarConteoStock`, `revertirVentaEnInventario` |
 | `tickets.ts` | `pagoEnEfectivo`, `pagoSinVuelto`, `armarTicketCobro`, `validarInvariantesTicket` |
 | `anulacion.ts` | `crearCodigoAutorizacion`, `validarCodigoAutorizacion`, `anularTicket` |
 | `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual`, `validarEdicionPropia` |
@@ -104,7 +104,7 @@ Las pruebas se nombran con la regla que verifican (`describe("RN-xx · …")`). 
 | RN-23 | Todo se cobra en el momento | `armarTicketCobro`, `pagoEnEfectivo` | tickets |
 | RN-24 | Asociar venta a habitación es opcional | `cotizarVenta`, `armarTicketCobro` | tickets |
 | RN-25 | Solo `inventory.manage` repone | `puede`, `reponerStock` | permisos, inventario |
-| RN-26 | Sin stock negativo salvo configuración | `aplicarVentaAInventario` | inventario |
+| RN-26 | Sin stock negativo salvo configuración y, además, confirmación del cajero (decisión 29) | `aplicarVentaAInventario` | inventario |
 | RN-27 | Un alquiler abierto por habitación | `ocuparHabitacion` + índice único en la base de datos (ver abajo) | habitaciones, T-15 |
 | RN-28 | Solo desde "Libre" | `ocuparHabitacion` | habitaciones |
 | RN-29 | Salida → pendiente de limpieza | `liberarPorSalida` | habitaciones, alquileres |

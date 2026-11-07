@@ -526,6 +526,8 @@ model EstadoEspejo {
   /// Desde cuándo buscar cambios en la siguiente sincronización: el inicio de la última correcta, con margen.
   /// null = nunca se sincronizó: la siguiente publica todo el historial.
   cambiosDesde       DateTime?
+  /// VERSION_RESUMEN_ESPEJO de la última sincronización correcta. Si es otra, la siguiente publica todo el historial.
+  versionResumen     Int?
   ultimoErrorCodigo  String?
   ultimoErrorMensaje String?
   ultimoErrorEn      DateTime?

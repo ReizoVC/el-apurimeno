@@ -28,8 +28,8 @@ export function AvisoActualizacion() {
   const [lanzadaEn, setLanzadaEn] = useState<number | null>(null);
   const [demorada, setDemorada] = useState(false);
 
+  // Mientras el servidor se reinicia no responde, y el estado sigue siendo el último leído: "en curso".
   const enCurso = estado?.ultimaInstalacion?.resultado === "EN_CURSO";
-  const esperando = lanzadaEn !== null && (enCurso || estado === null);
 
   const leer = useCallback(async () => {
     try {
@@ -48,7 +48,7 @@ export function AvisoActualizacion() {
           setDemorada(true);
         }
       },
-      enCurso || lanzadaEn !== null ? CADA_3_SEGUNDOS : CADA_10_MINUTOS,
+      enCurso ? CADA_3_SEGUNDOS : CADA_10_MINUTOS,
     );
     return () => clearInterval(temporizador);
   }, [leer, enCurso, lanzadaEn]);
@@ -71,7 +71,7 @@ export function AvisoActualizacion() {
   if (estado === null) return null;
   const { disponible, ultimaInstalacion: ultima } = estado;
 
-  if (enCurso || esperando) {
+  if (enCurso) {
     return (
       <div role="status" className={CLASE_AVISO}>
         <p className="font-medium">
@@ -126,7 +126,8 @@ export function AvisoActualizacion() {
           Avise a Reizo.
         </Aviso>
       )}
-      {error !== null && (
+      {/* Si no se pudo lanzar, el servidor ya lo dejó como resultado: no se repite. */}
+      {error !== null && error !== ultima?.mensaje && (
         <Aviso tipo="error" onCerrar={() => setError(null)}>
           {error}
         </Aviso>

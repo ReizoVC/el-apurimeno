@@ -45,7 +45,8 @@
   No descarga ni instala el POS. Para ensayar en un equipo sin el POS instalado.
 
 .PARAMETER SinFirma
-  No exige el manifiesto firmado. Solo para ensayar contra un "origin" local, que no publica nada en GitHub.
+  No exige el manifiesto firmado. Solo para ensayar contra un "origin" local, que no publica nada en GitHub: si origin
+  es el repositorio de GitHub, se rechaza.
 #>
 param(
   [string]$Version = "",
@@ -164,6 +165,10 @@ function Preparar-Plan {
   $cambios = Git "status --porcelain"
   if ($rama -ne "main" -or $cambios -ne "") { throw "El checkout no está en main sin cambios (rama $rama). No se tocó nada." }
 
+  # -SinFirma también puede llegar en orden.json, que escribe el servidor: contra GitHub nunca vale, solo para ensayar.
+  if ($SinFirma -and ((Git "remote get-url origin") -match ("github\.com[:/]" + [regex]::Escape($repositorioGitHub)))) {
+    throw "-SinFirma solo sirve para ensayar contra un origin local: con GitHub, la firma es obligatoria. No se tocó nada."
+  }
   Git "fetch origin main --tags" | Out-Null
   $destino = $Version
   if ($destino -eq "") {

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -74,7 +74,7 @@ export function crearControlActualizacion(opciones: OpcionesActualizacion, ahora
   function leerUltimaInstalacion(): UltimaInstalacion | null {
     if (!configurado) return null;
     try {
-      const texto = readFileSync(archivoEstado, "utf8").replace(/^﻿/, "");
+      const texto = readFileSync(archivoEstado, "utf8").replace(/^\uFEFF/, "");
       const { resultado, version, mensaje } = JSON.parse(texto) as { resultado?: unknown; version?: unknown; mensaje?: unknown };
       const actualizadaEn = statSync(archivoEstado).mtime;
       const base = { version: String(version ?? ""), mensaje: typeof mensaje === "string" && mensaje !== "" ? mensaje : null, actualizadaEn: actualizadaEn.toISOString() };
@@ -87,8 +87,9 @@ export function crearControlActualizacion(opciones: OpcionesActualizacion, ahora
     }
   }
 
+  /** Con los mismos campos que escribe actualizar-produccion.ps1: `-Estado` por SSH también lo muestra. */
   function guardarEstado(resultado: "en-curso" | "error", version: string, mensaje: string): void {
-    writeFileSync(archivoEstado, JSON.stringify({ resultado, version: `v${version}`, mensaje }), "utf8");
+    writeFileSync(archivoEstado, JSON.stringify({ resultado, version: `v${version}`, mensaje, hora: ahora().toISOString() }), "utf8");
   }
 
   const control: ControlActualizacion = {
@@ -143,6 +144,8 @@ export function crearControlActualizacion(opciones: OpcionesActualizacion, ahora
         await lanzarTarea();
       } catch (err) {
         log.error({ err }, "Actualización: no se pudo lanzar la tarea");
+        // Sin esto, la tarea la tomaría la próxima vez que alguien la lance a mano, aunque ya nadie la haya pedido.
+        rmSync(archivoOrden, { force: true });
         const mensaje = `No se pudo lanzar la actualización. ¿Se corrió actualizar-produccion.ps1 -RegistrarTarea en este equipo? No se tocó nada.`;
         guardarEstado("error", version, mensaje);
         throw new ErrorNegocio("INVALID_STATE_TRANSITION", mensaje);

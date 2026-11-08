@@ -385,7 +385,10 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
       y Limpieza necesitan saber de la versión nueva aunque quien esté adentro no tenga `system.update`.
 
     `ManifiestoVersion` no es `.strict()`: un servidor sin actualizar tiene que poder leer el manifiesto de una versión
-    que agregue campos. Cambio **aditivo**.
+    que agregue campos. Por lo mismo, tampoco lo son las respuestas de `GET /actualizacion` (`EstadoActualizacion`,
+    `VersionDisponible`, `UltimaInstalacion`) ni `SaludRespuesta`: justo después de actualizar las lee una página
+    compilada con la versión anterior, que tiene que poder mostrar el resultado y "Recargar" aunque la nueva agregue
+    campos. Cambio **aditivo**.
 
 ## Decisiones pendientes que afectan el contrato
 

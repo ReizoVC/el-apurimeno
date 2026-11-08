@@ -233,6 +233,18 @@ try {
   $orden = $script:llamadas -join ","
   $script:SinFirma = $false
   Comprobar "-SinFirma: no la pide y usa el .sha256 publicado" (($e -eq "") -and ($orden -match "^descargar,descargar,copia"))
+  Publicar "v3.4.1" "apps/web/pagina.txt"
+  $antes = Instalada
+  $urlOrigen = G "remote get-url origin"
+  G "remote set-url origin https://github.com/ReizoVC/el-apurimeno.git" | Out-Null
+  $script:SinFirma = $true
+  # Se niega antes del fetch: la prueba no sale a internet.
+  $script:llamadas = @(); $script:falla = @{}; $script:Version = "v3.4.1"
+  $e = ""
+  try { Preparar-Plan | Out-Null } catch { $e = $_.Exception.Message }
+  $script:SinFirma = $false
+  G "remote set-url origin `"$urlOrigen`"" | Out-Null
+  Comprobar "-SinFirma contra GitHub (también desde orden.json): se niega sin tocar nada" (($e -match "firma es obligatoria") -and $script:llamadas.Count -eq 0 -and (Instalada) -eq $antes)
 
   Write-Host "Orden:"
   $script:Version = ""; $script:CerrarPOS = $false; $script:SinPOS = $false; $script:SinFirma = $false

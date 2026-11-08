@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  EstadoActualizacionSchema,
+  InstalarActualizacionEntradaSchema,
+  SaludRespuestaSchema,
   CausaFallaImpresoraSchema,
   CodigoAutorizacionSchema,
   EstadoImpresoraSchema,
@@ -541,5 +544,26 @@ describe("Falla de la impresora (RF-56, decisión 26)", () => {
     expect(LogoComprobanteSchema.safeParse({}).success).toBe(false);
     expect(LogoComprobanteSchema.safeParse({ logo: { ...logo, ancho: 0 } }).success).toBe(false);
     expect(LogoComprobanteSchema.safeParse({ logo: { ...logo, pngBase64: "" } }).success).toBe(false);
+  });
+});
+
+describe("Actualización desde el Dashboard (decisión 30)", () => {
+  it("una página de la versión anterior lee las respuestas de una versión nueva que agrega campos", () => {
+    const estado = {
+      estado: "AL_DIA",
+      instalada: "0.4.0",
+      disponible: null,
+      ultimaRevisionEn: null,
+      ultimaInstalacion: { resultado: "OK", version: "v0.4.0", mensaje: null, actualizadaEn: "2026-11-08T12:00:00.000Z", nuevo: 1 },
+      nuevo: true,
+    };
+    expect(EstadoActualizacionSchema.parse(estado).ultimaInstalacion?.resultado).toBe("OK");
+    expect(SaludRespuestaSchema.parse({ estado: "ok", versionSistema: "0.4.0", versionDisponible: null, nuevo: "x" }).versionSistema).toBe("0.4.0");
+  });
+
+  it("la orden de instalar sí es estricta, y solo con un número de versión", () => {
+    expect(InstalarActualizacionEntradaSchema.safeParse({ version: "0.4.0" }).success).toBe(true);
+    expect(InstalarActualizacionEntradaSchema.safeParse({ version: "v0.4.0" }).success).toBe(false);
+    expect(InstalarActualizacionEntradaSchema.safeParse({ version: "0.4.0", sinFirma: true }).success).toBe(false);
   });
 });

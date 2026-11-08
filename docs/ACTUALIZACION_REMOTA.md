@@ -186,7 +186,7 @@ Ensayado el 05/11/2026, con una migración que falla por SQL inválido. Una migr
 - **Clave de versiones:** la privada solo está en el equipo de quien publica y en su gestor de contraseñas. Quien entre a la cuenta de GitHub no puede firmar: el Dashboard no anuncia su versión y el actualizador se niega a instalarla, también por SSH. La firma incluye el commit y el SHA-256 del POS, así que tampoco sirve mover la etiqueta o cambiar el instalador.
 - **La firma se comprueba con el código ya instalado,** nunca con el de la versión nueva.
 - **Qué puede hacer quien tenga el permiso:** instalar la última versión firmada. No puede elegir otra ni volver atrás.
-- **La orden** está en `datos\actualizaciones`: quien pueda escribir ahí, solo logra pedir una versión firmada y posterior a la instalada.
+- **La orden** está en `datos\actualizaciones`: quien pueda escribir ahí, solo logra pedir una versión firmada y posterior a la instalada. Aunque la orden diga `sinFirma`, el actualizador lo rechaza si `origin` es el repositorio de GitHub: `-SinFirma` solo sirve contra un "origin" local de ensayo.
 - **`GET /health` no pide sesión:** en la red del local, cualquiera puede ver el número de versión instalado y el disponible. No expone nada más.
 - **Qué se instala:** solo etiquetas `vX.Y.Z` que estén en `origin/main` y sean posteriores a la instalada.
 - **El MSI no está firmado con un certificado de Windows,** y `msiexec` en modo silencioso no lo pide: lo protege el SHA-256 del manifiesto firmado. Solo el modo de ensayo (`-SinFirma`) usa el `.sha256` publicado, que detecta una descarga dañada pero no un ataque.

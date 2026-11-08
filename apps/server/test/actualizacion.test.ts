@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
@@ -14,6 +14,7 @@ import {
   generarClavesVersion,
   leerClavePrivadaVersion,
   leerClavePublicaVersion,
+  manifiestoVerificado,
 } from "../src/actualizacion/firma.js";
 import type { PublicacionEncontrada } from "../src/actualizacion/github.js";
 import { ultimaVersionCompleta } from "../src/actualizacion/ultima-completa.js";
@@ -246,13 +247,14 @@ describe("Instalar desde el Dashboard (decisión 30)", () => {
     expect(r.statusCode).toBe(422);
     expect(r.json()).toMatchObject({ mensaje: expect.stringContaining("-RegistrarTarea") });
     expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "ERROR", mensaje: expect.stringContaining("-RegistrarTarea") });
+    expect(existsSync(join(carpeta, "orden.json"))).toBe(false);
     expect((await instalar(en, "0.4.0")).statusCode).toBe(422);
     expect(lanzadas).toBe(2);
   });
 
   it("lee lo que escribe actualizar-produccion.ps1, con BOM", async () => {
     const en = await conVersion();
-    writeFileSync(join(carpeta, "estado.json"), `﻿${JSON.stringify({ resultado: "ok", version: "v0.4.0", mensaje: "", hora: "2026-11-06T12:00:00" })}`, "utf8");
+    writeFileSync(join(carpeta, "estado.json"), `\uFEFF${JSON.stringify({ resultado: "ok", version: "v0.4.0", mensaje: "", hora: "2026-11-06T12:00:00" })}`, "utf8");
     expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "OK", version: "v0.4.0", mensaje: null });
     writeFileSync(join(carpeta, "estado.json"), JSON.stringify({ resultado: "error", version: "v0.4.0", mensaje: "Falló la compilación." }), "utf8");
     expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "ERROR", mensaje: "Falló la compilación." });
@@ -283,6 +285,28 @@ describe("Instalar desde el Dashboard (decisión 30)", () => {
     expect(r.statusCode).toBe(200);
     expect(r.json()).toEqual({ estado: "ok", versionSistema: "0.3.0", versionDisponible: "0.4.0" });
   });
+});
+
+describe("Verificación con que instala el actualizador (decisión 30)", () => {
+  it("devuelve el manifiesto solo con firma buena y de la versión de su etiqueta", () => {
+    expect(manifiestoVerificado(publicacion("0.4.0"), publica)).toMatchObject({ version: "0.4.0", commit: "a".repeat(40) });
+    expect(manifiestoVerificado({ ...publicacion("0.4.0"), etiqueta: "v0.5.0" }, publica)).toBeNull();
+    expect(manifiestoVerificado({ ...publicacion("0.4.0"), firma: null }, publica)).toBeNull();
+    expect(manifiestoVerificado({ ...publicacion("0.4.0"), manifiesto: null }, publica)).toBeNull();
+    expect(manifiestoVerificado(publicacion("0.4.0"), leerClavePublicaVersion(generarClavesVersion().publica))).toBeNull();
+    const basura = Buffer.from("no es JSON", "utf8");
+    expect(manifiestoVerificado({ etiqueta: "v0.4.0", manifiesto: basura, firma: firmarManifiesto(basura, privada) }, publica)).toBeNull();
+  });
+
+  it("verificar-version sale con error sin versión o sin clave, antes de salir a internet", () => {
+    const tsx = (...a: string[]) => [join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs"), join("src", "scripts", "verificar-version.ts"), ...a];
+    const correr = (args: string[], clave: string) => () =>
+      execFileSync(process.execPath, args, { stdio: "pipe", env: { ...process.env, ACTUALIZACION_CLAVE_PUBLICA: clave } });
+    expect(correr(tsx(), claves.publica)).toThrow(/Falta la versión/);
+    expect(correr(tsx("0.4.0"), claves.publica)).toThrow(/Falta la versión/);
+    expect(correr(tsx("v0.4.0"), "")).toThrow(/Falta ACTUALIZACION_CLAVE_PUBLICA/);
+    expect(correr(tsx("v0.4.0"), "no es una clave")).toThrow(/ACTUALIZACION_CLAVE_PUBLICA:/);
+  }, 60_000);
 });
 
 describe("Última versión completa (decisión 30)", () => {

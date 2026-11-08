@@ -207,6 +207,7 @@ requieren `Authorization: Bearer <token>`, salvo `/auth/login` y `/health`.
 | `POST /productos/:id/conteo` | `CONTAR_STOCK` | No: `stockVisto` rechaza la repetición |
 | `GET /movimientos-inventario?productoId=` | `CONSULTAR_MOVIMIENTOS_INVENTARIO` | — |
 | `GET /actualizacion` | `CONSULTAR_ACTUALIZACION` | — |
+| `POST /actualizacion/instalacion` | `INSTALAR_ACTUALIZACION` | No: rechaza si ya hay una en curso |
 | `POST /ventas` | `VENDER` | Sí |
 | `POST /codigos-autorizacion` (cuerpo opcional `{ operacion }`: `ANULAR_TICKET` por defecto o `REINTENTAR_CIERRE_TURNO`) | `GENERAR_CODIGO_AUTORIZACION` | — |
 | `POST /tickets/:id/anulacion` | `ANULAR_TICKET` o `ANULAR_TICKET_CON_CODIGO` | Sí |

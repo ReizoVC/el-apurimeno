@@ -65,6 +65,7 @@ export const PERMISO_POR_OPERACION = {
   RESPALDAR: "settings.manage",
   /** Aviso de versiones nuevas (decisión 30). */
   CONSULTAR_ACTUALIZACION: "system.update",
+  INSTALAR_ACTUALIZACION: "system.update",
 } as const satisfies Record<string, Permiso>;
 
 export type Operacion = keyof typeof PERMISO_POR_OPERACION;

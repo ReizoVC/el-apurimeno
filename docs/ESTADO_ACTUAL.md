@@ -17,10 +17,10 @@ servicios reales (#31); salida, conteo e historial de stock y venta sin stock co
 de versiones nuevas firmadas en el Dashboard (#33); y la republicación completa del espejo cuando cambia el formato
 del resumen (#34). Los anteriores están en el historial de git.
 
-**Sin integrar:** la rama `claude/boton-actualizar` guarda el botón "Actualizar" del Dashboard, la comprobación de la
-firma en el actualizador y los avisos de recarga en el POS y en Limpieza. Quedó sin commit desde el 06/11 y se guardó
-el 08/11 tal como estaba: no está revisada ni probada como conjunto, toca `contracts` y `domain`, y está 2 commits
-detrás de `main`.
+**En revisión:** el PR #37 trae el botón "Actualizar" del Dashboard, la comprobación de la firma en el
+actualizador y los avisos de recarga en el POS, en Limpieza y en el Dashboard. Está revisado y probado como conjunto
+(pruebas, ensayo del actualizador y pantallas contra un servidor real con la tarea simulada), y sus cambios en
+`contracts` y `domain` están aprobados. Falta probarlo con una versión publicada en GitHub y en el PC del local.
 
 **Instalado en el equipo de desarrollo** (los servicios corren desde `D:\dev\el-apurimeno`): hasta el #32, con su
 migración aplicada. El #33 y el #34 traen migración, así que instalarlos es una actualización completa.
@@ -89,9 +89,8 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
    - **Actualización remota:** Tailscale, SSH solo por esa red y el ensayo con servicios reales
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
-     El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). Faltan el botón "Actualizar", que el
-     actualizador compruebe la firma y el panel para publicar; los dos primeros están a medio revisar en la rama
-     `claude/boton-actualizar`.
+     El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). El botón "Actualizar" y la comprobación de
+     la firma en el actualizador están en el PR #37; falta el panel para publicar.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
    Loyverse, cuyo stock está desfasado. Falta la importación (etapa 3 del plan de abajo), que trae nombres, precios,

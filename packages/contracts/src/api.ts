@@ -101,6 +101,7 @@ export const RUTAS = {
   respaldar: "/respaldos/copia",
   // Aviso de versiones nuevas (decisión 30).
   estadoActualizacion: "/actualizacion",
+  instalarActualizacion: "/actualizacion/instalacion",
   // Impresora de comprobantes (RF-56): estado para el aviso del POS y "reintentar ahora"; el logotipo, para la
   // vista previa de la Configuración.
   estadoImpresora: "/impresora/estado",

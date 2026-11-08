@@ -25,8 +25,9 @@ function leerVersionInstalada(): string | null {
 
 export function leerConfiguracionActualizacion(env: NodeJS.ProcessEnv): ConfiguracionActualizacion {
   const texto = env["ACTUALIZACION_CLAVE_PUBLICA"]?.trim();
-  if (!texto) return ACTUALIZACION_APAGADA;
   const versionInstalada = leerVersionInstalada();
+  // Sin clave no se revisa nada, pero la versión sigue sirviendo: las pantallas abiertas saben si quedaron viejas.
+  if (!texto) return { ...ACTUALIZACION_APAGADA, versionInstalada };
   if (versionInstalada === null) {
     return { clavePublica: null, versionInstalada: null, problema: "No se pudo leer la versión instalada de apps/native/src-tauri/tauri.conf.json." };
   }

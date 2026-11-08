@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MarcoCapacitacion } from "@apurimeno/ui/components/modo-capacitacion";
+import { AvisoVersion } from "./componentes/AvisoVersion";
 import { registrarSesionInvalida, usarSesion } from "./lib/servidor";
 import {
   borrarSesion,
@@ -46,6 +47,7 @@ export default function App() {
     return <Login avisoInicial={estado.aviso} onSesion={entrar} />;
   return (
     <MarcoCapacitacion activo={estado.sesion.entorno === "CAPACITACION"}>
+      <AvisoVersion />
       <Principal sesion={estado.sesion} onSalir={() => salir(null)} />
     </MarcoCapacitacion>
   );

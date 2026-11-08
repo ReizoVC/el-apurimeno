@@ -69,7 +69,7 @@ export const PERMISO: Record<Permiso, string> = {
   "users.manage": "Gestionar usuarios y rangos",
   "settings.manage": "Configuración y métodos de pago",
   "audit.view": "Ver la auditoría",
-  "system.update": "Ver el aviso de versiones nuevas del sistema",
+  "system.update": "Ver e instalar las versiones nuevas del sistema",
 };
 
 export const ORIGEN_TICKET: Record<OrigenTicket, string> = {
@@ -121,6 +121,7 @@ export const ACCION: Record<AccionAuditoria, string> = {
   CONFIGURACION_CAMBIADA: "Configuración cambiada",
   ESPEJO_SINCRONIZADO: "Sincronización del espejo",
   RESPALDO_MANUAL: "Copia de respaldo manual",
+  ACTUALIZACION_INICIADA: "Actualización del sistema iniciada",
 };
 
 export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
@@ -144,6 +145,7 @@ export const ENTIDAD: Record<TipoEntidadAuditada, string> = {
   TRABAJO_IMPRESION: "Impresión",
   ESPEJO: "Espejo en la nube",
   RESPALDO: "Respaldo",
+  SISTEMA: "Sistema",
 };
 
 /** Por qué falló la última sincronización con el espejo en la nube. */

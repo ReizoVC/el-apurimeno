@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
@@ -14,6 +14,7 @@ import {
   generarClavesVersion,
   leerClavePrivadaVersion,
   leerClavePublicaVersion,
+  manifiestoVerificado,
 } from "../src/actualizacion/firma.js";
 import type { PublicacionEncontrada } from "../src/actualizacion/github.js";
 import { ultimaVersionCompleta } from "../src/actualizacion/ultima-completa.js";
@@ -189,6 +190,123 @@ describe("Permiso y configuración (decisión 30)", () => {
     const conPermiso = await en.prisma.rangoPermiso.findMany({ where: { permiso: "system.update" } });
     expect(conPermiso.map((r) => r.rangoId)).toEqual(["rango-administrador"]);
   });
+});
+
+describe("Instalar desde el Dashboard (decisión 30)", () => {
+  let carpeta: string;
+  let lanzadas: number;
+  afterEach(() => rmSync(carpeta, { recursive: true, force: true }));
+
+  async function conVersion(lanzarTarea: () => Promise<void> = () => Promise.resolve()) {
+    carpeta = mkdtempSync(join(tmpdir(), "apurimeno-act-"));
+    lanzadas = 0;
+    const en = await entorno(() => Promise.resolve(publicacion("0.4.0")), {
+      carpeta,
+      lanzarTarea: () => {
+        lanzadas++;
+        return lanzarTarea();
+      },
+    });
+    await en.app.actualizacion.revisar();
+    return en;
+  }
+  const instalar = async (en: Entorno, version: unknown, token?: string) =>
+    en.llamar("POST", RUTAS.instalarActualizacion, token ?? (await en.login("admin")), { version });
+
+  it("deja la orden con la versión, cierra el POS, lanza la tarea y lo audita", async () => {
+    const en = await conVersion();
+    const r = await instalar(en, "0.4.0");
+    expect(r.statusCode).toBe(200);
+    expect(EstadoActualizacionSchema.parse(r.json()).ultimaInstalacion).toMatchObject({ resultado: "EN_CURSO", version: "v0.4.0" });
+    expect(lanzadas).toBe(1);
+    expect(JSON.parse(readFileSync(join(carpeta, "orden.json"), "utf8"))).toEqual({ version: "v0.4.0", cerrarPOS: true });
+    expect(await en.prisma.registroAuditoria.findFirstOrThrow({ where: { accion: "ACTUALIZACION_INICIADA" } })).toMatchObject({
+      tipoEntidad: "SISTEMA",
+      valorNuevo: { version: "0.4.0" },
+    });
+  });
+
+  it("rechaza otra versión y una segunda mientras hay una en curso, sin lanzar nada más", async () => {
+    const en = await conVersion();
+    const otra = await instalar(en, "0.5.0");
+    expect(otra.statusCode).toBe(422);
+    expect(otra.json()).toMatchObject({ codigo: "INVALID_STATE_TRANSITION" });
+    expect(lanzadas).toBe(0);
+    expect(await en.prisma.registroAuditoria.count({ where: { accion: "ACTUALIZACION_INICIADA" } })).toBe(0);
+
+    expect((await instalar(en, "0.4.0")).statusCode).toBe(200);
+    const segunda = await instalar(en, "0.4.0");
+    expect(segunda.statusCode).toBe(422);
+    expect(segunda.json()).toMatchObject({ mensaje: expect.stringContaining("en curso") });
+    expect(lanzadas).toBe(1);
+  });
+
+  it("si la tarea no se puede lanzar, lo informa y se puede volver a intentar", async () => {
+    const en = await conVersion(() => Promise.reject(new Error("no existe la tarea")));
+    const r = await instalar(en, "0.4.0");
+    expect(r.statusCode).toBe(422);
+    expect(r.json()).toMatchObject({ mensaje: expect.stringContaining("-RegistrarTarea") });
+    expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "ERROR", mensaje: expect.stringContaining("-RegistrarTarea") });
+    expect(existsSync(join(carpeta, "orden.json"))).toBe(false);
+    expect((await instalar(en, "0.4.0")).statusCode).toBe(422);
+    expect(lanzadas).toBe(2);
+  });
+
+  it("lee lo que escribe actualizar-produccion.ps1, con BOM", async () => {
+    const en = await conVersion();
+    writeFileSync(join(carpeta, "estado.json"), `\uFEFF${JSON.stringify({ resultado: "ok", version: "v0.4.0", mensaje: "", hora: "2026-11-06T12:00:00" })}`, "utf8");
+    expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "OK", version: "v0.4.0", mensaje: null });
+    writeFileSync(join(carpeta, "estado.json"), JSON.stringify({ resultado: "error", version: "v0.4.0", mensaje: "Falló la compilación." }), "utf8");
+    expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "ERROR", mensaje: "Falló la compilación." });
+    writeFileSync(join(carpeta, "estado.json"), "esto no es JSON", "utf8");
+    expect((await estado(en)).ultimaInstalacion).toBeNull();
+  });
+
+  it("una instalación que lleva más de 2 horas en curso se da por cortada, y se puede repetir", async () => {
+    const en = await conVersion();
+    expect((await instalar(en, "0.4.0")).statusCode).toBe(200);
+    en.reloj.ahora = new Date(Date.now() + 121 * 60_000);
+    expect((await estado(en)).ultimaInstalacion).toMatchObject({ resultado: "CORTADA" });
+    expect((await instalar(en, "0.4.0")).statusCode).toBe(200);
+  });
+
+  it("exige system.update, y sin clave no hay nada que instalar", async () => {
+    const en = await conVersion();
+    expect((await instalar(en, "0.4.0", await en.login("cajero"))).statusCode).toBe(403);
+    expect(lanzadas).toBe(0);
+    await en.cerrar();
+    const sinClave = await entorno(() => Promise.resolve(publicacion("0.4.0")), { clavePublica: null, carpeta, lanzarTarea: () => Promise.resolve() });
+    expect((await instalar(sinClave, "0.4.0")).statusCode).toBe(422);
+  });
+
+  it("/health no pide sesión y solo trae las versiones", async () => {
+    const en = await conVersion();
+    const r = await en.llamar("GET", RUTAS.salud, null);
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toEqual({ estado: "ok", versionSistema: "0.3.0", versionDisponible: "0.4.0" });
+  });
+});
+
+describe("Verificación con que instala el actualizador (decisión 30)", () => {
+  it("devuelve el manifiesto solo con firma buena y de la versión de su etiqueta", () => {
+    expect(manifiestoVerificado(publicacion("0.4.0"), publica)).toMatchObject({ version: "0.4.0", commit: "a".repeat(40) });
+    expect(manifiestoVerificado({ ...publicacion("0.4.0"), etiqueta: "v0.5.0" }, publica)).toBeNull();
+    expect(manifiestoVerificado({ ...publicacion("0.4.0"), firma: null }, publica)).toBeNull();
+    expect(manifiestoVerificado({ ...publicacion("0.4.0"), manifiesto: null }, publica)).toBeNull();
+    expect(manifiestoVerificado(publicacion("0.4.0"), leerClavePublicaVersion(generarClavesVersion().publica))).toBeNull();
+    const basura = Buffer.from("no es JSON", "utf8");
+    expect(manifiestoVerificado({ etiqueta: "v0.4.0", manifiesto: basura, firma: firmarManifiesto(basura, privada) }, publica)).toBeNull();
+  });
+
+  it("verificar-version sale con error sin versión o sin clave, antes de salir a internet", () => {
+    const tsx = (...a: string[]) => [join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs"), join("src", "scripts", "verificar-version.ts"), ...a];
+    const correr = (args: string[], clave: string) => () =>
+      execFileSync(process.execPath, args, { stdio: "pipe", env: { ...process.env, ACTUALIZACION_CLAVE_PUBLICA: clave } });
+    expect(correr(tsx(), claves.publica)).toThrow(/Falta la versión/);
+    expect(correr(tsx("0.4.0"), claves.publica)).toThrow(/Falta la versión/);
+    expect(correr(tsx("v0.4.0"), "")).toThrow(/Falta ACTUALIZACION_CLAVE_PUBLICA/);
+    expect(correr(tsx("v0.4.0"), "no es una clave")).toThrow(/ACTUALIZACION_CLAVE_PUBLICA:/);
+  }, 60_000);
 });
 
 describe("Última versión completa (decisión 30)", () => {

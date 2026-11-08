@@ -25,6 +25,7 @@ import {
   ReposicionRespuestaSchema,
   RespaldoRespuestaSchema,
   RespuestaErrorSchema,
+  SaludRespuestaSchema,
   SincronizacionEspejoRespuestaSchema,
   TableroSchema,
   TicketSchema,
@@ -266,6 +267,11 @@ export const servidor = {
   // Aviso de versiones nuevas (decisión 30)
   estadoActualizacion: () =>
     llamar("GET", RUTAS.estadoActualizacion, EstadoActualizacionSchema),
+  instalarActualizacion: (version: string) =>
+    llamar("POST", RUTAS.instalarActualizacion, EstadoActualizacionSchema, {
+      version,
+    }),
+  salud: () => llamar("GET", RUTAS.salud, SaludRespuestaSchema),
 
   // Productos e inventario (RF-53, CU-12, CU-29)
   categoriasProducto: () =>

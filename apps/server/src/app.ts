@@ -125,7 +125,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   const actualizacion = crearControlActualizacion(opciones.actualizacion ?? ACTUALIZACION_APAGADA, ahora, app.log);
   app.decorate("actualizacion", actualizacion);
   app.addHook("onClose", async () => actualizacion.detener());
-  registrarRutasActualizacion(app, actualizacion);
+  registrarRutasActualizacion(app, opciones.prisma, ahora, actualizacion);
   await app.ready();
   return app;
 }

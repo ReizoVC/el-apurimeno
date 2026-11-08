@@ -17,6 +17,7 @@ $origen = Join-Path $temporal "origen.git"
 $raiz = Join-Path $temporal "local"
 $servidor = Join-Path $raiz "apps\server"
 $carpetaActualizaciones = Join-Path $temporal "actualizaciones"
+$archivoOrden = Join-Path $carpetaActualizaciones "orden.json"
 $baseCapacitacion = Join-Path $temporal "no-existe.db"
 
 # --- Lo reemplazado: anota qué se llamó, en orden, y falla donde el caso lo pida ----------------------------------------
@@ -25,7 +26,21 @@ $script:falla = @{}
 $script:posAbierto = $false
 $script:posInstalado = $null
 $script:hashMalo = $false
+$script:firmaMala = $false
+$script:firmaDeOtroCommit = $false
 function Anotar([string]$Que) { $script:llamadas += $Que }
+# El SHA-256 de lo que "descarga" Descargar-Archivo.
+function Hash-MSI {
+  $f = Join-Path $temporal "hash.tmp"
+  Set-Content $f "msi de prueba"
+  return (Get-FileHash $f -Algorithm SHA256).Hash
+}
+function Verificar-Firma([string]$Destino) {
+  if ($script:firmaMala) { throw "La versión $Destino no pasó la verificación de firma. No se tocó nada." }
+  $commit = if ($script:firmaDeOtroCommit) { "0" * 40 } else { Etiquetada $Destino }
+  $sha = if ($script:hashMalo) { "0" * 64 } else { Hash-MSI }
+  return [pscustomobject]@{ commit = $commit; sha256 = $sha; nombre = "x.msi" }
+}
 function Comprobar-Entorno {}
 function Existe-Servicio([string]$S) { return $S -ne "ApurimenoCapacitacion" }
 function Detener-Servicio([string]$S) { Anotar "detener:$S" }
@@ -102,7 +117,7 @@ try {
   Publicar "v1.1.0" "apps/web/pagina.txt"
   $e = Actualizar "v1.1.0"
   Comprobar "termina sin error ($e)" ($e -eq "")
-  Comprobar "copia antes de traer el código, recompila" ((($script:llamadas -join ",") -match "descargar,descargar,copia,recompilar,msi"))
+  Comprobar "copia antes de traer el código, recompila; con firma, no baja el .sha256" ((($script:llamadas -join ",") -match "^descargar,copia,recompilar,msi"))
   Comprobar "no detiene servicios por su cuenta ni instala dependencias" (-not (Hizo "install") -and -not ($script:llamadas -match "detener"))
   Comprobar "el checkout quedó en v1.1.0" ((Instalada) -eq (Etiquetada "v1.1.0"))
 
@@ -201,6 +216,52 @@ try {
   $e = Actualizar "v3.3.0"
   Comprobar "POS ya en esa versión: no lo descarga ni instala" (($e -eq "") -and -not (Hizo "descargar") -and -not (Hizo "msi"))
   $script:posInstalado = $null
+
+  Write-Host "Firma:"
+  Publicar "v3.4.0" "apps/web/pagina.txt"
+  $antes = Instalada
+  $script:firmaMala = $true
+  $e = Actualizar "v3.4.0"
+  $script:firmaMala = $false
+  Comprobar "firma mala: no toca nada" (($e -match "verificación de firma") -and $script:llamadas.Count -eq 0 -and (Instalada) -eq $antes)
+  $script:firmaDeOtroCommit = $true
+  $e = Actualizar "v3.4.0"
+  $script:firmaDeOtroCommit = $false
+  Comprobar "etiqueta movida a otro commit: no toca nada" (($e -match "versión firmada") -and $script:llamadas.Count -eq 0 -and (Instalada) -eq $antes)
+  $script:SinFirma = $true
+  $e = Actualizar "v3.4.0"
+  $orden = $script:llamadas -join ","
+  $script:SinFirma = $false
+  Comprobar "-SinFirma: no la pide y usa el .sha256 publicado" (($e -eq "") -and ($orden -match "^descargar,descargar,copia"))
+  Publicar "v3.4.1" "apps/web/pagina.txt"
+  $antes = Instalada
+  $urlOrigen = G "remote get-url origin"
+  G "remote set-url origin https://github.com/ReizoVC/el-apurimeno.git" | Out-Null
+  $script:SinFirma = $true
+  # Se niega antes del fetch: la prueba no sale a internet.
+  $script:llamadas = @(); $script:falla = @{}; $script:Version = "v3.4.1"
+  $e = ""
+  try { Preparar-Plan | Out-Null } catch { $e = $_.Exception.Message }
+  $script:SinFirma = $false
+  G "remote set-url origin `"$urlOrigen`"" | Out-Null
+  Comprobar "-SinFirma contra GitHub (también desde orden.json): se niega sin tocar nada" (($e -match "firma es obligatoria") -and $script:llamadas.Count -eq 0 -and (Instalada) -eq $antes)
+
+  Write-Host "Orden:"
+  $script:Version = ""; $script:CerrarPOS = $false; $script:SinPOS = $false; $script:SinFirma = $false
+  # Como la escribe el servidor: sin los campos de ensayo y sin BOM.
+  [IO.File]::WriteAllText($archivoOrden, '{"version":"v3.5.0","cerrarPOS":true}')
+  Cargar-Orden
+  Comprobar "toma la versión y -CerrarPOS del servidor" (($script:Version -eq "v3.5.0") -and $script:CerrarPOS -and -not $script:SinFirma -and -not $script:SinPOS)
+  Comprobar "la orden vale una sola vez" (-not (Test-Path $archivoOrden))
+  $falla = ""
+  try { Cargar-Orden } catch { $falla = $_.Exception.Message }
+  Comprobar "sin orden, la tarea no hace nada" ($falla -match "sin una orden")
+  $script:Version = "v3.6.0"; $script:CerrarPOS = $false; $script:SinPOS = $true; $script:SinFirma = $true
+  Escribir-Orden
+  $script:Version = ""; $script:SinPOS = $false; $script:SinFirma = $false
+  Cargar-Orden
+  Comprobar "la orden por SSH también vuelve completa" (($script:Version -eq "v3.6.0") -and $script:SinPOS -and $script:SinFirma -and -not $script:CerrarPOS)
+  $script:SinPOS = $false; $script:SinFirma = $false
 
   Write-Host "Sin versión indicada:"
   Publicar "v3.10.0" "apps/web/pagina.txt"

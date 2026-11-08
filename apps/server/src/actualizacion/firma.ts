@@ -1,7 +1,9 @@
 import { createPrivateKey, createPublicKey, generateKeyPairSync, sign, verify, type KeyObject } from "node:crypto";
 import { isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ManifiestoVersionSchema, type ManifiestoVersion } from "@apurimeno/contracts";
 import { aTexto, desdeTexto } from "../respaldo/cifrado.js";
+import type { PublicacionEncontrada } from "./github.js";
 
 // Firma de las versiones publicadas (decisión 30). Ed25519, que trae Node: quien publica firma con la privada, que solo
 // está en su equipo, y el servidor del local comprueba con la pública. Se firman los bytes exactos del manifiesto.
@@ -43,6 +45,18 @@ export function firmaValida(bytes: Buffer, firma: string, publica: KeyObject): b
     return verify(null, bytes, publica, Buffer.from(firma.trim(), "base64"));
   } catch {
     return false;
+  }
+}
+
+/** El manifiesto, solo si la firma es buena y es de la versión que dice la etiqueta. Si no, null. */
+export function manifiestoVerificado(publicacion: PublicacionEncontrada, publica: KeyObject): ManifiestoVersion | null {
+  const { manifiesto, firma, etiqueta } = publicacion;
+  if (manifiesto === null || firma === null || !firmaValida(manifiesto, firma, publica)) return null;
+  try {
+    const leido = ManifiestoVersionSchema.parse(JSON.parse(manifiesto.toString("utf8")));
+    return etiqueta === `v${leido.version}` ? leido : null;
+  } catch {
+    return null;
   }
 }
 

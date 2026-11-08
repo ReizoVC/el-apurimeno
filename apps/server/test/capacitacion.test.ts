@@ -150,7 +150,7 @@ describe("Base de capacitación: cuentas, ejemplos y reinicio", () => {
       "POST",
       RUTAS.registrarVenta,
       cajero,
-      { items: [{ productoId: "cap-prod-gaseosa", cantidad: 2 }], esHuesped: false, habitacionReferenciaId: null, ajuste: null, pagos: [efectivo(700)] },
+      { items: [{ productoId: "cap-prod-gaseosa", cantidadMilesimas: 2000 }], esHuesped: false, habitacionReferenciaId: null, ajuste: null, pagos: [efectivo(700)] },
       "clave-capacitacion-2",
     );
     await e.prisma.habitacion.update({ where: { id: "hab-101" }, data: { precioBase: 9900 } });
@@ -165,7 +165,7 @@ describe("Base de capacitación: cuentas, ejemplos y reinicio", () => {
     expect(habitaciones).toHaveLength(17);
     expect(habitaciones.every((h) => h.estado === "LIBRE")).toBe(true);
     expect(habitaciones.find((h) => h.id === "hab-101")?.precioBase).toBe(2500);
-    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "cap-prod-gaseosa" } })).stock).toBe(48);
+    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "cap-prod-gaseosa" } })).stock).toBe(48_000);
     // Las tres cuentas, idénticas (misma contraseña y rangos); las del arnés de pruebas, creadas "al practicar", ya no.
     const despues = await e.prisma.usuario.findMany({ orderBy: { id: "asc" } });
     expect(despues).toEqual(antes);

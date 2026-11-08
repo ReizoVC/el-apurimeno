@@ -29,10 +29,10 @@ migración aplicada. El #33 y el #34 traen migración, así que instalarlos es u
 
 | Parte | Qué hace | Cómo se probó |
 |---|---|---|
-| `packages/contracts` | Tipos y esquemas de todo el sistema; 30 decisiones de interpretación del SRS documentadas | 49 pruebas |
-| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno, salida y conteo de stock, comparación de versiones | 261 pruebas, incluida la tabla de casos del SRS |
-| `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
-| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión con conexión a la impresora (COM, USB directa, cola de Windows), lectura de su estado, reintentos y logotipo (probada con simulación y salida a archivo) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño, movimientos de stock, consulta de versiones firmadas en GitHub, republicación del espejo al cambiar su formato | 356 pruebas contra SQLite real; pruebas de concurrencia; la impresión, con una impresora simulada que responde como una real y con el ayudante de Windows real contra puertos que no existen |
+| `packages/contracts` | Tipos y esquemas de todo el sistema; 31 decisiones de interpretación del SRS documentadas | 51 pruebas |
+| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno, salida y conteo de stock, comparación de versiones, cantidades en milésimas | 272 pruebas, incluida la tabla de casos del SRS |
+| `packages/formato` | Dinero, cantidades y fechas de Lima, compartidos por todas las pantallas | 10 pruebas |
+| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión con conexión a la impresora (COM, USB directa, cola de Windows), lectura de su estado, reintentos y logotipo (probada con simulación y salida a archivo) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño, movimientos de stock, consulta de versiones firmadas en GitHub, republicación del espejo al cambiar su formato, ficha de producto con unidad y milésimas | 366 pruebas contra SQLite real; pruebas de concurrencia; la impresión, con una impresora simulada que responde como una real y con el ayudante de Windows real contra puertos que no existen |
 | `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras y venta sin stock confirmada por el cajero, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
 | `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario (entrada, salida, conteo e historial de stock) y categorías, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
@@ -49,7 +49,7 @@ base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema 
 detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
 iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (674 pruebas al 08/11). Con el equipo cargado, la suite
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (699 pruebas al 08/11). Con el equipo cargado, la suite
 completa del servidor tarda unos 4 minutos y algunas pruebas pueden vencer su límite de 20 s al prepararse (5 el 08/11);
 corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
@@ -94,10 +94,30 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
      `claude/boton-actualizar`.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
-   Loyverse, cuyo stock está desfasado. Falta un comando de importación que traiga nombres, precios, categorías y
-   códigos, sin el stock; el stock inicial sale de un conteo físico con Contar (decisión 29).
+   Loyverse, cuyo stock está desfasado. Falta la importación (etapa 3 del plan de abajo), que trae nombres, precios,
+   categorías, códigos y SKU, sin el stock; el stock inicial sale de un conteo físico.
 6. **Piloto en paralelo con el cuaderno** (E4 de los Planos): 1 a 2 semanas usando ambos, con capacitación al
    personal, comparando cada cierre de turno con el cuaderno antes de dejarlo.
+
+## Papelería y ferretería
+
+El 08/11/2026 la propietaria decidió preparar el sistema para sus otros dos negocios, en una sola base con los tres
+(decisión 31 de contracts). El plan tiene nueve etapas, un PR cada una y en orden:
+
+| # | Etapa | Estado |
+|---|---|---|
+| 1 | Ficha de producto (SKU, unidad, costo, mínimos), cantidades en milésimas y motivos fijos de salida | En PR |
+| 2 | Negocios: stock, precios, turnos, tickets, comprobante y reportes por negocio | Pendiente |
+| 3 | Importación (plantilla y formato de Loyverse) y alta rápida al escanear | Pendiente |
+| 4 | Conteo por sesión, con lector | Pendiente |
+| 5 | Traslados entre negocios | Pendiente |
+| 6 | Impresión en cada mostrador | Pendiente; depende de la prueba de la impresora física |
+| 7 | Compras, proveedores, costo promedio y lista para comprar | Pendiente |
+| 8 | Presentaciones (caja, docena, resma) y kits | Pendiente |
+| 9 | Reportes de inventario | Pendiente |
+
+Tras la etapa 4 se puede cargar el hospedaje con datos reales y empezar su piloto. Tras la 6 se puede activar un
+segundo negocio. Fuera del plan: crédito a clientes, precios mayoristas y SUNAT, que espera la respuesta del contador.
 
 ## Decisiones que necesitan tu respuesta
 
@@ -108,6 +128,8 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
 | Encendido del equipo | El servidor, el Dashboard y Limpieza arrancan solos como servicios de Windows (NSSM) | ¿Quién enciende el equipo cada día, o queda siempre encendido? |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
+| RUC y régimen de cada negocio | Sin datos | Qué datos lleva cada comprobante y si un traslado entre negocios cuenta como venta; consultarlo con el contador |
+| Comprobantes de la ferretería y la papelería | Fuera de alcance (SUNAT) | Qué emitir y con qué frecuencia piden factura |
 
 Ya resueltas y registradas (no requieren nada): logotipo en el comprobante (sí, centrado arriba del nombre; se
 puede quitar con `IMPRESORA_LOGO=no` si en papel no se ve bien), número de operación obligatorio para Yape y Plin (P-05; en la

@@ -111,7 +111,7 @@ const TICKET_EJEMPLO = (metodoId: string): Ticket => ({
       id: "l1",
       tipo: "BASE_HABITACION",
       descripcion: "Habitación 101 — 8 horas",
-      cantidad: 1,
+      cantidad: 1000,
       precioUnitario: 2500,
       importe: 2500,
       productoId: null,

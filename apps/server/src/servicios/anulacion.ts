@@ -55,7 +55,7 @@ async function aplicarEfectos(tx: Transaccion, ctx: ContextoServicio, r: AnularT
   }
 
   const ids = [...new Set(original.lineas.flatMap((l) => (l.productoId === null ? [] : [l.productoId])))];
-  const productos = (await tx.producto.findMany({ where: { id: { in: ids } } })).map(aProducto);
+  const productos = (await tx.producto.findMany({ where: { id: { in: ids } } })).map((fila) => aProducto(fila));
   const efecto = revertirVentaEnInventario(original, productos);
   for (const producto of efecto.productos) {
     const anterior = productos.find((p) => p.id === producto.id);

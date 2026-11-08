@@ -92,6 +92,16 @@ export const TipoMovimientoInventarioSchema = z.enum([
 export type TipoMovimientoInventario = z.infer<typeof TipoMovimientoInventarioSchema>;
 export const TipoMovimientoInventario = TipoMovimientoInventarioSchema.enum;
 
+/** Unidad en la que se vende y se cuenta un producto (decisión 31). Solo UNIDAD exige cantidades enteras. */
+export const UnidadMedidaSchema = z.enum(["UNIDAD", "METRO", "KILOGRAMO", "LITRO"]);
+export type UnidadMedida = z.infer<typeof UnidadMedidaSchema>;
+export const UnidadMedida = UnidadMedidaSchema.enum;
+
+/** Motivo fijo de una salida de mercadería, para poder sumar las mermas por causa (decisión 31). */
+export const MotivoSalidaSchema = z.enum(["VENCIDO", "DANADO", "PERDIDA", "CONSUMO_INTERNO", "TRASLADO", "OTRO"]);
+export type MotivoSalida = z.infer<typeof MotivoSalidaSchema>;
+export const MotivoSalida = MotivoSalidaSchema.enum;
+
 /** Estado de un trabajo de impresión del comprobante (§20.5). */
 export const EstadoTrabajoImpresionSchema = z.enum(["PENDIENTE", "IMPRESO", "ERROR"]);
 export type EstadoTrabajoImpresion = z.infer<typeof EstadoTrabajoImpresionSchema>;

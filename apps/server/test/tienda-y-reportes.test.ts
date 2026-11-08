@@ -26,10 +26,15 @@ afterEach(() => e.cerrar());
 const nuevoProducto = (extra: Record<string, unknown> = {}) => ({
   categoriaId: "cat-bebidas",
   nombre: "Gaseosa 500 ml",
+  sku: null,
   codigoBarras: "7750000000001",
+  unidad: "UNIDAD",
   precioHuesped: 300,
   precioPublico: 350,
+  costo: null,
   controlaStock: true,
+  stockMinimo: null,
+  stockOptimo: null,
   activo: true,
   ...extra,
 });
@@ -41,13 +46,13 @@ async function prepararCatalogo(): Promise<string> {
   expect(creado.statusCode).toBe(201);
   const producto = ProductoSchema.parse(creado.json());
   expect(producto.stock).toBe(0);
-  const repuesto = await e.llamar("POST", ruta(RUTAS.reponerProducto, producto.id), admin, { cantidad: 24 });
-  expect(ReposicionRespuestaSchema.parse(repuesto.json())).toMatchObject({ producto: { stock: 24 }, movimiento: { tipo: "REPOSICION", cantidad: 24 } });
+  const repuesto = await e.llamar("POST", ruta(RUTAS.reponerProducto, producto.id), admin, { cantidad: 24_000 });
+  expect(ReposicionRespuestaSchema.parse(repuesto.json())).toMatchObject({ producto: { stock: 24_000 }, movimiento: { tipo: "REPOSICION", cantidad: 24_000 } });
   return producto.id;
 }
 
 const venta = (productoId: string, esHuesped: boolean, habitacionReferenciaId: string | null, pagos: unknown[]) => ({
-  items: [{ productoId, cantidad: 2 }],
+  items: [{ productoId, cantidadMilesimas: 2000 }],
   esHuesped,
   habitacionReferenciaId,
   ajuste: null,
@@ -69,7 +74,7 @@ describe("Tienda por HTTP (CU-11, CU-12, CU-29)", () => {
     expect((await e.llamar("GET", RUTAS.productos, cajero)).json()).toEqual([]);
     expect((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=false`, admin)).json()).toEqual([]);
     const todos = ProductoSchema.array().parse((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=true`, admin)).json());
-    expect(todos).toMatchObject([{ id: productoId, activo: false, stock: 24 }]);
+    expect(todos).toMatchObject([{ id: productoId, activo: false, stock: 24_000 }]);
     // Quien solo vende no ve los inactivos.
     expect((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=true`, cajero)).statusCode).toBe(403);
     expect((await e.llamar("GET", `${RUTAS.productos}?incluirInactivos=si`, admin)).statusCode).toBe(400);
@@ -78,7 +83,7 @@ describe("Tienda por HTTP (CU-11, CU-12, CU-29)", () => {
   it("el Cajero no gestiona el catálogo ni repone (RN-25)", async () => {
     const productoId = await prepararCatalogo();
     expect((await e.llamar("POST", RUTAS.productos, cajero, nuevoProducto())).statusCode).toBe(403);
-    expect((await e.llamar("POST", ruta(RUTAS.reponerProducto, productoId), cajero, { cantidad: 1 })).statusCode).toBe(403);
+    expect((await e.llamar("POST", ruta(RUTAS.reponerProducto, productoId), cajero, { cantidad: 1000 })).statusCode).toBe(403);
   });
 
   it("el código de barras es único entre productos (decisión 14 de contracts)", async () => {
@@ -88,7 +93,7 @@ describe("Tienda por HTTP (CU-11, CU-12, CU-29)", () => {
     expect(duplicado.json()).toMatchObject({ codigo: "VALIDACION" });
     // Editar el mismo producto conservando su código sí se permite, y el cambio de precio queda auditado.
     const editado = await e.llamar("PUT", ruta(RUTAS.producto, productoId), admin, nuevoProducto({ categoriaId, precioPublico: 400 }));
-    expect(ProductoSchema.parse(editado.json())).toMatchObject({ precioPublico: 400, stock: 24 });
+    expect(ProductoSchema.parse(editado.json())).toMatchObject({ precioPublico: 400, stock: 24_000 });
     expect(await e.prisma.registroAuditoria.findFirst({ where: { accion: "PRODUCTO_EDITADO" } })).not.toBeNull();
   });
 
@@ -99,7 +104,7 @@ describe("Tienda por HTTP (CU-11, CU-12, CU-29)", () => {
     expect(TicketSchema.parse(huesped.json())).toMatchObject({ total: 600, habitacionReferenciaId: "hab-107", alquilerId: null });
     const publico = await e.llamar("POST", RUTAS.registrarVenta, cajero, venta(productoId, false, null, [yape(700)]), "clave-v-2");
     expect(TicketSchema.parse(publico.json()).total).toBe(700);
-    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: productoId } })).stock).toBe(20);
+    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: productoId } })).stock).toBe(20_000);
   });
 
   it("una venta a público asociada a una habitación no cumple el contrato (400)", async () => {

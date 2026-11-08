@@ -10,8 +10,10 @@ import type {
   PrecioEspecialCliente,
   Producto,
 } from "@apurimeno/contracts";
+import { MILESIMAS_POR_UNIDAD, importeDeLinea } from "@apurimeno/contracts";
+import { abreviaturaUnidad } from "@apurimeno/formato";
 import { ErrorNegocio } from "./errores.js";
-import { asegurarCentimos, asegurarEnteroPositivo, motivoRequerido } from "./interno.js";
+import { asegurarCantidadDeProducto, asegurarCentimos, motivoRequerido } from "./interno.js";
 
 /** Línea de ticket antes de persistirse: el backend le asigna `id`. */
 export type BorradorLinea = Omit<LineaTicket, "id">;
@@ -27,6 +29,7 @@ function sumar(lineas: readonly BorradorLinea[]): Centimos {
   return lineas.reduce((total, linea) => total + linea.importe, 0);
 }
 
+/** `cantidad` en milésimas (decisión 31 de contracts); el importe se redondea al céntimo. */
 function linea(
   tipo: BorradorLinea["tipo"],
   descripcion: string,
@@ -34,8 +37,10 @@ function linea(
   precioUnitario: number,
   productoId: Id | null = null,
 ): BorradorLinea {
-  return { tipo, descripcion, cantidad, precioUnitario, importe: cantidad * precioUnitario, productoId };
+  return { tipo, descripcion, cantidad, precioUnitario, importe: importeDeLinea(cantidad, precioUnitario), productoId };
 }
+
+const UNA = MILESIMAS_POR_UNIDAD;
 
 /**
  * Precio de la habitación para un ingreso (RN-13, RN-14, RN-15, RF-02, RF-17).
@@ -83,11 +88,11 @@ export function cotizarIngreso(datos: DatosCotizacionIngreso): CotizacionIngreso
   const { origenPrecio, precio } = resolverPrecioHabitacion(habitacion, datos.clienteId, datos.preciosEspeciales);
 
   const lineas = [
-    linea("BASE_HABITACION", `Habitación ${habitacion.numero} — ${parametros.horasBase} horas`, 1, precio),
+    linea("BASE_HABITACION", `Habitación ${habitacion.numero} — ${parametros.horasBase} horas`, UNA, precio),
   ];
   if (horasAdicionalesAlIngreso > 0) {
     lineas.push(
-      linea("HORA_ADICIONAL", "Horas adicionales", horasAdicionalesAlIngreso, parametros.precioHoraAdicional),
+      linea("HORA_ADICIONAL", "Horas adicionales", horasAdicionalesAlIngreso * UNA, parametros.precioHoraAdicional),
     );
   }
   return {
@@ -105,7 +110,7 @@ export function cotizarIngreso(datos: DatosCotizacionIngreso): CotizacionIngreso
  * No depende del precio de la habitación ni del precio especial del cliente.
  */
 export function cotizarHoraAdicional(alquiler: Pick<Alquiler, "parametrosAplicados">): Cotizacion {
-  const lineas = [linea("HORA_ADICIONAL", "Hora adicional", 1, alquiler.parametrosAplicados.precioHoraAdicional)];
+  const lineas = [linea("HORA_ADICIONAL", "Hora adicional", UNA, alquiler.parametrosAplicados.precioHoraAdicional)];
   return { lineas, total: sumar(lineas), ajustePuntual: null };
 }
 
@@ -123,7 +128,7 @@ export function aplicarAjustePuntual(cotizacion: Cotizacion, montoAjustado: numb
 
   const diferencia = montoAjustado - cotizacion.total;
   return {
-    lineas: [...cotizacion.lineas, linea("AJUSTE_PUNTUAL", "Ajuste", 1, diferencia)],
+    lineas: [...cotizacion.lineas, linea("AJUSTE_PUNTUAL", "Ajuste", UNA, diferencia)],
     total: montoAjustado,
     ajustePuntual: { montoOriginal: cotizacion.total, montoAjustado, motivo: motivoLimpio },
   };
@@ -136,7 +141,17 @@ export function precioProducto(producto: Producto, esHuesped: boolean): Centimos
 
 export interface ItemVenta {
   producto: Producto;
+  /** En milésimas de la unidad del producto (decisión 31 de contracts). */
   cantidad: number;
+}
+
+/**
+ * Texto de la línea de un producto: su nombre, y su unidad entre paréntesis si no se vende por unidad, porque la
+ * línea del ticket no guarda la unidad ("Cable mellizo (m)").
+ */
+export function descripcionProducto(producto: Producto): string {
+  const abreviatura = abreviaturaUnidad(producto.unidad);
+  return abreviatura === "" ? producto.nombre : `${producto.nombre} (${abreviatura})`;
 }
 
 /**
@@ -147,8 +162,8 @@ export interface ItemVenta {
 export function cotizarVenta(items: readonly ItemVenta[], esHuesped: boolean): Cotizacion {
   if (items.length === 0) throw new RangeError("Una venta tiene al menos un producto.");
   const lineas = items.map(({ producto, cantidad }) => {
-    asegurarEnteroPositivo(cantidad, `cantidad de ${producto.nombre}`);
-    return linea("PRODUCTO", producto.nombre, cantidad, precioProducto(producto, esHuesped), producto.id);
+    asegurarCantidadDeProducto(producto, cantidad);
+    return linea("PRODUCTO", descripcionProducto(producto), cantidad, precioProducto(producto, esHuesped), producto.id);
   });
   return { lineas, total: sumar(lineas), ajustePuntual: null };
 }

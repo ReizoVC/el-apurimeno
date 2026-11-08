@@ -53,11 +53,16 @@ const producto = (id: string, nombre: string, precioPublico: number): Producto =
   id,
   categoriaId: "cat-1",
   nombre,
+  sku: null,
   codigoBarras: null,
+  unidad: "UNIDAD",
   precioHuesped: precioPublico,
   precioPublico,
+  costo: null,
   controlaStock: false,
   stock: 0,
+  stockMinimo: null,
+  stockOptimo: null,
   activo: true,
 });
 
@@ -96,8 +101,9 @@ function venta() {
       habitacionReferenciaId: null,
       cotizacion: cotizarVenta(
         [
-          { producto: producto("p-1", "Café pasado", 250), cantidad: 2 },
-          { producto: producto("p-2", "Piña en almíbar ¡nueva!", 450), cantidad: 1 },
+          // En milésimas (decisión 31 de contracts): 2 y 1 unidades.
+          { producto: producto("p-1", "Café pasado", 250), cantidad: 2000 },
+          { producto: producto("p-2", "Piña en almíbar ¡nueva!", 450), cantidad: 1000 },
         ],
         false,
       ),

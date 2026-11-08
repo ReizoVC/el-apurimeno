@@ -22,7 +22,7 @@ import { AjustePuntual } from "../componentes/AjustePuntual";
 import { Aviso } from "../componentes/Aviso";
 import { SelectorCliente } from "../componentes/SelectorCliente";
 import { SelectorPago } from "../componentes/SelectorPago";
-import { hora, soles } from "@apurimeno/formato";
+import { cantidad, hora, soles } from "@apurimeno/formato";
 import { useClaveIdempotencia } from "../lib/idempotencia";
 import { mensajeDe, servidor } from "../lib/servidor";
 import { tienePermiso, type Sesion } from "../lib/sesion";
@@ -176,7 +176,8 @@ export function Ingreso({
               <div key={l.descripcion} className="flex justify-between">
                 <span>
                   {l.descripcion}
-                  {l.cantidad > 1 ? ` × ${l.cantidad}` : ""}
+                  {/* En milésimas (decisión 31 de contracts): 2000 = 2 horas. */}
+                  {l.cantidad > 1000 ? ` × ${cantidad(l.cantidad)}` : ""}
                 </span>
                 <span>{soles(l.importe)}</span>
               </div>

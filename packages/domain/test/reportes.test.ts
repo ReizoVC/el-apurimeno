@@ -50,7 +50,7 @@ describe("Días del negocio en hora de Lima", () => {
 describe("RF-47 · reporte de ventas", () => {
   const t1 = cobro("INGRESO_ALQUILER", ingreso(3000), EFECTIVO.id, en("14:00"));
   const t2 = cobro("HORA_ADICIONAL", cotizarHoraAdicional(alquiler()), YAPE.id, en("23:00"), { turnoId: "turno-2" });
-  const t3 = cobro("VENTA_TIENDA", cotizarVenta([{ producto: producto(), cantidad: 2 }], false), EFECTIVO.id, en("04:00", 24));
+  const t3 = cobro("VENTA_TIENDA", cotizarVenta([{ producto: producto(), cantidad: 2000 }], false), EFECTIVO.id, en("04:00", 24));
 
   it("totaliza por origen, método, día de Lima, turno y producto, y todos cuadran con el total", () => {
     const r = resumirVentas([t1, t2, t3]);
@@ -68,7 +68,7 @@ describe("RF-47 · reporte de ventas", () => {
     // Las 04:00 UTC del 24 siguen siendo el 23 en Lima: todo cae en el mismo día.
     expect(r.porDia).toEqual([{ dia: "2026-09-23", total: 4500 }]);
     expect(r.porTurno.reduce((s, x) => s + x.total, 0)).toBe(r.total);
-    expect(r.porProducto).toEqual([{ productoId: "prod-gaseosa", descripcion: "Gaseosa", cantidad: 2, total: 700 }]);
+    expect(r.porProducto).toEqual([{ productoId: "prod-gaseosa", descripcion: "Gaseosa", cantidad: 2000, total: 700 }]);
   });
 
   it("un ticket anulado y su compensatorio no cuentan (solo tickets vigentes)", () => {

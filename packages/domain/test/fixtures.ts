@@ -91,11 +91,17 @@ export function producto(parcial: Partial<Producto> = {}): Producto {
     id: "prod-gaseosa",
     categoriaId: "cat-bebidas",
     nombre: "Gaseosa",
+    sku: null,
     codigoBarras: null,
+    unidad: "UNIDAD",
     precioHuesped: 300,
     precioPublico: 350,
+    costo: null,
     controlaStock: true,
-    stock: 10,
+    /** En milésimas (decisión 31 de contracts): 10 unidades. */
+    stock: 10_000,
+    stockMinimo: null,
+    stockOptimo: null,
     activo: true,
     ...parcial,
   };

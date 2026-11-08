@@ -36,7 +36,7 @@ import {
 } from "../../src/componentes/Periodo";
 import { useCarga } from "../../src/lib/carga";
 import { periodoDeDias } from "@apurimeno/formato";
-import { fechaHora, soles } from "@apurimeno/formato";
+import { cantidad, fechaHora, soles } from "@apurimeno/formato";
 import { ORIGEN_TICKET } from "../../src/lib/rotulos";
 import { servidor } from "../../src/lib/servidor";
 
@@ -277,7 +277,10 @@ function Ventas({
             {reporte.porProducto.map((p) => (
               <TableRow key={p.productoId}>
                 <TableCell>{p.descripcion}</TableCell>
-                <TableCell className="text-right">{p.cantidad}</TableCell>
+                {/* En milésimas (decisión 31 de contracts); la unidad va en la descripción. */}
+                <TableCell className="text-right">
+                  {cantidad(p.cantidad)}
+                </TableCell>
                 <TableCell className="text-right">{soles(p.total)}</TableCell>
               </TableRow>
             ))}

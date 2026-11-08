@@ -5,7 +5,8 @@ import type {
   Ticket,
 } from "@apurimeno/contracts";
 import { ms } from "./interno.js";
-import { fechaHora, soles } from "@apurimeno/formato";
+import { MILESIMAS_POR_UNIDAD } from "@apurimeno/contracts";
+import { cantidad, fechaHora, soles } from "@apurimeno/formato";
 
 // Contenido del comprobante impreso (§13, RN-38, RN-39, RF-44, RF-55): texto plano en líneas del ancho del
 // papel. Convertirlo a comandos ESC/POS y enviarlo a la impresora es trabajo del servidor (ADR-05).
@@ -132,8 +133,9 @@ export function componerLineasComprobante(
 
   for (const linea of ticket.lineas) {
     agregar(fila(linea.descripcion, soles(linea.importe), ancho));
-    if (linea.cantidad > 1)
-      agregar([`  ${linea.cantidad} x ${soles(linea.precioUnitario)}`]);
+    // En milésimas (decisión 31 de contracts): una sola unidad no lleva el detalle.
+    if (linea.cantidad !== MILESIMAS_POR_UNIDAD)
+      agregar([`  ${cantidad(linea.cantidad)} x ${soles(linea.precioUnitario)}`]);
   }
   agregar([separador]);
   agregar(fila("TOTAL", soles(ticket.total), ancho), "negrita");

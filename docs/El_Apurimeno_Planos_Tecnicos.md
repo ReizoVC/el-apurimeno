@@ -29,6 +29,8 @@ El Apurimeño es un hospedaje por horas, formal (con RUC), que opera las 24 hora
 
 **Fuera de alcance, explícitamente:** comprobante tributario real (SUNAT), reservas, alquiler por días, aplicaciones móviles nativas (la app de limpieza es web responsiva), soporte multi-negocio en esta versión, integración con pasarelas de pago.
 
+**Cambio de alcance (08/11/2026):** el soporte para la papelería y la ferretería entra al proyecto, en nueve etapas y en una sola base con los tres negocios. La primera, la ficha de producto con cantidades en milésimas, está en la decisión 31 de `packages/contracts/README.md`. SUNAT sigue fuera de alcance hasta la respuesta del contador.
+
 # 2. Glosario
 
 | Término                  | Significado en este sistema |

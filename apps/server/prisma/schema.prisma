@@ -87,6 +87,24 @@ enum TipoMovimientoInventario {
   CONTEO
 }
 
+/// Decisión 31 de contracts: unidad de venta y conteo de un producto.
+enum UnidadMedida {
+  UNIDAD
+  METRO
+  KILOGRAMO
+  LITRO
+}
+
+/// Decisión 31 de contracts: motivo fijo de una salida de mercadería.
+enum MotivoSalida {
+  VENCIDO
+  DANADO
+  PERDIDA
+  CONSUMO_INTERNO
+  TRASLADO
+  OTRO
+}
+
 enum EstadoTrabajoImpresion {
   PENDIENTE
   IMPRESO
@@ -380,11 +398,17 @@ model Producto {
   id            String  @id
   categoriaId   String
   nombre        String
-  codigoBarras  String? @unique
+  sku           String?      @unique
+  codigoBarras  String?      @unique
+  unidad        UnidadMedida @default(UNIDAD)
   precioHuesped Int
   precioPublico Int
+  costo         Int?
   controlaStock Boolean
+  /// En milésimas de la unidad (decisión 31 de contracts), como `stockMinimo` y `stockOptimo`.
   stock         Int
+  stockMinimo   Int?
+  stockOptimo   Int?
   activo        Boolean
 
   categoria   CategoriaProducto      @relation(fields: [categoriaId], references: [id])
@@ -398,6 +422,7 @@ model MovimientoInventario {
   tipo        TipoMovimientoInventario
   cantidad    Int
   ticketId    String?
+  motivoSalida MotivoSalida?
   motivo      String?
   creadoPorId String
   creadoEn    DateTime

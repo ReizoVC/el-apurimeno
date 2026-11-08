@@ -140,7 +140,7 @@ export default function StoreCatalogPage() {
                           }
                         >
                           {producto.stock > 0
-                            ? `${producto.stock} uds.`
+                            ? `${producto.stock / 1000} uds.`
                             : "Agotado (0)"}
                         </span>
                       ) : (

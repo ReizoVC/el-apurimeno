@@ -22,7 +22,7 @@ beforeEach(async () => {
       precioHuesped: 300,
       precioPublico: 350,
       controlaStock: true,
-      stock: 10,
+      stock: 10_000,
       activo: true,
     },
   });
@@ -37,7 +37,7 @@ afterEach(() => e.cerrar());
 
 const venta = (esHuesped: boolean, habitacionReferenciaId: string | null, monto: number) =>
   RegistrarVentaEntradaSchema.parse({
-    items: [{ productoId: "prod-gaseosa", cantidad: 2 }],
+    items: [{ productoId: "prod-gaseosa", cantidadMilesimas: 2000 }],
     esHuesped,
     habitacionReferenciaId,
     ajuste: null,
@@ -48,8 +48,8 @@ describe("Venta en tienda con esHuesped explícito (RN-20, RN-22)", () => {
   it("a huésped cobra el precio de huésped, descuenta stock y registra el kardex", async () => {
     const { resultado: ticket } = await registrarVentaServicio(ctx, venta(true, "hab-107", 600), "clave-venta-1");
     expect(ticket).toMatchObject({ total: 600, origen: "VENTA_TIENDA", habitacionReferenciaId: "hab-107", alquilerId: null });
-    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "prod-gaseosa" } })).stock).toBe(8);
-    expect(await e.prisma.movimientoInventario.findFirst({ where: { ticketId: ticket.id } })).toMatchObject({ tipo: "VENTA", cantidad: -2 });
+    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "prod-gaseosa" } })).stock).toBe(8000);
+    expect(await e.prisma.movimientoInventario.findFirst({ where: { ticketId: ticket.id } })).toMatchObject({ tipo: "VENTA", cantidad: -2000 });
   });
 
   it("a público cobra el precio de público, sin habitación (RN-24)", async () => {
@@ -63,7 +63,7 @@ describe("Venta en tienda con esHuesped explícito (RN-20, RN-22)", () => {
   });
 
   it("stock insuficiente se rechaza sin tocar nada (RN-26)", async () => {
-    await e.prisma.producto.update({ where: { id: "prod-gaseosa" }, data: { stock: 1 } });
+    await e.prisma.producto.update({ where: { id: "prod-gaseosa" }, data: { stock: 1000 } });
     await expect(registrarVentaServicio(ctx, venta(false, null, 700), "clave-venta-4")).rejects.toMatchObject({
       codigo: "INSUFFICIENT_STOCK",
     });

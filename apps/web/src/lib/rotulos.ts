@@ -2,15 +2,35 @@ import type {
   AccionAuditoria,
   CodigoErrorEspejo,
   CodigoErrorRespaldo,
+  MotivoSalida,
   OperacionAutorizable,
   OrigenTicket,
   Permiso,
   TipoEntidadAuditada,
   TipoMovimientoInventario,
+  UnidadMedida,
 } from "@apurimeno/contracts";
 
 // Textos en castellano para valores del contrato. Los tipos vienen de @apurimeno/contracts: si el catálogo
 // cambia, TypeScript exige completar estos textos.
+
+/** Decisión 31 de contracts. */
+export const UNIDAD_MEDIDA: Record<UnidadMedida, string> = {
+  UNIDAD: "Unidad",
+  METRO: "Metro (m)",
+  KILOGRAMO: "Kilo (kg)",
+  LITRO: "Litro (L)",
+};
+
+/** Decisión 31 de contracts: motivos fijos de una salida, en el orden en que se ofrecen. */
+export const MOTIVO_SALIDA: Record<MotivoSalida, string> = {
+  VENCIDO: "Vencido",
+  DANADO: "Dañado",
+  PERDIDA: "Pérdida",
+  CONSUMO_INTERNO: "Consumo interno",
+  TRASLADO: "Traslado a otro negocio",
+  OTRO: "Otro",
+};
 
 export const TIPO_MOVIMIENTO_INVENTARIO: Record<
   TipoMovimientoInventario,

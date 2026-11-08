@@ -278,9 +278,10 @@ productos, auditoría ni el estado de las habitaciones en vivo (RN-45, RIE-08).
   Una vuelta a la vez: si hay una en curso, la manual responde 409 `SINCRONIZACION_EN_CURSO`.
 - **Qué publica cada vuelta:** hoy y ayer, más los días y turnos que cambiaron desde la última
   sincronización correcta (con 5 minutos de margen). Una anulación vuelve a publicar el día del cobro
-  original y su turno; una hora adicional, el día en que ingresó el alquiler. La primera vez, o con
-  `{ "completo": true }`, publica todo el historial. Cada fila se reemplaza (upsert), así que repetir no
-  duplica nada.
+  original y su turno; una hora adicional, el día en que ingresó el alquiler. La primera vez, con
+  `{ "completo": true }` o si cambió `VERSION_RESUMEN_ESPEJO` desde la última sincronización correcta,
+  publica todo el historial. Cada fila se reemplaza (upsert), así que repetir no duplica nada. Orden para
+  cambiar el formato: `supabase/README.md`.
 - **Si falla** (sin internet, credenciales, tablas faltantes), el local sigue igual (RNF-SYNC-02): el
   error queda en `GET /espejo` y en el registro, y la siguiente vuelta vuelve a intentar lo mismo.
 - **Credenciales:** entra con la cuenta `sincronizador`, que solo puede insertar y actualizar las tablas

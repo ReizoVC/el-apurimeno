@@ -1,4 +1,4 @@
-import { aFilaResumenDia, aFilaResumenTurno, type DiaCalendario } from "@apurimeno/contracts";
+import { VERSION_RESUMEN_ESPEJO, aFilaResumenDia, aFilaResumenTurno, type DiaCalendario } from "@apurimeno/contracts";
 import { diaLocal, periodoDelDia, resumirDia, resumirTurno } from "@apurimeno/domain";
 import { sumarDias } from "@apurimeno/formato";
 import type { PrismaClient } from "../db.js";
@@ -25,7 +25,7 @@ export interface OpcionesPublicacion {
 export interface ResultadoPublicacion {
   dias: number;
   turnos: number;
-  /** Si publicó todo el historial: porque se pidió o porque nunca se había sincronizado. */
+  /** Si publicó todo el historial: porque se pidió, porque nunca se había sincronizado o porque cambió el formato. */
   completo: boolean;
 }
 
@@ -35,7 +35,8 @@ const dia = (fecha: Date) => diaLocal(fecha.toISOString());
  * Días y turnos a publicar. Siempre hoy y ayer (así un día sin movimiento aparece en cero). Además, los días de
  * todo ticket emitido desde la última sincronización y los que ese ticket afecta: una anulación cambia el día
  * del cobro original; una hora adicional cambia la ocupación del día en que ingresó su alquiler. Y los turnos que
- * se cerraron o cuyas ventas cambiaron por una anulación. Sin sincronización previa, o si se pide, todo.
+ * se cerraron o cuyas ventas cambiaron por una anulación. Con `cambiosDesde` null (sin sincronización previa, si se
+ * pide o si cambió el formato), todo.
  */
 async function elegir(prisma: PrismaClient, ahora: Date, cambiosDesde: Date | null) {
   const hoy = dia(ahora);
@@ -108,7 +109,10 @@ export async function publicarResumen(
 ): Promise<ResultadoPublicacion> {
   const { ahora } = opciones;
   const estado = await prisma.estadoEspejo.findUnique({ where: { id: 1 } });
-  const cambiosDesde = opciones.completo ? null : (estado?.cambiosDesde ?? null);
+  // Con un formato nuevo se republica todo: si no, los días viejos quedarían en el formato anterior y la vista remota
+  // mezclaría filas de dos versiones. La versión se guarda solo si el espejo lo aceptó todo: si falla, se reintenta todo.
+  const formatoCambiado = estado?.versionResumen !== VERSION_RESUMEN_ESPEJO;
+  const cambiosDesde = opciones.completo || formatoCambiado ? null : (estado?.cambiosDesde ?? null);
   const { dias, turnoIds } = await elegir(prisma, ahora, cambiosDesde);
 
   const actualizadoEn = ahora.toISOString();
@@ -124,6 +128,7 @@ export async function publicarResumen(
     ultimoIntentoEn: ahora,
     ultimoExitoEn: ahora,
     cambiosDesde: new Date(ahora.getTime() - MARGEN_CAMBIOS_MS),
+    versionResumen: VERSION_RESUMEN_ESPEJO,
     ultimoErrorCodigo: null,
     ultimoErrorMensaje: null,
     ultimoErrorEn: null,

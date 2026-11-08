@@ -1,6 +1,6 @@
 # Estado actual del proyecto
 
-Al 06/11/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
+Al 08/11/2026. Resume qué está hecho y probado, qué falta para que el sistema reemplace el cuaderno de papel, y qué
 decisiones esperan a la propietaria. El detalle técnico de cada parte está en el README de su carpeta.
 
 **En una línea:** el MVP de software está completo salvo la **prueba de la impresión con la impresora física**: la
@@ -12,20 +12,29 @@ Antes del piloto faltan la **impresora**, **importar los productos** y los **dat
 
 ## Integrado
 
-Todo está en `main`, hasta el PR #31 inclusive. Los últimos: categorías que se renombran y se eliminan en su propia
-pestaña (#29) y la actualización remota del PC del local, ensayada con servicios reales (#31). Los anteriores están en
-el historial de git.
+Todo está en `main`, hasta el PR #34 inclusive. Los últimos: la actualización remota del PC del local, ensayada con
+servicios reales (#31); salida, conteo e historial de stock y venta sin stock confirmada por el cajero (#32); el aviso
+de versiones nuevas firmadas en el Dashboard (#33); y la republicación completa del espejo cuando cambia el formato
+del resumen (#34). Los anteriores están en el historial de git.
+
+**Sin integrar:** la rama `claude/boton-actualizar` guarda el botón "Actualizar" del Dashboard, la comprobación de la
+firma en el actualizador y los avisos de recarga en el POS y en Limpieza. Quedó sin commit desde el 06/11 y se guardó
+el 08/11 tal como estaba: no está revisada ni probada como conjunto, toca `contracts` y `domain`, y está 2 commits
+detrás de `main`.
+
+**Instalado en el equipo de desarrollo** (los servicios corren desde `D:\dev\el-apurimeno`): hasta el #32, con su
+migración aplicada. El #33 y el #34 traen migración, así que instalarlos es una actualización completa.
 
 ## Completo y probado
 
 | Parte | Qué hace | Cómo se probó |
 |---|---|---|
-| `packages/contracts` | Tipos y esquemas de todo el sistema; 25 decisiones de interpretación del SRS documentadas | 45 pruebas |
-| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno | 243 pruebas, incluida la tabla de casos del SRS |
-| `packages/formato` | Dinero y fechas de Lima, compartidos por todas las pantallas | 8 pruebas |
-| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión con conexión a la impresora (COM, USB directa, cola de Windows), lectura de su estado, reintentos y logotipo (probada con simulación y salida a archivo) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño | 301 pruebas contra SQLite real; pruebas de concurrencia; la impresión, con una impresora simulada que responde como una real y con el ayudante de Windows real contra puertos que no existen |
-| `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
-| `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario (entrada, salida, conteo e historial de stock), usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
+| `packages/contracts` | Tipos y esquemas de todo el sistema; 31 decisiones de interpretación del SRS documentadas | 51 pruebas |
+| `packages/domain` | Reglas de negocio: tiempos y cortesía, precios (lista, especial, ajuste), horas adicionales, caja y arqueo, tienda y stock, anulaciones, permisos, reportes, comprobante, resumen del espejo, horarios y retención de respaldos, intentos de cierre de turno, salida y conteo de stock, comparación de versiones, cantidades en milésimas | 272 pruebas, incluida la tabla de casos del SRS |
+| `packages/formato` | Dinero, cantidades y fechas de Lima, compartidos por todas las pantallas | 10 pruebas |
+| `apps/server` | API local: sesiones y permisos, turnos, ingresos, horas adicionales, salidas, tienda, anulación con código de autorización, limpieza, administración, configuración, auditoría, reportes, idempotencia de cobros, cola de impresión con conexión a la impresora (COM, USB directa, cola de Windows), lectura de su estado, reintentos y logotipo (probada con simulación y salida a archivo) y sincronización con el espejo, respaldos (con la ventana de 2 horas) y restauración, intentos de cierre de turno, reglas de `.gitignore`, registro que rota por tamaño, movimientos de stock, consulta de versiones firmadas en GitHub, republicación del espejo al cambiar su formato, ficha de producto con unidad y milésimas | 366 pruebas contra SQLite real; pruebas de concurrencia; la impresión, con una impresora simulada que responde como una real y con el ayudante de Windows real contra puertos que no existen |
+| `apps/native` (POS) | Tablero por piso con estado en vivo, ingreso, hora adicional, salida, anulación guiada, tienda con lector de código de barras y venta sin stock confirmada por el cajero, turno con arqueo ciego (con código de autorización tras 3 intentos con diferencia) | De punta a punta en el navegador contra el servidor real. El ejecutable de Tauri y sus instaladores (MSI y NSIS) compilan en este PC Windows con `pnpm --filter native tauri build`; falta abrir la ventana a mano para confirmarla (la sesión de Claude Code no puede abrir ventanas de escritorio) |
+| `apps/web` (Dashboard) | Vista del día, reportes, habitaciones, clientes y precios especiales, productos e inventario (entrada, salida, conteo e historial de stock) y categorías, usuarios y rangos, configuración, métodos de pago, auditoría, turnos abiertos y cierre forzado, códigos de anulación, reimpresión, espejo en la nube, respaldos | De punta a punta como administrador contra el servidor real, con cifras calculadas a mano |
 | `apps/cleaning` | Lista de habitaciones por limpiar, marcar lista, reportar mantenimiento | Contra el servidor real |
 | Espejo en la nube | El servidor publica cada 30 min ventas, anulados, ocupación por día y arqueos por turno; nunca clientes, tickets ni el estado en vivo | Contra el proyecto `apurimeno-prueba`: primera sincronización, cambios, anulación de días anteriores, sin internet y vuelta, re-sincronización completa |
 | `apps/owner` | Resumen remoto para la propietaria: contraseña + TOTP obligatorio, franja "Datos al…", Hoy/Ayer/7 días/Mes, ventas, arqueos y ocupación | De punta a punta en Chrome de celular contra `apurimeno-prueba`, servida con las cabeceras reales de Cloudflare Pages; cifras iguales a lo publicado |
@@ -40,7 +49,9 @@ base abierta y `prisma migrate deploy` la necesita en exclusiva). Si el esquema 
 detener el servicio `ApurimenoCapacitacion` (como administrador), correr `pnpm preparar-capacitacion` y volver a
 iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mientras falten.
 
-`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (696 pruebas al 08/11). Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
+`pnpm check-types`, `pnpm lint` (ahora también servidor, dominio, contratos y formato) y `pnpm test` pasan en todo el monorepo (699 pruebas al 08/11). Con el equipo cargado, la suite
+completa del servidor tarda unos 4 minutos y algunas pruebas pueden vencer su límite de 20 s al prepararse (5 el 08/11);
+corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native con el entorno de capacitación).
 
 ## Qué falta para reemplazar el cuaderno
 
@@ -79,7 +90,8 @@ iniciarlo. El reinicio detecta las migraciones pendientes y se niega a correr mi
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
      El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). Faltan el botón "Actualizar", que el
-     actualizador compruebe la firma y el panel para publicar.
+     actualizador compruebe la firma y el panel para publicar; los dos primeros están a medio revisar en la rama
+     `claude/boton-actualizar`.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
    Loyverse, cuyo stock está desfasado. Falta la importación (etapa 3 del plan de abajo), que trae nombres, precios,

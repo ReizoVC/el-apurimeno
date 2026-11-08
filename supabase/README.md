@@ -173,6 +173,28 @@ reemplazan a los reales. Por eso el proyecto de producción solo debe tener en s
 y las pruebas usan un proyecto aparte. Si pasara, basta con una sincronización completa desde el servidor del
 local ("Re-sincronizar todo") para volver a publicar los datos correctos.
 
+## Cambiar el formato del resumen
+
+`VERSION_RESUMEN_ESPEJO` (`packages/contracts/src/espejo.ts`) sube si cambian los campos del resumen o lo que
+significan. Si cambió el significado sin cambiar los campos, también sube: es lo único que hace republicar los días
+ya publicados, y nada más detecta ese cambio.
+
+La actualización del local no toca Supabase ni `apps/owner`: el SQL y la publicación de la vista remota se hacen a
+mano. Y como los tres se actualizan por separado, el orden importa:
+
+1. **SQL en Supabase:** la columna nueva sin `not null`. Con `not null` y sin valor por defecto, se rechaza lo que
+   publique el servidor mientras no se actualice.
+2. **Publicar `apps/owner`** con la versión nueva y el campo opcional: tiene que poder leer las filas anteriores.
+   Si el servidor se actualiza antes, la vista remota queda bloqueada en todos los periodos ("El local publica un
+   formato más nuevo") hasta publicarla: hoy y ayer se republican siempre.
+3. **Actualizar el servidor del local.** Su primera sincronización correcta con la versión nueva publica todo el
+   historial sola; si falla, la siguiente vuelta lo reintenta. No hace falta "Re-sincronizar todo".
+4. **Comprobar** en el Dashboard que la sincronización terminó bien. Recién entonces el campo puede pasar a
+   obligatorio en una versión siguiente.
+
+Para renombrar o quitar un campo: primero se agrega el nuevo con estos pasos, y el viejo se quita en una versión
+posterior, cuando ya nadie lo lee.
+
 ## Plan gratuito de Supabase
 
 - **Pausa por inactividad:** el proyecto se pausa tras unos 7 días sin actividad. Mientras el servidor del

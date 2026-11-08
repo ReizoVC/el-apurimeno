@@ -17,7 +17,7 @@ servicios reales (#31); salida, conteo e historial de stock y venta sin stock co
 de versiones nuevas firmadas en el Dashboard (#33); y la republicación completa del espejo cuando cambia el formato
 del resumen (#34). Los anteriores están en el historial de git.
 
-**En revisión:** el PR #PR_BOTON trae el botón "Actualizar" del Dashboard, la comprobación de la firma en el
+**En revisión:** el PR #37 trae el botón "Actualizar" del Dashboard, la comprobación de la firma en el
 actualizador y los avisos de recarga en el POS, en Limpieza y en el Dashboard. Está revisado y probado como conjunto
 (pruebas, ensayo del actualizador y pantallas contra un servidor real con la tarea simulada), y sus cambios en
 `contracts` y `domain` están aprobados. Falta probarlo con una versión publicada en GitHub y en el PC del local.
@@ -90,7 +90,7 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
      El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). El botón "Actualizar" y la comprobación de
-     la firma en el actualizador están en el PR #PR_BOTON; falta el panel para publicar.
+     la firma en el actualizador están en el PR #37; falta el panel para publicar.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
    Loyverse, cuyo stock está desfasado. Falta un comando de importación que traiga nombres, precios, categorías y

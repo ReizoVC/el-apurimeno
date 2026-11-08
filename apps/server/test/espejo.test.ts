@@ -4,6 +4,7 @@ import {
   RegistrarIngresoRespuestaSchema,
   ReporteVentasSchema,
   SincronizacionEspejoRespuestaSchema,
+  VERSION_RESUMEN_ESPEJO,
 } from "@apurimeno/contracts";
 import { periodoDelDia } from "@apurimeno/domain";
 import { afterEach, describe, expect, it } from "vitest";
@@ -170,6 +171,47 @@ describe("Sincronización con el espejo en la nube (ADR-06, RF-60)", () => {
     await e.app.espejo.sincronizar(false);
     e.reloj.avanzarMinutos(30);
     expect(await e.app.espejo.sincronizar(true)).toEqual({ exito: true, diasPublicados: 3, turnosPublicados: 1 });
+  });
+
+  it("si cambió el formato del resumen, republica todo el historial una sola vez", async () => {
+    await unDiaDeTrabajo();
+    await e.app.espejo.sincronizar(false);
+    expect((await e.prisma.estadoEspejo.findUniqueOrThrow({ where: { id: 1 } })).versionResumen).toBe(VERSION_RESUMEN_ESPEJO);
+
+    // Lo mismo que ver una versión nueva del código: lo último publicado quedó con otra versión.
+    await e.prisma.estadoEspejo.update({ where: { id: 1 }, data: { versionResumen: VERSION_RESUMEN_ESPEJO - 1 } });
+    e.reloj.avanzarMinutos(30);
+    expect(await e.app.espejo.sincronizar(false)).toEqual({ exito: true, diasPublicados: 3, turnosPublicados: 1 });
+    expect(destino.ultimo.dias.every((d) => d.version === VERSION_RESUMEN_ESPEJO)).toBe(true);
+    expect((await e.prisma.estadoEspejo.findUniqueOrThrow({ where: { id: 1 } })).versionResumen).toBe(VERSION_RESUMEN_ESPEJO);
+
+    e.reloj.avanzarMinutos(30);
+    await e.app.espejo.sincronizar(false);
+    expect(dias(destino.ultimo)).toEqual(["2026-09-24", "2026-09-25"]);
+    expect(destino.ultimo.turnos).toEqual([]);
+  });
+
+  it("una base que ya sincronizaba pero no guardaba la versión republica todo al actualizarse", async () => {
+    await unDiaDeTrabajo();
+    await e.app.espejo.sincronizar(false);
+    await e.prisma.estadoEspejo.update({ where: { id: 1 }, data: { versionResumen: null } });
+    e.reloj.avanzarMinutos(30);
+    expect(await e.app.espejo.sincronizar(false)).toEqual({ exito: true, diasPublicados: 3, turnosPublicados: 1 });
+  });
+
+  it("si la republicación por formato falla, la siguiente vuelta vuelve a publicar todo", async () => {
+    await unDiaDeTrabajo();
+    await e.app.espejo.sincronizar(false);
+    await e.prisma.estadoEspejo.update({ where: { id: 1 }, data: { versionResumen: VERSION_RESUMEN_ESPEJO - 1 } });
+
+    destino.error = new ErrorEspejo("SIN_CONEXION", "sin internet");
+    e.reloj.avanzarMinutos(30);
+    expect((await e.app.espejo.sincronizar(false)).exito).toBe(false);
+    expect((await e.prisma.estadoEspejo.findUniqueOrThrow({ where: { id: 1 } })).versionResumen).toBe(VERSION_RESUMEN_ESPEJO - 1);
+
+    destino.error = null;
+    e.reloj.avanzarMinutos(30);
+    expect(await e.app.espejo.sincronizar(false)).toEqual({ exito: true, diasPublicados: 3, turnosPublicados: 1 });
   });
 });
 

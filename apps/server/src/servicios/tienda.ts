@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   LIMITE_MOVIMIENTOS_INVENTARIO,
+  MILESIMAS_POR_UNIDAD,
   type AccionAuditoria,
   type CategoriaProducto,
   type CategoriaProductoEntrada,
@@ -24,6 +25,7 @@ import {
   reponerStock,
   type EfectoInventario,
 } from "@apurimeno/domain";
+import { cantidadConUnidad } from "@apurimeno/formato";
 import { exigir } from "../auth.js";
 import { auditar } from "../auditoria.js";
 import { ErrorApi, esViolacionUnica } from "../errores.js";
@@ -61,7 +63,7 @@ export async function registrarVentaServicio(ctx: ContextoServicio, entrada: Reg
         const items = entrada.items.map((item) => {
           const producto = productos.get(item.productoId);
           if (producto === undefined) throw noEncontrado(`El producto ${item.productoId}`);
-          return { producto, cantidad: item.cantidad };
+          return { producto, cantidad: item.cantidadMilesimas };
         });
 
         let cotizacion = cotizarVenta(items, entrada.esHuesped);
@@ -150,12 +152,13 @@ export async function listarProductos(
   ctx: ContextoServicio,
   codigoBarras: string | undefined,
   incluirInactivos = false,
+  verCosto = false,
 ): Promise<Producto[]> {
   const filas = await ctx.prisma.producto.findMany({
     where: { ...(incluirInactivos ? {} : { activo: true }), ...(codigoBarras === undefined ? {} : { codigoBarras }) },
     orderBy: { nombre: "asc" },
   });
-  return filas.map(aProducto);
+  return filas.map((fila) => aProducto(fila, verCosto));
 }
 
 export async function listarCategorias(ctx: ContextoServicio): Promise<CategoriaProducto[]> {
@@ -241,6 +244,18 @@ async function validarProducto(ctx: ContextoServicio, entrada: ProductoEntrada, 
       throw new ErrorApi("VALIDACION", "codigoBarras: ya lo usa otro producto (decisión 14 de contracts).");
     }
   }
+  if (entrada.sku !== null) {
+    const otro = await ctx.prisma.producto.findUnique({ where: { sku: entrada.sku } });
+    if (otro !== null && otro.id !== id) {
+      throw new ErrorApi("VALIDACION", `sku: ya lo usa ${otro.nombre} (decisión 31 de contracts).`);
+    }
+  }
+  const unidadEntera = entrada.unidad === "UNIDAD";
+  for (const [campo, valor] of [["stockMinimo", entrada.stockMinimo], ["stockOptimo", entrada.stockOptimo]] as const) {
+    if (unidadEntera && valor !== null && valor % MILESIMAS_POR_UNIDAD !== 0) {
+      throw new ErrorApi("VALIDACION", `${campo}: un producto por unidad lleva mínimos enteros.`);
+    }
+  }
 }
 
 /** Alta de producto (RF-53). Empieza sin stock: el stock solo entra por reposición (RN-25). */
@@ -257,12 +272,22 @@ export async function crearProducto(ctx: ContextoServicio, entrada: ProductoEntr
   });
 }
 
-/** Edición de producto (RF-53): datos y precios, nunca el stock. El cambio de precio queda auditado (RN-42). */
+/**
+ * Edición de producto (RF-53): datos y precios, nunca el stock. El cambio de precio queda auditado (RN-42). La unidad
+ * solo cambia mientras el producto no tenga movimientos ni ventas: si no, el kardex y los tickets anteriores pasarían
+ * a leerse en otra unidad (decisión 31).
+ */
 export async function editarProducto(ctx: ContextoServicio, id: string, entrada: ProductoEntrada): Promise<Producto> {
   await validarProducto(ctx, entrada, id);
   return ctx.prisma.$transaction(async (tx) => {
     const previa = await tx.producto.findUnique({ where: { id } });
     if (previa === null) throw noEncontrado("El producto");
+    if (previa.unidad !== entrada.unidad) {
+      const usado = (await tx.movimientoInventario.count({ where: { productoId: id } })) + (await tx.lineaTicket.count({ where: { productoId: id } }));
+      if (usado > 0) {
+        throw new ErrorApi("VALIDACION", "unidad: el producto ya tiene movimientos o ventas; para venderlo en otra unidad, cree un producto nuevo.");
+      }
+    }
     const producto = aProducto(await tx.producto.update({ where: { id }, data: entrada }));
     await auditar(
       tx,
@@ -294,7 +319,7 @@ async function moverStock(
     if (stockVisto !== null && stockVisto !== fila.stock) {
       throw new ErrorNegocio(
         "INVALID_STATE_TRANSITION",
-        `El stock de ${fila.nombre} cambió de ${stockVisto} a ${fila.stock} mientras tanto. Revíselo y vuelva a intentar.`,
+        `El stock de ${fila.nombre} cambió de ${cantidadConUnidad(stockVisto, fila.unidad)} a ${cantidadConUnidad(fila.stock, fila.unidad)} mientras tanto. Revíselo y vuelva a intentar.`,
       );
     }
     const efecto = calcular(aProducto(fila));
@@ -315,8 +340,13 @@ async function moverStock(
         tipoEntidad: "PRODUCTO",
         entidadId: id,
         valorPrevio: { stock: fila.stock },
-        valorNuevo: { stock: producto.stock, cantidad: movimiento.cantidad },
-        motivo: movimiento.motivo ?? null,
+        valorNuevo: {
+          stock: producto.stock,
+          cantidad: movimiento.cantidad,
+          ...(movimiento.motivoSalida == null ? {} : { motivoSalida: movimiento.motivoSalida }),
+        },
+        // La auditoría exige motivo en una salida: el motivo fijo, con su detalle si lo tiene.
+        motivo: [movimiento.motivoSalida, movimiento.motivo].filter((t) => t != null && t !== "").join(": ") || null,
       },
       ctx.ahora,
     );
@@ -329,9 +359,9 @@ export function reponerProducto(ctx: ContextoServicio, id: string, cantidad: num
   return moverStock(ctx, id, null, "MERCADERIA_INGRESADA", (p) => reponerStock(p, cantidad));
 }
 
-/** Salida de mercadería con motivo (decisión 29). */
+/** Salida de mercadería con su motivo fijo (decisiones 29 y 31). */
 export function salidaDeStock(ctx: ContextoServicio, id: string, e: SalidaStockEntrada): Promise<ReposicionRespuesta> {
-  return moverStock(ctx, id, e.stockVisto, "STOCK_SALIDA", (p) => registrarSalidaStock(p, e.cantidad, e.motivo));
+  return moverStock(ctx, id, e.stockVisto, "STOCK_SALIDA", (p) => registrarSalidaStock(p, e.cantidad, e.motivoSalida, e.motivo));
 }
 
 /** Conteo físico: el stock queda en lo contado (decisión 29). */
@@ -349,7 +379,7 @@ export async function listarMovimientosInventario(ctx: ContextoServicio, product
     orderBy: { creadoEn: "desc" },
     take: LIMITE_MOVIMIENTOS_INVENTARIO,
     include: {
-      producto: { select: { nombre: true, stock: true } },
+      producto: { select: { nombre: true, stock: true, unidad: true } },
       creadoPor: { select: { nombreUsuario: true } },
       ticket: { select: { numero: true } },
     },
@@ -361,6 +391,7 @@ export async function listarMovimientosInventario(ctx: ContextoServicio, product
     return {
       movimiento: aMovimientoInventario(fila),
       productoNombre: fila.producto.nombre,
+      unidad: fila.producto.unidad,
       creadoPorNombre: fila.creadoPor.nombreUsuario,
       ticketNumero: fila.ticket?.numero ?? null,
       saldo,

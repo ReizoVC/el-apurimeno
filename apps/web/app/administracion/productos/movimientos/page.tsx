@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@apurimeno/ui/components/table";
-import { fechaHora } from "@apurimeno/formato";
+import { cantidadConUnidad, fechaHora } from "@apurimeno/formato";
 import {
   Aviso,
   CLASE_SELECT,
@@ -24,10 +24,11 @@ import {
   Encabezado,
 } from "../../../../src/componentes/comunes";
 import { useCarga } from "../../../../src/lib/carga";
-import { TIPO_MOVIMIENTO_INVENTARIO } from "../../../../src/lib/rotulos";
+import {
+  MOTIVO_SALIDA,
+  TIPO_MOVIMIENTO_INVENTARIO,
+} from "../../../../src/lib/rotulos";
 import { servidor } from "../../../../src/lib/servidor";
-
-const conSigno = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
 
 /** Historial del stock (kardex): de todos los productos o de uno, con el stock que dejó cada movimiento (decisión 29). */
 export default function PaginaMovimientos() {
@@ -120,8 +121,12 @@ function Fila({ fila }: { fila: MovimientoHistorial }) {
   const detalle = [
     ticketNumero === null ? null : `Ticket #${ticketNumero}`,
     m.tipo === "CONTEO" && m.cantidad === 0 ? "Sin diferencia" : null,
+    m.motivoSalida === null ? null : MOTIVO_SALIDA[m.motivoSalida],
     m.motivo,
   ].filter((t) => t !== null);
+  // En milésimas (decisión 31 de contracts): se muestran en la unidad del producto.
+  const enUnidad = (milesimas: number) =>
+    cantidadConUnidad(milesimas, fila.unidad);
   return (
     <TableRow>
       <TableCell className="whitespace-nowrap text-muted-foreground">
@@ -134,11 +139,14 @@ function Fila({ fila }: { fila: MovimientoHistorial }) {
           <Badge className="ml-2 bg-red-600 text-white">Sin stock</Badge>
         )}
       </TableCell>
-      <TableCell className="text-right">{conSigno(m.cantidad)}</TableCell>
+      <TableCell className="text-right">
+        {m.cantidad > 0 ? "+" : ""}
+        {enUnidad(m.cantidad).replace(/^-/, "−")}
+      </TableCell>
       <TableCell
         className={`text-right font-medium ${saldo < 0 ? "text-red-600" : ""}`}
       >
-        {saldo}
+        {enUnidad(saldo)}
       </TableCell>
       <TableCell className="text-muted-foreground">
         {fila.creadoPorNombre}

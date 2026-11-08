@@ -6,12 +6,13 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import type {
-  AjusteEntrada,
-  Habitacion,
-  MetodoPago,
-  PagoEntrada,
-  Producto,
+import {
+  MILESIMAS_POR_UNIDAD,
+  type AjusteEntrada,
+  type Habitacion,
+  type MetodoPago,
+  type PagoEntrada,
+  type Producto,
 } from "@apurimeno/contracts";
 import { cotizarVenta } from "@apurimeno/domain";
 import { Button } from "@apurimeno/ui/components/button";
@@ -27,10 +28,51 @@ import { AjustePuntual } from "../componentes/AjustePuntual";
 import { Aviso } from "../componentes/Aviso";
 import { Campo } from "../componentes/Campo";
 import { SelectorPago } from "../componentes/SelectorPago";
-import { soles } from "@apurimeno/formato";
+import {
+  abreviaturaUnidad,
+  aTextoCantidad,
+  cantidad as textoCantidad,
+  cantidadConUnidad,
+  leerCantidad,
+  soles,
+} from "@apurimeno/formato";
 import { useClaveIdempotencia } from "../lib/idempotencia";
 import { mensajeDe, servidor } from "../lib/servidor";
 import { tienePermiso, type Sesion } from "../lib/sesion";
+
+/**
+ * Cantidad escrita a mano para un producto por metro, kilo o litro ("2.5", "0,75"). Se aplica al salir del campo o
+ * con Enter; un texto que no es una cantidad vuelve a la que había.
+ */
+function CantidadEditable({
+  milesimas,
+  etiqueta,
+  onCambio,
+}: {
+  milesimas: number;
+  etiqueta: string;
+  onCambio: (milesimas: number) => void;
+}) {
+  const [texto, setTexto] = useState(aTextoCantidad(milesimas));
+  const aplicar = () => {
+    const leida = leerCantidad(texto, true);
+    if (leida === null) setTexto(aTextoCantidad(milesimas));
+    else if (leida !== milesimas) onCambio(leida);
+  };
+  return (
+    <Input
+      aria-label={etiqueta}
+      className="h-9 w-20 text-center"
+      inputMode="decimal"
+      value={texto}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={aplicar}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") aplicar();
+      }}
+    />
+  );
+}
 
 interface Props {
   sesion: Sesion;
@@ -70,13 +112,25 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
   }, []);
   useEffect(cargar, [cargar]);
 
-  const agregar = (producto: Producto, cantidad = 1) => {
+  // El carrito guarda milésimas (decisión 31 de contracts): +1 y −1 suman o restan una unidad entera.
+  const agregar = (producto: Producto, cantidad = MILESIMAS_POR_UNIDAD) => {
     setExito(null);
     setCarrito((prev) => {
       const siguiente = new Map(prev);
       const nueva = (siguiente.get(producto.id) ?? 0) + cantidad;
       if (nueva <= 0) siguiente.delete(producto.id);
       else siguiente.set(producto.id, nueva);
+      return siguiente;
+    });
+  };
+
+  /** Fija la cantidad escrita a mano (productos por metro, kilo o litro); 0 lo quita del carrito. */
+  const fijarCantidad = (producto: Producto, milesimas: number) => {
+    setExito(null);
+    setCarrito((prev) => {
+      const siguiente = new Map(prev);
+      if (milesimas <= 0) siguiente.delete(producto.id);
+      else siguiente.set(producto.id, milesimas);
       return siguiente;
     });
   };
@@ -137,7 +191,7 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
         {
           items: items.map(({ producto, cantidad }) => ({
             productoId: producto.id,
-            cantidad,
+            cantidadMilesimas: cantidad,
           })),
           esHuesped,
           habitacionReferenciaId: esHuesped ? habitacionId : null,
@@ -215,7 +269,7 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
                     <span
                       className={`text-xs ${p.stock <= 0 ? "text-destructive" : "text-muted-foreground"}`}
                     >
-                      Stock: {p.stock}
+                      Stock: {cantidadConUnidad(p.stock, p.unidad)}
                     </span>
                   )}
                 </button>
@@ -293,6 +347,7 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
                 const excede =
                   item.producto.controlaStock &&
                   item.cantidad > item.producto.stock;
+                const abreviatura = abreviaturaUnidad(item.producto.unidad);
                 return (
                   <li
                     key={item.producto.id}
@@ -301,8 +356,11 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
                     <span className="min-w-0">
                       {linea.descripcion}
                       <span className="block text-xs text-muted-foreground">
-                        {soles(linea.precioUnitario)} c/u
-                        {excede ? ` · stock ${item.producto.stock}` : ""}
+                        {soles(linea.precioUnitario)}{" "}
+                        {abreviatura === "" ? "c/u" : `por ${abreviatura}`}
+                        {excede
+                          ? ` · stock ${cantidadConUnidad(item.producto.stock, item.producto.unidad)}`
+                          : ""}
                       </span>
                     </span>
                     <span className="flex items-center gap-1">
@@ -310,11 +368,24 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
                         size="icon"
                         variant="outline"
                         aria-label={`Quitar uno de ${item.producto.nombre}`}
-                        onClick={() => agregar(item.producto, -1)}
+                        onClick={() =>
+                          agregar(item.producto, -MILESIMAS_POR_UNIDAD)
+                        }
                       >
                         −
                       </Button>
-                      <span className="w-6 text-center">{item.cantidad}</span>
+                      {abreviatura === "" ? (
+                        <span className="w-6 text-center">
+                          {textoCantidad(item.cantidad)}
+                        </span>
+                      ) : (
+                        <CantidadEditable
+                          key={item.cantidad}
+                          milesimas={item.cantidad}
+                          etiqueta={`Cantidad de ${item.producto.nombre} en ${abreviatura}`}
+                          onCambio={(m) => fijarCantidad(item.producto, m)}
+                        />
+                      )}
                       <Button
                         size="icon"
                         variant="outline"
@@ -341,8 +412,9 @@ export function Tienda({ sesion, metodos, ocupadas }: Props) {
               <ul>
                 {excedidos.map(({ producto, cantidad }) => (
                   <li key={producto.id}>
-                    {producto.nombre}: hay {producto.stock}, se venden{" "}
-                    {cantidad}
+                    {producto.nombre}: hay{" "}
+                    {cantidadConUnidad(producto.stock, producto.unidad)}, se
+                    venden {cantidadConUnidad(cantidad, producto.unidad)}
                   </li>
                 ))}
               </ul>

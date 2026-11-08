@@ -81,11 +81,11 @@ describe("SRS §16.10 — casos de prueba obligatorios de tiempo y precio", () =
   });
 
   it("T-12 venta asociada a un huésped: precio de huésped", () => {
-    expect(cotizarVenta([{ producto: producto(), cantidad: 1 }], true).total).toBe(300);
+    expect(cotizarVenta([{ producto: producto(), cantidad: 1000 }], true).total).toBe(300);
   });
 
   it("T-13 venta sin habitación: precio de público", () => {
-    expect(cotizarVenta([{ producto: producto(), cantidad: 1 }], false).total).toBe(350);
+    expect(cotizarVenta([{ producto: producto(), cantidad: 1000 }], false).total).toBe(350);
   });
 
   it("T-14 cerrar en sobretiempo sin resolver: rechazado", () => {

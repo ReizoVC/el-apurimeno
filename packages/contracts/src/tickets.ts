@@ -4,7 +4,10 @@ import {
   CentimosSchema,
   FechaISOSchema,
   IdSchema,
+  MILESIMAS_POR_UNIDAD,
+  MilesimasSchema,
   TextoRequeridoSchema,
+  importeDeLinea,
 } from "./comun.js";
 import {
   EstadoTicketSchema,
@@ -68,21 +71,26 @@ export const LineaTicketSchema = z
     tipo: TipoLineaTicketSchema,
     /** Texto impreso, ej. "Habitación 205 — 8 horas". Nunca incluye datos del cliente (RN-38). */
     descripcion: TextoRequeridoSchema,
-    cantidad: z.number().int().positive(),
+    /** En milésimas (decisión 31): 1 habitación = 1000, 2 horas = 2000, 2,5 m de cable = 2500. */
+    cantidad: MilesimasSchema.positive(),
+    /** Por unidad: una habitación, una hora, un metro. */
     precioUnitario: CentimosConSignoSchema,
     importe: CentimosConSignoSchema,
     productoId: IdSchema.nullable(),
   })
   .strict()
   .superRefine((l, ctx) => {
-    if (l.importe !== l.cantidad * l.precioUnitario) {
-      problema(ctx, ["importe"], "importe debe ser cantidad × precioUnitario.");
+    if (l.importe !== importeDeLinea(l.cantidad, l.precioUnitario)) {
+      problema(ctx, ["importe"], "importe debe ser cantidad × precioUnitario, redondeado al céntimo.");
     }
     if ((l.tipo === "PRODUCTO") !== (l.productoId !== null)) {
       problema(ctx, ["productoId"], "productoId es obligatorio en líneas PRODUCTO y prohibido en las demás.");
     }
-    if ((l.tipo === "BASE_HABITACION" || l.tipo === "AJUSTE_PUNTUAL") && l.cantidad !== 1) {
-      problema(ctx, ["cantidad"], `Una línea ${l.tipo} tiene cantidad 1.`);
+    if ((l.tipo === "BASE_HABITACION" || l.tipo === "AJUSTE_PUNTUAL") && l.cantidad !== MILESIMAS_POR_UNIDAD) {
+      problema(ctx, ["cantidad"], `Una línea ${l.tipo} tiene cantidad 1 (1000 milésimas).`);
+    }
+    if (l.tipo === "HORA_ADICIONAL" && l.cantidad % MILESIMAS_POR_UNIDAD !== 0) {
+      problema(ctx, ["cantidad"], "Las horas adicionales se cobran enteras.");
     }
   });
 export type LineaTicket = z.infer<typeof LineaTicketSchema>;
@@ -191,7 +199,7 @@ export const TicketSchema = z
     }
     if (t.origen === "HORA_ADICIONAL") {
       const horas = lineasDe("HORA_ADICIONAL");
-      if (horas.length !== 1 || horas[0]?.cantidad !== 1) {
+      if (horas.length !== 1 || horas[0]?.cantidad !== MILESIMAS_POR_UNIDAD) {
         problema(ctx, ["lineas"], "Un ticket de hora adicional cobra exactamente una hora (RN-09).");
       }
     }

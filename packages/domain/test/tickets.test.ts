@@ -82,7 +82,7 @@ describe("RN-24 · asociar una venta a una habitación es opcional", () => {
         turno: turnoAbierto(),
         alquilerId: null,
         habitacionReferenciaId: null,
-        cotizacion: cotizarVenta([{ producto: producto(), cantidad: 1 }], false),
+        cotizacion: cotizarVenta([{ producto: producto(), cantidad: 1000 }], false),
         pagos: [pagoSinVuelto(EFECTIVO.id, 350, null)],
         creadoPorId: "cajero-1",
       },

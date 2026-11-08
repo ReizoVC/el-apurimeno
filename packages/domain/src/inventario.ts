@@ -1,13 +1,17 @@
-import type { Id, Producto, Ticket, TipoMovimientoInventario } from "@apurimeno/contracts";
+import type { Id, MotivoSalida, Producto, Ticket, TipoMovimientoInventario } from "@apurimeno/contracts";
+import { cantidadConUnidad } from "@apurimeno/formato";
 import { ErrorNegocio } from "./errores.js";
-import { asegurarEnteroPositivo, motivoRequerido } from "./interno.js";
+import { asegurarCantidadDeProducto, motivoRequerido } from "./interno.js";
 import type { ItemVenta } from "./precios.js";
+
+// Todas las cantidades y el stock van en milésimas de la unidad del producto (decisión 31 de contracts).
 
 /** Movimiento de kardex antes de persistirse: el backend agrega id, ticketId, autor y fecha. */
 export interface BorradorMovimientoInventario {
   productoId: Id;
   tipo: TipoMovimientoInventario;
   cantidad: number;
+  motivoSalida?: MotivoSalida | null;
   motivo?: string | null;
 }
 
@@ -30,10 +34,12 @@ function asegurarControlaStock(producto: Producto): void {
   }
 }
 
+const con = (producto: Producto, milesimas: number) => cantidadConUnidad(milesimas, producto.unidad);
+
 function agrupar(items: readonly ItemVenta[]): Map<Id, { producto: Producto; cantidad: number }> {
   const grupos = new Map<Id, { producto: Producto; cantidad: number }>();
   for (const { producto, cantidad } of items) {
-    asegurarEnteroPositivo(cantidad, `cantidad de ${producto.nombre}`);
+    asegurarCantidadDeProducto(producto, cantidad);
     const grupo = grupos.get(producto.id);
     if (grupo === undefined) grupos.set(producto.id, { producto, cantidad });
     else grupo.cantidad += cantidad;
@@ -59,7 +65,7 @@ export function aplicarVentaAInventario(
     if (!producto.controlaStock) continue;
     if (cantidad > producto.stock) {
       if (!permitirStockNegativo || !confirmarSinStock) {
-        const faltante = `No hay stock suficiente de ${producto.nombre}: disponible ${producto.stock}, solicitado ${cantidad}.`;
+        const faltante = `No hay stock suficiente de ${producto.nombre}: disponible ${con(producto, producto.stock)}, solicitado ${con(producto, cantidad)}.`;
         throw new ErrorNegocio(
           "INSUFFICIENT_STOCK",
           permitirStockNegativo ? `${faltante} Confirme el aviso para vender sin stock.` : `${faltante} La venta sin stock está desactivada en la Configuración.`,
@@ -75,8 +81,8 @@ export function aplicarVentaAInventario(
 
 /** Ingreso de mercadería (RN-25, RF-35). El permiso `inventory.manage` lo verifica quien llama. */
 export function reponerStock(producto: Producto, cantidad: number): EfectoInventario {
-  asegurarEnteroPositivo(cantidad, "cantidad");
-  if (!producto.controlaStock) throw new RangeError(`${producto.nombre} no lleva control de stock.`);
+  asegurarCantidadDeProducto(producto, cantidad);
+  asegurarControlaStock(producto);
   return {
     productos: [{ ...producto, stock: producto.stock + cantidad }],
     movimientos: [{ productoId: producto.id, tipo: "REPOSICION", cantidad }],
@@ -84,22 +90,27 @@ export function reponerStock(producto: Producto, cantidad: number): EfectoInvent
 }
 
 /**
- * Salida de mercadería: vencida, dañada, consumo interno (decisión 29). Con motivo, y nunca más de lo que hay: si lo
- * físico no cuadra con el sistema, corresponde un conteo.
+ * Salida de mercadería (decisiones 29 y 31): con su motivo fijo, y el detalle obligatorio si el motivo es OTRO. Nunca
+ * saca más de lo que hay: si lo físico no cuadra con el sistema, corresponde un conteo.
  */
-export function registrarSalidaStock(producto: Producto, cantidad: number, motivo: string): EfectoInventario {
-  asegurarEnteroPositivo(cantidad, "cantidad");
+export function registrarSalidaStock(
+  producto: Producto,
+  cantidad: number,
+  motivoSalida: MotivoSalida,
+  detalle: string | null,
+): EfectoInventario {
+  asegurarCantidadDeProducto(producto, cantidad);
   asegurarControlaStock(producto);
-  const limpio = motivoRequerido(motivo);
+  const limpio = motivoSalida === "OTRO" ? motivoRequerido(detalle) : detalle?.trim() || null;
   if (cantidad > producto.stock) {
     throw new ErrorNegocio(
       "INSUFFICIENT_STOCK",
-      `No se pueden sacar ${cantidad} de ${producto.nombre}: el sistema tiene ${producto.stock}. Si lo físico no cuadra, use Contar.`,
+      `No se pueden sacar ${con(producto, cantidad)} de ${producto.nombre}: el sistema tiene ${con(producto, producto.stock)}. Si lo físico no cuadra, use Contar.`,
     );
   }
   return {
     productos: [{ ...producto, stock: producto.stock - cantidad }],
-    movimientos: [{ productoId: producto.id, tipo: "SALIDA", cantidad: -cantidad, motivo: limpio }],
+    movimientos: [{ productoId: producto.id, tipo: "SALIDA", cantidad: -cantidad, motivoSalida, motivo: limpio }],
   };
 }
 
@@ -108,7 +119,7 @@ export function registrarSalidaStock(producto: Producto, cantidad: number, motiv
  * constancia de que se contó.
  */
 export function aplicarConteoStock(producto: Producto, contado: number, nota: string | null): EfectoInventario {
-  if (!Number.isSafeInteger(contado) || contado < 0) throw new RangeError(`contado debe ser un entero no negativo: ${contado}`);
+  asegurarCantidadDeProducto(producto, contado, true);
   asegurarControlaStock(producto);
   const limpia = nota?.trim() ?? "";
   return {
@@ -121,17 +132,17 @@ export function aplicarConteoStock(producto: Producto, contado: number, nota: st
 export function revertirVentaEnInventario(ticketOriginal: Ticket, productos: readonly Producto[]): EfectoInventario {
   if (ticketOriginal.origen !== "VENTA_TIENDA") throw new RangeError("El ticket no es una venta de tienda.");
   const porId = new Map(productos.map((p) => [p.id, p]));
-  const items: ItemVenta[] = [];
+  const efecto: EfectoInventario = { productos: [], movimientos: [] };
+  const devuelto = new Map<Id, number>();
   for (const linea of ticketOriginal.lineas) {
     if (linea.tipo !== "PRODUCTO" || linea.productoId === null) continue;
-    const producto = porId.get(linea.productoId);
-    if (producto === undefined) throw new RangeError(`Falta el producto ${linea.productoId}.`);
-    items.push({ producto, cantidad: linea.cantidad });
+    if (!porId.has(linea.productoId)) throw new RangeError(`Falta el producto ${linea.productoId}.`);
+    devuelto.set(linea.productoId, (devuelto.get(linea.productoId) ?? 0) + linea.cantidad);
   }
-
-  const efecto: EfectoInventario = { productos: [], movimientos: [] };
-  for (const { producto, cantidad } of agrupar(items).values()) {
-    if (!producto.controlaStock) continue;
+  // Devuelve lo que se vendió tal como quedó en el ticket, aunque después haya cambiado la unidad del producto.
+  for (const [id, cantidad] of devuelto) {
+    const producto = porId.get(id);
+    if (producto === undefined || !producto.controlaStock) continue;
     efecto.productos.push({ ...producto, stock: producto.stock + cantidad });
     efecto.movimientos.push({ productoId: producto.id, tipo: "ANULACION_VENTA", cantidad });
   }

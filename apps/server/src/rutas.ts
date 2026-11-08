@@ -44,6 +44,7 @@ import {
   TurnoActualRespuestaSchema,
   TurnoRespuestaSchema,
 } from "@apurimeno/contracts";
+import { puede } from "@apurimeno/domain";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { exigir } from "./auth.js";
 import type { PrismaClient } from "./db.js";
@@ -210,7 +211,9 @@ export function registrarRutas(
     const { codigoBarras, incluirInactivos = false } = validar(ProductosConsultaSchema, request.query);
     const c = ctx(request);
     if (incluirInactivos) exigir(c.usuario, "GESTIONAR_PRODUCTOS");
-    return ProductoSchema.array().parse(await listarProductos(c, codigoBarras, incluirInactivos));
+    // Decisión 31: el costo solo lo ve quien gestiona el inventario, no quien solo vende.
+    const verCosto = puede(c.usuario.permisos, "GESTIONAR_PRODUCTOS");
+    return ProductoSchema.array().parse(await listarProductos(c, codigoBarras, incluirInactivos, verCosto));
   });
 
   app.post(RUTAS.productos, { config: { operacion: "GESTIONAR_PRODUCTOS" } }, async (request, reply) => {

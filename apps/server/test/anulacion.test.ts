@@ -183,7 +183,7 @@ describe("RN-46 · un Cajero anula solo con código de autorización", () => {
 
 function venta() {
   return {
-    items: [{ productoId: "prod-agua", cantidad: 1 }],
+    items: [{ productoId: "prod-agua", cantidadMilesimas: 1000 }],
     esHuesped: false,
     habitacionReferenciaId: null,
     ajuste: null,
@@ -195,14 +195,14 @@ describe("Anular una venta restituye el stock (RF-30)", () => {
   it("el stock vuelve y queda un movimiento ANULACION_VENTA con el compensatorio", async () => {
     const r = await e.llamar("POST", RUTAS.registrarVenta, cajero, venta(), "clave-venta-stock");
     expect(r.statusCode).toBe(201);
-    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "prod-agua" } })).stock).toBe(4);
+    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "prod-agua" } })).stock).toBe(4000);
 
     const { compensatorio } = AnularTicketRespuestaSchema.parse(
       (await anular(admin, r.json<{ id: string }>().id, { motivo: "cliente devolvió", codigoAutorizacion: null }, "clave-anula-venta")).json(),
     );
-    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "prod-agua" } })).stock).toBe(5);
+    expect((await e.prisma.producto.findUniqueOrThrow({ where: { id: "prod-agua" } })).stock).toBe(5000);
     expect(await e.prisma.movimientoInventario.findFirst({ where: { tipo: "ANULACION_VENTA" } })).toMatchObject({
-      cantidad: 1,
+      cantidad: 1000,
       ticketId: compensatorio.id,
     });
   });
@@ -211,6 +211,6 @@ describe("Anular una venta restituye el stock (RF-30)", () => {
 beforeEach(async () => {
   await e.prisma.categoriaProducto.create({ data: { id: "cat-bebidas", nombre: "Bebidas" } });
   await e.prisma.producto.create({
-    data: { id: "prod-agua", categoriaId: "cat-bebidas", nombre: "Agua", codigoBarras: null, precioHuesped: 150, precioPublico: 200, controlaStock: true, stock: 5, activo: true },
+    data: { id: "prod-agua", categoriaId: "cat-bebidas", nombre: "Agua", codigoBarras: null, precioHuesped: 150, precioPublico: 200, controlaStock: true, stock: 5000, activo: true },
   });
 });

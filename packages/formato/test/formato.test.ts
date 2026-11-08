@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   aTextoSoles,
+  abreviaturaUnidad,
+  cantidad,
+  cantidadConUnidad,
   diaLima,
+  leerCantidad,
   diasEntre,
   duracion,
   fechaHora,
@@ -79,5 +83,30 @@ describe("Horas en pantalla", () => {
     expect(hace("2026-09-26T20:03:00.000Z", ahora)).toBe("hace 12 min");
     expect(hace("2026-09-26T18:05:00.000Z", ahora)).toBe("hace 2 h 10 min");
     expect(hace("2026-09-23T20:15:00.000Z", ahora)).toBe("hace 3 días");
+  });
+});
+
+describe("Cantidades en milésimas (decisión 31 de contracts)", () => {
+  it("muestra sin ceros sobrantes y con la abreviatura de su unidad", () => {
+    expect(cantidad(2500)).toBe("2.5");
+    expect(cantidad(3000)).toBe("3");
+    expect(cantidad(250)).toBe("0.25");
+    expect(cantidad(-1500)).toBe("-1.5");
+    expect(cantidad(0)).toBe("0");
+    expect(cantidadConUnidad(2500, "METRO")).toBe("2.5 m");
+    expect(cantidadConUnidad(750, "KILOGRAMO")).toBe("0.75 kg");
+    expect(cantidadConUnidad(4000, "UNIDAD")).toBe("4");
+    expect(abreviaturaUnidad("LITRO")).toBe("L");
+  });
+
+  it("lee con punto o coma, hasta tres decimales, y solo enteros si la unidad no admite decimales", () => {
+    expect(leerCantidad("2,5", true)).toBe(2500);
+    expect(leerCantidad(" 0.125 ", true)).toBe(125);
+    expect(leerCantidad("3", false)).toBe(3000);
+    expect(leerCantidad("0", false)).toBe(0);
+    expect(leerCantidad("2.5", false)).toBeNull();
+    expect(leerCantidad("1.2345", true)).toBeNull();
+    expect(leerCantidad("-1", true)).toBeNull();
+    expect(leerCantidad("", true)).toBeNull();
   });
 });

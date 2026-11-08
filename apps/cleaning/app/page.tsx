@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MarcoCapacitacion } from "@apurimeno/ui/components/modo-capacitacion";
 import { usarEntorno } from "../src/api";
+import { AvisoRecargar } from "../src/aviso-recargar";
 import { Login } from "../src/login";
 import { Pendientes } from "../src/pendientes";
 import {
@@ -50,6 +51,7 @@ export default function CleaningPage() {
   }
   return (
     <MarcoCapacitacion activo={estado.sesion.entorno === "CAPACITACION"}>
+      <AvisoRecargar />
       <Pendientes
         sesion={estado.sesion}
         onSesionInvalida={salir}

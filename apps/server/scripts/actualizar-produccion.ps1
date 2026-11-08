@@ -9,15 +9,20 @@
     actualizar-produccion.ps1 -Comprobar [-Version vX.Y.Z]    Dice qué haría. No cambia nada.
     actualizar-produccion.ps1 [-Version vX.Y.Z] [-CerrarPOS]  Actualiza. Sin -Version, a la última publicada.
     actualizar-produccion.ps1 -Estado                         Versión instalada y resultado de la última actualización.
+    actualizar-produccion.ps1 -RegistrarTarea                 Deja lista la tarea para el botón del Dashboard. Una vez.
 
-  Por qué una tarea programada: al cortarse la conexión SSH, Windows mata lo que esa sesión lanzó. Una actualización
-  cortada a la mitad deja el local sin cobrar. Por eso esta orden solo comprueba y lanza la tarea ApurimenoActualizacion
-  (sin horario: solo corre cuando se la lanza), y muestra su registro. Si se corta la conexión, la tarea sigue; al volver
-  a conectarse, -Estado dice cómo terminó.
+  Por qué una tarea programada: al cortarse la conexión SSH, Windows mata lo que esa sesión lanzó, y al detenerse el
+  servidor mataría lo que él lanzó. Una actualización cortada a la mitad deja el local sin cobrar. Por eso esta orden solo
+  comprueba y lanza la tarea ApurimenoActualizacion (sin horario: solo corre cuando se la lanza), y muestra su registro.
+  Si se corta la conexión, la tarea sigue; al volver a conectarse, -Estado dice cómo terminó.
+
+  La tarea siempre es la misma y lee qué hacer de datos\actualizaciones\orden.json. Lo escriben esta orden o el servidor,
+  cuando alguien pulsa "Actualizar" en el Dashboard (decisión 30 de contracts).
 
   Qué hace la tarea (-Aplicar):
     1. Comprobaciones, sin tocar nada: checkout en main sin cambios; la versión está en origin/main y es posterior a la
-       instalada; el instalador del POS se descarga y su SHA-256 coincide; el POS está cerrado.
+       instalada; su manifiesto tiene una firma válida (pnpm verificar-version, con el código ya instalado) y es de ese
+       commit; el instalador del POS se descarga y coincide con el SHA-256 firmado; el POS está cerrado.
     2. Según lo que traiga la versión, con una copia de la base antes de traer el código (pnpm copia-previa; si falla, no
        sigue):
        - Rápida (sin dependencias ni migraciones): copia, trae el código y corre recompilar-produccion.ps1, que compila
@@ -38,14 +43,19 @@
 
 .PARAMETER SinPOS
   No descarga ni instala el POS. Para ensayar en un equipo sin el POS instalado.
+
+.PARAMETER SinFirma
+  No exige el manifiesto firmado. Solo para ensayar contra un "origin" local, que no publica nada en GitHub.
 #>
 param(
   [string]$Version = "",
   [switch]$Comprobar,
   [switch]$Estado,
   [switch]$Aplicar,
+  [switch]$RegistrarTarea,
   [switch]$CerrarPOS,
-  [switch]$SinPOS
+  [switch]$SinPOS,
+  [switch]$SinFirma
 )
 
 $ErrorActionPreference = "Stop"
@@ -55,6 +65,7 @@ $repositorioGitHub = "ReizoVC/el-apurimeno"
 $tarea = "ApurimenoActualizacion"
 $carpetaActualizaciones = Join-Path $servidor "datos\actualizaciones"
 $archivoEstado = Join-Path $carpetaActualizaciones "estado.json"
+$archivoOrden = Join-Path $carpetaActualizaciones "orden.json"
 $registroActualizacion = Join-Path $carpetaActualizaciones "ultima.log"
 
 # Lo que obliga a una actualización completa: necesita los servicios detenidos.
@@ -89,6 +100,15 @@ function Comprobar-Entorno {
   foreach ($s in "ApurimenoServidor", "ApurimenoDashboard", "ApurimenoLimpieza") {
     if (-not (Existe-Servicio $s)) { throw "No existe el servicio ${s}: instálelo antes con instalar-servicio.ps1." }
   }
+}
+# Comprueba la firma con el código ya instalado, no con el que se va a instalar. Devuelve commit, sha256 y nombre.
+function Verificar-Firma([string]$Destino) {
+  $r = Correr "cd /d `"$servidor`" && pnpm --silent verificar-version $Destino"
+  if ($r.Codigo -ne 0) { throw "La versión $Destino no pasó la verificación de firma: $($r.Salida) No se tocó nada." }
+  # Correr mezcla la salida de errores: Node puede escribir ahí un aviso. El resultado es la última línea JSON.
+  $linea = @(($r.Salida -split "`n") | Where-Object { $_.TrimStart().StartsWith("{") }) | Select-Object -Last 1
+  if (-not $linea) { throw "La verificación de firma de $Destino no devolvió un resultado: $($r.Salida) No se tocó nada." }
+  return $linea | ConvertFrom-Json
 }
 function Descargar-Archivo([string]$Url, [string]$Destino) {
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -156,15 +176,24 @@ function Preparar-Plan {
 
   $actual = Git "rev-parse HEAD"
   $commit = Git "rev-list -n 1 $destino"   # no rev-parse con ^{commit}: cmd se come el ^
-  if ($actual -eq $commit) { return @{ Destino = $destino; AlDia = $true } }
-  if (-not (Git-Ok "merge-base --is-ancestor HEAD $destino")) {
+  $alDia = $actual -eq $commit
+  if (-not $alDia -and -not (Git-Ok "merge-base --is-ancestor HEAD $destino")) {
     throw "La versión $destino no es posterior a la instalada ($(Git 'rev-parse --short HEAD')). Para volver atrás, publique una versión nueva que revierta el cambio."
   }
-  return @{ Destino = $destino; AlDia = $false; Anterior = $actual; Tipo = (Tipo-De-Actualizacion $destino) }
+  # Lo que dice el manifiesto firmado manda sobre lo que diga la etiqueta: alguien con acceso a GitHub puede moverla.
+  $firma = $null
+  if (-not $SinFirma) {
+    $firma = Verificar-Firma $destino
+    if ($firma.commit -ne $commit) {
+      throw "La etiqueta $destino apunta a $commit, pero la versión firmada es de $($firma.commit): no se instala. No se tocó nada."
+    }
+  }
+  if ($alDia) { return @{ Destino = $destino; AlDia = $true; Firma = $firma } }
+  return @{ Destino = $destino; AlDia = $false; Anterior = $actual; Tipo = (Tipo-De-Actualizacion $destino); Firma = $firma }
 }
 
 # Descarga y verifica el instalador antes de tocar nada. Devuelve su ruta, o $null si el POS ya está en esa versión.
-function Preparar-POS([string]$Destino) {
+function Preparar-POS([string]$Destino, $Firma) {
   if ($SinPOS) { return $null }
   $numero = $Destino.TrimStart("v")
   if ((Version-POS-Instalada) -eq $numero) { return $null }
@@ -178,11 +207,12 @@ function Preparar-POS([string]$Destino) {
   $base = "https://github.com/$repositorioGitHub/releases/download/$Destino"
   try {
     Descargar-Archivo "$base/$nombre" $msi
-    Descargar-Archivo "$base/$nombre.sha256" "$msi.sha256"
+    # Sin firma, el .sha256 solo detecta una descarga dañada: se publica en el mismo lugar que el MSI.
+    if (-not $Firma) { Descargar-Archivo "$base/$nombre.sha256" "$msi.sha256" }
   } catch {
     throw "No se pudo descargar el instalador del POS de $Destino ($($_.Exception.Message)). No se tocó nada."
   }
-  $esperado = ((Get-Content "$msi.sha256" -Raw).Trim() -split "\s+")[0]
+  $esperado = if ($Firma) { $Firma.sha256 } else { ((Get-Content "$msi.sha256" -Raw).Trim() -split "\s+")[0] }
   if ((Get-FileHash $msi -Algorithm SHA256).Hash -ne $esperado) {
     Remove-Item $msi -Force
     throw "El instalador del POS no coincide con su SHA-256: no se usa. No se tocó nada."
@@ -194,7 +224,7 @@ function Preparar-POS([string]$Destino) {
 function Aplicar-Actualizacion {
   $plan = Preparar-Plan
   # Con el código al día, el POS puede faltar: una instalación anterior pudo fallar solo en ese paso.
-  $msi = Preparar-POS $plan.Destino
+  $msi = Preparar-POS $plan.Destino $plan.Firma
   if ($plan.AlDia -and -not $msi) { Write-Host "Ya está en $($plan.Destino). No hay nada que hacer."; return }
 
   $script:ReemplazoEmpezado = $false
@@ -294,20 +324,38 @@ function Mostrar-Estado {
   Write-Host "Registro: $registroActualizacion"
 }
 
-function Lanzar-Tarea {
-  if (Tarea-Corriendo) { throw "Ya hay una actualización corriendo: vea su avance con -Estado." }
+# La tarea no lleva parámetros: siempre lee la orden. Corre con la cuenta que la registra, que debe ser de administrador.
+function Registrar-Tarea {
+  Comprobar-Entorno
   $argumentos = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Aplicar"
-  if ($Version -ne "") { $argumentos += " -Version $Version" }
-  if ($CerrarPOS) { $argumentos += " -CerrarPOS" }
-  if ($SinPOS) { $argumentos += " -SinPOS" }
   $accion = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $argumentos -WorkingDirectory $raiz
   # S4U: corre como este mismo usuario, sin guardar su contraseña y sin depender de que la sesión siga abierta.
   $cuenta = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   $principal = New-ScheduledTaskPrincipal -UserId $cuenta -LogonType S4U -RunLevel Highest
   $ajustes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2)
   Register-ScheduledTask -TaskName $tarea -Action $accion -Principal $principal -Settings $ajustes -Force | Out-Null
-
   New-Item -ItemType Directory -Force $carpetaActualizaciones | Out-Null
+}
+
+function Escribir-Orden {
+  New-Item -ItemType Directory -Force $carpetaActualizaciones | Out-Null
+  @{ version = $Version; cerrarPOS = [bool]$CerrarPOS; sinPOS = [bool]$SinPOS; sinFirma = [bool]$SinFirma } | ConvertTo-Json | Set-Content $archivoOrden -Encoding UTF8
+}
+# La orden vale una sola vez: se borra al leerla. Sin orden, la tarea no hace nada.
+function Cargar-Orden {
+  if (-not (Test-Path $archivoOrden)) { throw "La tarea corrió sin una orden en $archivoOrden. No se tocó nada." }
+  $o = Get-Content $archivoOrden -Raw -Encoding UTF8 | ConvertFrom-Json
+  Remove-Item $archivoOrden -Force
+  $script:Version = [string]$o.version
+  $script:CerrarPOS = [bool]$o.cerrarPOS
+  $script:SinPOS = [bool]$o.sinPOS
+  $script:SinFirma = [bool]$o.sinFirma
+}
+
+function Lanzar-Tarea {
+  if (Tarea-Corriendo) { throw "Ya hay una actualización corriendo: vea su avance con -Estado." }
+  Registrar-Tarea
+  Escribir-Orden
   Guardar-Estado "en-curso" $(if ($Version) { $Version } else { "última" })
   Remove-Item $registroActualizacion -Force -ErrorAction SilentlyContinue
   Start-ScheduledTask -TaskName $tarea
@@ -335,8 +383,10 @@ function Lanzar-Tarea {
 function Correr-Tarea {
   New-Item -ItemType Directory -Force $carpetaActualizaciones | Out-Null
   Start-Transcript -Path $registroActualizacion -Force | Out-Null
-  $destino = if ($Version) { $Version } else { "última" }
+  $destino = "última"
   try {
+    Cargar-Orden
+    if ($Version) { $destino = $Version }
     Aplicar-Actualizacion
     Guardar-Estado "ok" $destino
   } catch {
@@ -351,6 +401,7 @@ function Correr-Tarea {
 if ($MyInvocation.InvocationName -ne ".") {
   if ($Estado) { Mostrar-Estado }
   elseif ($Aplicar) { Correr-Tarea }
+  elseif ($RegistrarTarea) { Registrar-Tarea; Write-Host "Tarea $tarea registrada con la cuenta $([Security.Principal.WindowsIdentity]::GetCurrent().Name)." }
   elseif ($Comprobar) {
     $plan = Preparar-Plan
     if ($plan.AlDia) { Write-Host "El código ya está en $($plan.Destino)." }
@@ -359,7 +410,7 @@ if ($MyInvocation.InvocationName -ne ".") {
       if ($plan.Tipo -eq "rapida") { Write-Host "  Interrupción: cerca de 1 minuto, al final." }
       else { Write-Host "  Interrupción: varios minutos, TODA la actualización. El POS no puede cobrar mientras tanto." }
     }
-    $msi = Preparar-POS $plan.Destino
+    $msi = Preparar-POS $plan.Destino $plan.Firma
     Write-Host "  POS: $(if ($msi) { 'instalador descargado y verificado; se instalaría' } else { 'no hace falta instalarlo' })."
   }
   else { Lanzar-Tarea }

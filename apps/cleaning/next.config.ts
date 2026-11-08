@@ -1,6 +1,17 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { NextConfig } from "next";
 
+// La versión con que se compiló esta página: si el servidor ya tiene otra, hay que recargarla (decisión 30 de contracts).
+const { version } = JSON.parse(
+  readFileSync(
+    join(process.cwd(), "..", "native", "src-tauri", "tauri.conf.json"),
+    "utf8",
+  ),
+) as { version: string };
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_VERSION_SISTEMA: version },
   // Carpeta del build. `apps/server/scripts/recompilar-produccion.ps1` compila en otra (CARPETA_COMPILACION=.next-nuevo)
   // mientras el servicio sigue sirviendo `.next`, y las cambia al final. Sin la variable, `.next` como siempre.
   distDir: process.env["CARPETA_COMPILACION"] || ".next",

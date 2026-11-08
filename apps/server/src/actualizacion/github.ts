@@ -28,6 +28,13 @@ async function descargar(url: string): Promise<Buffer | null> {
   return bytes;
 }
 
+/** Los archivos de una versión. Si la etiqueta no existe, vienen en null. */
+export async function publicacionDeEtiqueta(etiqueta: string): Promise<PublicacionEncontrada> {
+  const base = `https://github.com/${REPOSITORIO}/releases/download/${etiqueta}`;
+  const [manifiesto, firma] = await Promise.all([descargar(`${base}/${ARCHIVO_MANIFIESTO_VERSION}`), descargar(`${base}/${ARCHIVO_FIRMA_VERSION}`)]);
+  return { etiqueta, manifiesto, firma: firma?.toString("utf8") ?? null };
+}
+
 export const publicacionDeGitHub: ObtenerPublicacion = async () => {
   const r = await fetch(`https://api.github.com/repos/${REPOSITORIO}/releases/latest`, {
     headers: { ...CABECERAS, accept: "application/vnd.github+json" },
@@ -39,7 +46,5 @@ export const publicacionDeGitHub: ObtenerPublicacion = async () => {
   if (typeof etiqueta !== "string" || !/^v\d+\.\d+\.\d+$/.test(etiqueta)) {
     return { etiqueta: String(etiqueta), manifiesto: null, firma: null };
   }
-  const base = `https://github.com/${REPOSITORIO}/releases/download/${etiqueta}`;
-  const [manifiesto, firma] = await Promise.all([descargar(`${base}/${ARCHIVO_MANIFIESTO_VERSION}`), descargar(`${base}/${ARCHIVO_FIRMA_VERSION}`)]);
-  return { etiqueta, manifiesto, firma: firma?.toString("utf8") ?? null };
+  return publicacionDeEtiqueta(etiqueta);
 };

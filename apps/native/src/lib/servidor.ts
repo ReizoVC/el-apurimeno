@@ -16,6 +16,7 @@ import {
   RegistrarVentaRespuestaSchema,
   ReimpresionRespuestaSchema,
   RespuestaErrorSchema,
+  SaludRespuestaSchema,
   SalidaRespuestaSchema,
   TableroSchema,
   TurnoActualRespuestaSchema,
@@ -267,6 +268,7 @@ export const servidor = {
     ),
 
   // Impresora (RF-56): el servidor imprime; el POS solo muestra si algo falló y permite reintentar.
+  salud: () => llamar("GET", RUTAS.salud, SaludRespuestaSchema),
   estadoImpresora: () =>
     llamar("GET", RUTAS.estadoImpresora, EstadoImpresoraSchema),
   reintentarImpresion: () =>

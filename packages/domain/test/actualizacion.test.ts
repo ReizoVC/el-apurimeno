@@ -1,6 +1,6 @@
-import type { ManifiestoVersion } from "@apurimeno/contracts";
+import type { EstadoActualizacion, ManifiestoVersion, ResultadoInstalacion } from "@apurimeno/contracts";
 import { describe, expect, it } from "vitest";
-import { compararVersiones, versionDisponible } from "../src/index.js";
+import { compararVersiones, exigirVersionInstalable, versionDisponible } from "../src/index.js";
 
 const manifiesto = (version: string, ultimaCompleta: string): ManifiestoVersion => ({
   version,
@@ -22,6 +22,39 @@ describe("compararVersiones", () => {
   it("una versión mal escrita es un defecto", () => {
     expect(() => compararVersiones("1.2", "1.2.3")).toThrow(RangeError);
     expect(() => compararVersiones("1.x.3", "1.2.3")).toThrow(RangeError);
+  });
+});
+
+describe("exigirVersionInstalable (decisión 30)", () => {
+  const disponible = { version: "0.4.0", notas: "Nota", completa: false, publicadaEn: "2026-11-06T12:00:00.000Z" };
+  const estado = (extra: Partial<EstadoActualizacion> = {}): EstadoActualizacion => ({
+    estado: "DISPONIBLE",
+    instalada: "0.3.0",
+    disponible,
+    ultimaRevisionEn: null,
+    ultimaInstalacion: null,
+    ...extra,
+  });
+  const instalacion = (resultado: ResultadoInstalacion) => ({
+    resultado,
+    version: "0.4.0",
+    mensaje: null,
+    actualizadaEn: "2026-11-06T12:00:00.000Z",
+  });
+
+  it("acepta la versión disponible, también después de un intento fallido", () => {
+    expect(() => exigirVersionInstalable(estado(), "0.4.0")).not.toThrow();
+    expect(() => exigirVersionInstalable(estado({ ultimaInstalacion: instalacion("ERROR") }), "0.4.0")).not.toThrow();
+    expect(() => exigirVersionInstalable(estado({ ultimaInstalacion: instalacion("CORTADA") }), "0.4.0")).not.toThrow();
+  });
+
+  it("rechaza otra versión, o si no hay ninguna disponible", () => {
+    expect(() => exigirVersionInstalable(estado(), "0.5.0")).toThrow(expect.objectContaining({ codigo: "INVALID_STATE_TRANSITION" }));
+    expect(() => exigirVersionInstalable(estado({ estado: "AL_DIA", disponible: null }), "0.4.0")).toThrow(/no está disponible/);
+  });
+
+  it("rechaza si ya hay una en curso", () => {
+    expect(() => exigirVersionInstalable(estado({ ultimaInstalacion: instalacion("EN_CURSO") }), "0.4.0")).toThrow(/en curso/);
   });
 });
 

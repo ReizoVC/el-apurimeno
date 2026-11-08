@@ -50,6 +50,8 @@ export const AccionAuditoriaSchema = z.enum([
   "ESPEJO_SINCRONIZADO",
   /** Copia de respaldo pedida a mano desde el Dashboard; las automáticas no se auditan. */
   "RESPALDO_MANUAL",
+  /** Alguien pulsó "Actualizar" en el Dashboard (decisión 30). Las órdenes por SSH no pasan por el servidor. */
+  "ACTUALIZACION_INICIADA",
 ]);
 export type AccionAuditoria = z.infer<typeof AccionAuditoriaSchema>;
 export const AccionAuditoria = AccionAuditoriaSchema.enum;
@@ -84,6 +86,7 @@ export const TipoEntidadAuditadaSchema = z.enum([
   "TRABAJO_IMPRESION",
   "ESPEJO",
   "RESPALDO",
+  "SISTEMA",
 ]);
 export type TipoEntidadAuditada = z.infer<typeof TipoEntidadAuditadaSchema>;
 export const TipoEntidadAuditada = TipoEntidadAuditadaSchema.enum;

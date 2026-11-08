@@ -102,10 +102,14 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
   categoría.
 - **Historial:** los últimos 200 movimientos, de todos los productos o de uno, con el stock que dejó cada uno. Una venta
   que dejó el stock en negativo se marca "Sin stock". No se pagina: para ir más atrás, se filtra por producto.
-- **Aviso de versiones nuevas:** arriba de todas las secciones, para quien tenga `system.update`, con la nota de la
-  versión y cuánto tiempo no se podrá cobrar. Se revisa cada 10 minutos contra el servidor, que a su vez mira GitHub cada
-  6 horas. Si lo publicado no tiene una firma válida, muestra una alerta roja. Quien ya tenía la sesión abierta recibe el
-  permiso al volver a entrar.
+- **Versiones nuevas:** arriba de todas las secciones, para quien tenga `system.update`, con la nota y el botón
+  "Actualizar", que primero dice cuánto tiempo no se podrá cobrar y que el POS se cierra. Se revisa cada 10 minutos contra
+  el servidor, que a su vez mira GitHub cada 6 horas. Mientras se instala, el servidor y el Dashboard se reinician: la
+  página ya cargada sigue esperando, consulta cada 3 s y no muestra los errores de conexión. Si lo publicado no tiene una
+  firma válida o la instalación falla, muestra una alerta roja. Quien ya tenía la sesión abierta recibe el permiso al
+  volver a entrar.
+- **"Recargar":** para cualquiera, cuando el servidor tiene otra versión que la de la página abierta. La de la página se
+  fija al compilar, desde `apps/native/src-tauri/tauri.conf.json`. Limpieza hace lo mismo.
 - **Categorías:** tienen su propia pestaña dentro de Productos, para que no queden debajo de una lista larga. Eliminar
   una vacía pide confirmar; una con productos pide elegir a qué categoría moverlos, incluidos los inactivos.
 - **Respaldos:** el mismo patrón que el espejo: la hora de la última copia en grande, "Desactualizado" en

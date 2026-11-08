@@ -376,9 +376,16 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     - **Permiso nuevo:** se separa de `settings.manage` para poder dárselo a alguien sin darle la configuración. Una
       migración lo agrega al rango Administrador en las bases que ya existen.
 
+    - **Instalar desde el Dashboard** (`POST /actualizacion/instalacion`): solo la versión disponible, y solo si no hay
+      otra instalación en curso. Queda `ACTUALIZACION_INICIADA` en la auditoría, antes de lanzar la tarea, porque el
+      servidor se va a reiniciar. El actualizador comprueba otra vez la firma con el código ya instalado, así que lo que
+      el servidor haya creído no alcanza para instalar nada. Quien pulsa cierra el POS: un POS abierto bloquearía la
+      actualización. No se bloquea con un turno abierto, porque ni los turnos ni las ventas se pierden.
+    - **`GET /health` trae las versiones** (`SaludRespuesta`). Es público en la red del local y no lleva nada más: el POS
+      y Limpieza necesitan saber de la versión nueva aunque quien esté adentro no tenga `system.update`.
+
     `ManifiestoVersion` no es `.strict()`: un servidor sin actualizar tiene que poder leer el manifiesto de una versión
-    que agregue campos. Cambio **aditivo**. Por ahora solo avisa: el botón y la verificación dentro del actualizador se
-    agregan después.
+    que agregue campos. Cambio **aditivo**.
 
 ## Decisiones pendientes que afectan el contrato
 

@@ -65,6 +65,14 @@ Se hace con el PC delante, como parte de la instalación (`docs/INSTALACION_LOCA
 
    Si se pierde la clave privada: generar otra y cambiar la pública en el PC del local, por SSH o estando allá.
 
+7. **Tarea del botón.** En el PC del local, una sola vez, con la cuenta de administrador que correrá las actualizaciones:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File C:\ElApurimeno\apps\server\scripts\actualizar-produccion.ps1 -RegistrarTarea
+   ```
+
+   Sin esto, el botón responde que no pudo lanzar la actualización, y no toca nada. Una orden por SSH también la registra.
+
 ## 2. Publicar una versión
 
 1. En el PR de la versión, subir `version` en `apps/native/src-tauri/tauri.conf.json`. Es el número de la versión; Windows solo reemplaza el POS si es mayor.
@@ -76,7 +84,7 @@ Se hace con el PC delante, como parte de la instalación (`docs/INSTALACION_LOCA
 
    Compila el MSI, firma su manifiesto y crea la etiqueta y la publicación de GitHub con el instalador, su SHA-256 y el manifiesto firmado. La nota es lo que lee el personal en el aviso; el máximo es 500 caracteres. El repositorio es público: el instalador también. No debe llevar secretos (no los lleva: el POS solo trae la dirección de su servidor).
 
-**El aviso.** El servidor del local revisa GitHub al arrancar y cada 6 horas. Quien tenga el permiso `system.update` ve en el Dashboard la versión, la nota y si la actualización es rápida o completa. Lo que no tenga una firma válida no se ofrece y muestra una alerta roja. Por ahora solo avisa: **la instalación sigue siendo por SSH, y el actualizador todavía no comprueba la firma.**
+**El aviso.** El servidor del local revisa GitHub al arrancar y cada 6 horas. Quien tenga el permiso `system.update` ve en el Dashboard la versión, la nota y el botón "Actualizar" (sección 3). Lo que no tenga una firma válida no se ofrece y muestra una alerta roja. El POS solo avisa que hay una versión nueva, y Limpieza y los Dashboards abiertos piden recargar cuando el sistema ya se actualizó.
 
 Si la publicación se corta y hay que repetirla, y dice que hay cambios sin commit: Tauri reescribe `apps/native/src-tauri/Cargo.toml` con otros finales de línea al compilar. Se restaura con `git checkout -- apps/native/src-tauri/Cargo.toml`.
 
@@ -84,7 +92,9 @@ Si cambia un programa que el PC no tiene o una variable obligatoria de `.env`, e
 
 ## 3. Instalar la versión en el local
 
-Elegir un horario de baja ocupación. Primero, sin cambiar nada (solo descarga y verifica el instalador):
+**Desde el Dashboard (lo habitual).** Quien tenga `system.update` pulsa "Actualizar" y confirma. Queda en la auditoría. El POS se cierra sin preguntar, porque abierto bloquearía la actualización. La página espera con el sistema caído y al final avisa que hay que volver a abrir el POS. Si falla, muestra el motivo y permite reintentar. Elegir un horario de baja ocupación.
+
+**Por SSH.** Sirve también para arreglar lo que el botón no puede. Elegir un horario de baja ocupación. Primero, sin cambiar nada (comprueba la firma, y descarga y verifica el instalador):
 
 ```bash
 ssh apurimeno "powershell -NoProfile -ExecutionPolicy Bypass -File C:\ElApurimeno\apps\server\scripts\actualizar-produccion.ps1 -Comprobar"
@@ -117,7 +127,7 @@ El registro completo queda en `apps\server\datos\actualizaciones\ultima.log`. El
 
 | Qué falló | Cómo queda | Qué hacer |
 | --- | --- | --- |
-| Comprobaciones, descarga o SHA-256 del POS | Nada cambió | Corregir y repetir |
+| Comprobaciones, firma, descarga o SHA-256 del POS | Nada cambió | Corregir y repetir. Si la firma no pasa y nadie publicó esa versión, revisar el acceso a la cuenta de GitHub |
 | Copia de la base | Código anterior y servicios funcionando (en la completa, se vuelven a iniciar) | Corregir y repetir |
 | Compilación (rápida) | Servicios sin tocar y código anterior | Corregir en una versión nueva |
 | Una app no responde con su build nuevo | Esa app volvió sola a su build anterior; el servidor sigue con el código nuevo | Revisar `.next-fallido` y publicar una versión con la corrección |
@@ -167,12 +177,17 @@ Ensayado el 05/11/2026, con una migración que falla por SQL inválido. Una migr
 - [ ] Cortar la conexión SSH de verdad a la mitad.
 - [ ] Una versión publicada en GitHub: la descarga real del instalador y `pnpm publicar-version` sin `--solo-compilar`.
 - [ ] Con esa versión: el POS abierto, con y sin `-CerrarPOS`.
-- [ ] Con esa versión y la clave real: que el Dashboard del local la anuncie.
+- [ ] Con esa versión y la clave real: que el Dashboard del local la anuncie, y que `pnpm verificar-version` la acepte.
+- [ ] Pulsar "Actualizar" de verdad: que el servidor lance la tarea, que siga al reiniciarse los servicios, con el POS abierto.
 
 ## Seguridad
 
-- **Quién puede actualizar:** quien tenga la clave SSH y acceso a la cuenta de Tailscale. Quien puede publicar en GitHub no puede instalar nada por sí solo: la orden siempre sale de una sesión SSH.
-- **Clave de versiones:** la privada solo está en el equipo de quien publica y en su gestor de contraseñas. Quien entre a la cuenta de GitHub no puede firmar, así que el Dashboard no anunciaría su versión.
+- **Quién puede actualizar:** quien tenga el permiso `system.update` en el Dashboard, o la clave SSH y acceso a la cuenta de Tailscale. Quien puede publicar en GitHub no puede instalar nada por sí solo.
+- **Clave de versiones:** la privada solo está en el equipo de quien publica y en su gestor de contraseñas. Quien entre a la cuenta de GitHub no puede firmar: el Dashboard no anuncia su versión y el actualizador se niega a instalarla, también por SSH. La firma incluye el commit y el SHA-256 del POS, así que tampoco sirve mover la etiqueta o cambiar el instalador.
+- **La firma se comprueba con el código ya instalado,** nunca con el de la versión nueva.
+- **Qué puede hacer quien tenga el permiso:** instalar la última versión firmada. No puede elegir otra ni volver atrás.
+- **La orden** está en `datos\actualizaciones`: quien pueda escribir ahí, solo logra pedir una versión firmada y posterior a la instalada.
+- **`GET /health` no pide sesión:** en la red del local, cualquiera puede ver el número de versión instalado y el disponible. No expone nada más.
 - **Qué se instala:** solo etiquetas `vX.Y.Z` que estén en `origin/main` y sean posteriores a la instalada.
-- **El SHA-256 del POS detecta una descarga dañada,** no un ataque: se publica en el mismo lugar que el MSI. El MSI no está firmado, y `msiexec` en modo silencioso no lo pide.
+- **El MSI no está firmado con un certificado de Windows,** y `msiexec` en modo silencioso no lo pide: lo protege el SHA-256 del manifiesto firmado. Solo el modo de ensayo (`-SinFirma`) usa el `.sha256` publicado, que detecta una descarga dañada pero no un ataque.
 - **`.env` y claves:** no se tocan ni se muestran. La clave privada de respaldo sigue sin estar en el PC.

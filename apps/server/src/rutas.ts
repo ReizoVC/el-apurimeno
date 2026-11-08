@@ -23,6 +23,7 @@ import {
   ProductoSchema,
   ProductosConsultaSchema,
   RUTAS,
+  SaludRespuestaSchema,
   RegistrarHoraAdicionalEntradaSchema,
   RegistrarHoraAdicionalRespuestaSchema,
   RegistrarIngresoEntradaSchema,
@@ -111,7 +112,10 @@ export function registrarRutas(
 ): void {
   const ctx = creadorContexto(prisma, ahora, imprimir, capacitacion);
 
-  app.get(RUTAS.salud, { config: { publica: true } }, async () => ({ estado: "ok" }));
+  app.get(RUTAS.salud, { config: { publica: true } }, async () => {
+    const { instalada, disponible } = app.actualizacion.estado();
+    return SaludRespuestaSchema.parse({ estado: "ok", versionSistema: instalada, versionDisponible: disponible?.version ?? null });
+  });
 
   app.get(RUTAS.tablero, { config: { operacion: "CONSULTAR_TABLERO" } }, async (request) =>
     TableroSchema.parse(await tableroServicio(ctx(request))),

@@ -1,6 +1,6 @@
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ACTUALIZACION_APAGADA, leerConfiguracionActualizacion, type ConfiguracionActualizacion } from "./actualizacion/configuracion.js";
+import { leerConfiguracionActualizacion, type ConfiguracionActualizacion } from "./actualizacion/configuracion.js";
 import { rutaDesdeUrl } from "./db.js";
 import { leerConfiguracionEspejo, type ConfiguracionEspejo } from "./espejo/configuracion.js";
 import { leerConfiguracionRespaldos, type ConfiguracionRespaldos } from "./respaldo/configuracion.js";
@@ -95,7 +95,7 @@ export function leerArranque(env: NodeJS.ProcessEnv, instancia: Instancia): Arra
     espejo: { supabase: null, problema: ESPEJO_DESACTIVADO_EN_CAPACITACION, intervaloMinutos: 30 },
     // Sin leer RESPALDO_*: copias locales junto a la base de capacitación, ninguna externa.
     respaldos: leerConfiguracionRespaldos({}, BASE_CAPACITACION),
-    // Sin leer ACTUALIZACION_*: comparte el código con producción y no tiene nada que anunciar por su cuenta.
-    actualizacion: ACTUALIZACION_APAGADA,
+    // Sin leer ACTUALIZACION_*: comparte el código con producción y no anuncia ni instala nada por su cuenta.
+    actualizacion: leerConfiguracionActualizacion({}),
   };
 }

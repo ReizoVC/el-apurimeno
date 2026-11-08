@@ -1,4 +1,5 @@
-import type { ManifiestoVersion, VersionDisponible } from "@apurimeno/contracts";
+import type { EstadoActualizacion, ManifiestoVersion, VersionDisponible } from "@apurimeno/contracts";
+import { ErrorNegocio } from "./errores.js";
 
 function partes(version: string): [number, number, number] {
   const [mayor, menor, parche] = version.split(".").map(Number);
@@ -31,4 +32,14 @@ export function versionDisponible(instalada: string, manifiesto: ManifiestoVersi
     completa: compararVersiones(instalada, manifiesto.ultimaCompleta) < 0,
     publicadaEn: manifiesto.publicadaEn,
   };
+}
+
+/** Solo se instala la versión disponible y una a la vez (decisión 30). */
+export function exigirVersionInstalable(estado: EstadoActualizacion, version: string): void {
+  if (estado.ultimaInstalacion?.resultado === "EN_CURSO") {
+    throw new ErrorNegocio("INVALID_STATE_TRANSITION", "Ya hay una actualización en curso.");
+  }
+  if (estado.disponible?.version !== version) {
+    throw new ErrorNegocio("INVALID_STATE_TRANSITION", `La versión ${version} no está disponible para instalar.`);
+  }
 }

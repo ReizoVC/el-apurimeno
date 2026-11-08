@@ -53,13 +53,41 @@ export const EstadoRevisionVersionSchema = z.enum([
 ]);
 export type EstadoRevisionVersion = z.infer<typeof EstadoRevisionVersionSchema>;
 
-/** `GET /actualizacion`. Sin internet, conserva el resultado de la última revisión. */
+export const ResultadoInstalacionSchema = z.enum([
+  "EN_CURSO",
+  "OK",
+  "ERROR",
+  /** Seguía en curso después del tiempo máximo de la tarea: se apagó el equipo o se cortó. */
+  "CORTADA",
+]);
+export type ResultadoInstalacion = z.infer<typeof ResultadoInstalacionSchema>;
+
+/** Cómo terminó la última instalación, o cómo va. `mensaje` es para el personal: dice qué falló. */
+export const UltimaInstalacionSchema = z
+  .object({
+    resultado: ResultadoInstalacionSchema,
+    version: z.string(),
+    mensaje: z.string().nullable(),
+    actualizadaEn: FechaISOSchema,
+  })
+  .strict();
+export type UltimaInstalacion = z.infer<typeof UltimaInstalacionSchema>;
+
+/** `POST /actualizacion/instalacion`. La versión es la que vio quien pulsó: si ya no es la disponible, se rechaza. */
+export const InstalarActualizacionEntradaSchema = z.object({ version: VersionSistemaSchema }).strict();
+export type InstalarActualizacionEntrada = z.infer<typeof InstalarActualizacionEntradaSchema>;
+
+/**
+ * `GET /actualizacion`. Sin internet, conserva el resultado de la última revisión. Durante una instalación el servidor
+ * se reinicia: quien espera tiene que tolerar que no responda.
+ */
 export const EstadoActualizacionSchema = z
   .object({
     estado: EstadoRevisionVersionSchema,
     instalada: VersionSistemaSchema.nullable(),
     disponible: VersionDisponibleSchema.nullable(),
     ultimaRevisionEn: FechaISOSchema.nullable(),
+    ultimaInstalacion: UltimaInstalacionSchema.nullable(),
   })
   .strict()
   .superRefine((e, ctx) => {
@@ -68,3 +96,16 @@ export const EstadoActualizacionSchema = z
     }
   });
 export type EstadoActualizacion = z.infer<typeof EstadoActualizacionSchema>;
+
+/**
+ * `GET /health`, sin sesión. El POS y Limpieza lo usan para saber si hay una versión nueva, aunque quien esté adentro
+ * no tenga `system.update`, y si la página que tienen abierta quedó vieja. Solo lleva números de versión.
+ */
+export const SaludRespuestaSchema = z
+  .object({
+    estado: z.literal("ok"),
+    versionSistema: VersionSistemaSchema.nullable(),
+    versionDisponible: VersionSistemaSchema.nullable(),
+  })
+  .strict();
+export type SaludRespuesta = z.infer<typeof SaludRespuestaSchema>;

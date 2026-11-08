@@ -93,13 +93,18 @@ Mismo patrón que `apps/native` y `apps/cleaning`:
   servidor, aclarando que el local sigue funcionando. "Re-sincronizar todo" pide confirmación, porque tarda más
   y solo hace falta si el espejo quedó desfasado. Sin las variables `ESPEJO_*`, la pantalla dice qué falta en
   vez de mostrar botones. El estado se refresca cada 30 s para ver las vueltas automáticas.
-- **Productos:** el stock no se edita a mano: un producto nuevo empieza en 0 y cambia con "Entrada", "Salida" (con
-  motivo) y "Contar" (el servidor lo registra en el kardex). Si otra venta cambió el stock mientras tanto, el servidor
-  rechaza la salida o el conteo y la lista pasa a mostrar el stock actual. La búsqueda acepta nombre o código de barras,
-  así que se puede escanear el producto para encontrarlo; el Enter del lector no envía nada. Un producto inactivo sale
-  del POS y aquí queda oculto salvo con "Mostrar inactivos", para reactivarlo. "Sin stock" va en rojo si es 0 o
-  negativo, y "Solo sin stock o en negativo" deja solo esos, para contarlos. "Nuevo producto" espera a que exista una
-  categoría.
+- **Productos:** el stock no se edita a mano: un producto nuevo empieza en 0 y cambia con "Entrada", "Salida" (con un
+  motivo fijo, y detalle obligatorio si es "Otro") y "Contar" (el servidor lo registra en el kardex). Si otra venta
+  cambió el stock mientras tanto, el servidor rechaza la salida o el conteo y la lista pasa a mostrar el stock actual.
+  La búsqueda acepta nombre, SKU o código de barras, así que se puede escanear el producto para encontrarlo; el Enter
+  del lector no envía nada. Un producto inactivo sale del POS y aquí queda oculto salvo con "Mostrar inactivos", para
+  reactivarlo. "Sin stock" va en rojo si es 0 o negativo; un producto en su mínimo o por debajo lleva un aviso ámbar. El
+  filtro de stock deja solo los que están bajo el mínimo, o solo los que están sin stock o en negativo. "Nuevo
+  producto" espera a que exista una categoría.
+- **Ficha del producto (decisión 31 de contracts):** SKU, unidad de venta (unidad, metro, kilo o litro), costo y
+  mínimos. Con metro, kilo o litro, las cantidades admiten hasta tres decimales y los precios se muestran "/ m". Las
+  cantidades viajan en milésimas; la pantalla las muestra en su unidad. La unidad solo se puede cambiar mientras el
+  producto no tenga movimientos ni ventas.
 - **Historial:** los últimos 200 movimientos, de todos los productos o de uno, con el stock que dejó cada uno. Una venta
   que dejó el stock en negativo se marca "Sin stock". No se pagina: para ir más atrás, se filtra por producto.
 - **Versiones nuevas:** arriba de todas las secciones, para quien tenga `system.update`, con la nota y el botón

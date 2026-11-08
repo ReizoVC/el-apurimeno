@@ -39,7 +39,8 @@ async function cargarEjemplos(prisma: PrismaClient): Promise<void> {
   for (const categoria of CATEGORIAS) await prisma.categoriaProducto.create({ data: categoria });
   for (const [id, categoriaId, nombre, codigoBarras, precioHuesped, precioPublico, stock] of PRODUCTOS) {
     await prisma.producto.create({
-      data: { id, categoriaId, nombre, codigoBarras, precioHuesped, precioPublico, controlaStock: true, stock, activo: true },
+      // El stock va en milésimas (decisión 31 de contracts).
+      data: { id, categoriaId, nombre, codigoBarras, precioHuesped, precioPublico, controlaStock: true, stock: stock * 1000, activo: true },
     });
   }
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Códigos de error de negocio que el SRS declara estables (§24.2).
  * Se conservan en inglés, textuales, tal como los nombra la sección 16.
- * Los cuatro últimos los definió el proyecto: el SRS no los nombra (README de contracts, decisión 19).
+ * Los últimos los definió el proyecto: el SRS no los nombra (README de contracts, decisiones 19 y 31).
  */
 export const CodigoErrorNegocioSchema = z.enum([
   "ROOM_NOT_AVAILABLE",
@@ -23,6 +23,8 @@ export const CodigoErrorNegocioSchema = z.enum([
   "INVALID_STATE_TRANSITION",
   // CU-23: un usuario no puede desactivarse ni quitarse users.manage a sí mismo.
   "SELF_LOCKOUT_FORBIDDEN",
+  // Decisión 31: la cantidad no corresponde a la unidad del producto (p. ej. 2,5 de algo que se vende por unidad).
+  "INVALID_QUANTITY",
 ]);
 export type CodigoErrorNegocio = z.infer<typeof CodigoErrorNegocioSchema>;
 export const CodigoErrorNegocio = CodigoErrorNegocioSchema.enum;
@@ -46,4 +48,5 @@ export const MENSAJE_ERROR_NEGOCIO: Readonly<Record<CodigoErrorNegocio, string>>
   INVALID_STATE_TRANSITION: "Esta operación no está permitida en el estado actual.",
   SELF_LOCKOUT_FORBIDDEN:
     "No puede desactivar su propia cuenta ni quitarse el permiso de gestionar usuarios; pídaselo a otro administrador.",
+  INVALID_QUANTITY: "La cantidad no corresponde a la unidad del producto.",
 };

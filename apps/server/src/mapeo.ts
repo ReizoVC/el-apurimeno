@@ -221,16 +221,25 @@ export function aMetodoPago(fila: Db.MetodoPago): MetodoPago {
   });
 }
 
-export function aProducto(fila: Db.Producto): Producto {
+/**
+ * `verCosto` en false oculta el costo (null): quien solo vende no ve cuánto paga el negocio (decisión 31). Dentro
+ * del servidor, para calcular, se usa siempre con el costo.
+ */
+export function aProducto(fila: Db.Producto, verCosto = true): Producto {
   return ProductoSchema.parse({
     id: fila.id,
     categoriaId: fila.categoriaId,
     nombre: fila.nombre,
+    sku: fila.sku,
     codigoBarras: fila.codigoBarras,
+    unidad: fila.unidad,
     precioHuesped: fila.precioHuesped,
     precioPublico: fila.precioPublico,
+    costo: verCosto ? fila.costo : null,
     controlaStock: fila.controlaStock,
     stock: fila.stock,
+    stockMinimo: fila.stockMinimo,
+    stockOptimo: fila.stockOptimo,
     activo: fila.activo,
   });
 }
@@ -301,6 +310,7 @@ export function aMovimientoInventario(fila: Db.MovimientoInventario): Movimiento
     tipo: fila.tipo,
     cantidad: fila.cantidad,
     ticketId: fila.ticketId,
+    motivoSalida: fila.motivoSalida,
     motivo: fila.motivo,
     creadoPorId: fila.creadoPorId,
     creadoEn: iso(fila.creadoEn),

@@ -73,7 +73,7 @@ describe("RN-08 caso a · horas pagadas al ingreso", () => {
     expect(c.total).toBe(4600);
     expect(c.lineas).toEqual([
       expect.objectContaining({ tipo: "BASE_HABITACION", importe: 3000 }),
-      expect.objectContaining({ tipo: "HORA_ADICIONAL", cantidad: 2, precioUnitario: 800, importe: 1600 }),
+      expect.objectContaining({ tipo: "HORA_ADICIONAL", cantidad: 2000, precioUnitario: 800, importe: 1600 }),
     ]);
   });
 });
@@ -149,14 +149,49 @@ describe("RN-20 · dos precios por producto", () => {
 
 describe("RN-22 · huésped si hay un alquiler abierto asociado", () => {
   it("venta asociada a un huésped → precio de huésped (T-12)", () => {
-    expect(cotizarVenta([{ producto: producto(), cantidad: 2 }], true).total).toBe(600);
+    expect(cotizarVenta([{ producto: producto(), cantidad: 2000 }], true).total).toBe(600);
   });
 
   it("venta sin habitación asociada → precio de público (T-13)", () => {
-    expect(cotizarVenta([{ producto: producto(), cantidad: 2 }], false).total).toBe(700);
+    expect(cotizarVenta([{ producto: producto(), cantidad: 2000 }], false).total).toBe(700);
   });
 
-  it("la cantidad debe ser un entero positivo (RF-21)", () => {
-    expect(() => cotizarVenta([{ producto: producto(), cantidad: 0 }], false)).toThrow(RangeError);
+  it("la cantidad debe ser positiva (RF-21)", () => {
+    expect(() => cotizarVenta([{ producto: producto(), cantidad: 0 }], false)).toThrow(
+      expect.objectContaining({ codigo: "INVALID_QUANTITY" }),
+    );
+  });
+});
+
+describe("Decisión 31 · cantidades en milésimas de la unidad del producto", () => {
+  const cable = producto({ id: "prod-cable", nombre: "Cable mellizo", unidad: "METRO", precioPublico: 300 });
+
+  it("2,5 m a S/ 3.00 el metro = S/ 7.50, y la unidad va en la descripción", () => {
+    const c = cotizarVenta([{ producto: cable, cantidad: 2500 }], false);
+    expect(c.lineas).toEqual([
+      { tipo: "PRODUCTO", descripcion: "Cable mellizo (m)", cantidad: 2500, precioUnitario: 300, importe: 750, productoId: "prod-cable" },
+    ]);
+  });
+
+  it("redondea al céntimo más cercano: 0,333 kg a S/ 2.50 = S/ 0.83; 0,334 kg = S/ 0.84", () => {
+    const clavos = producto({ nombre: "Clavos", unidad: "KILOGRAMO", precioPublico: 250 });
+    expect(cotizarVenta([{ producto: clavos, cantidad: 333 }], false).total).toBe(83);
+    expect(cotizarVenta([{ producto: clavos, cantidad: 334 }], false).total).toBe(84);
+    expect(cotizarVenta([{ producto: clavos, cantidad: 2 }], false).total).toBe(1);
+  });
+
+  it("un producto por unidad no admite fracciones", () => {
+    expect(() => cotizarVenta([{ producto: producto(), cantidad: 1500 }], false)).toThrow(
+      expect.objectContaining({ codigo: "INVALID_QUANTITY", message: expect.stringContaining("se vende por unidad") }),
+    );
+  });
+
+  it("las líneas del hospedaje valen 1000 por habitación o por hora", () => {
+    const c = cotizarIngreso({ habitacion: habitacion(), clienteId: null, preciosEspeciales: [], parametros: PARAMETROS, horasAdicionalesAlIngreso: 2 });
+    expect(c.lineas.map((l) => [l.tipo, l.cantidad])).toEqual([
+      ["BASE_HABITACION", 1000],
+      ["HORA_ADICIONAL", 2000],
+    ]);
+    expect(cotizarHoraAdicional(alquiler()).lineas[0]?.cantidad).toBe(1000);
   });
 });

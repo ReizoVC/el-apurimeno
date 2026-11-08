@@ -26,7 +26,7 @@ function cobro(monto: number, metodoPagoId: string, numero: number): Ticket {
       turno,
       alquilerId: null,
       habitacionReferenciaId: null,
-      cotizacion: cotizarVenta([{ producto: producto({ precioPublico: monto }), cantidad: 1 }], false),
+      cotizacion: cotizarVenta([{ producto: producto({ precioPublico: monto }), cantidad: 1000 }], false),
       pagos: [pagoSinVuelto(metodoPagoId, monto, null)],
       creadoPorId: "cajero-1",
     },

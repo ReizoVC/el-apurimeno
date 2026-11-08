@@ -8,6 +8,7 @@ import {
   CentimosSchema,
   FechaISOSchema,
   IdSchema,
+  MilesimasSchema,
   TextoRequeridoSchema,
 } from "./comun.js";
 import { TrabajoImpresionSchema } from "./comprobantes.js";
@@ -15,11 +16,13 @@ import { ConfiguracionGlobalSchema } from "./configuracion.js";
 import { CodigoErrorNegocioSchema } from "./errores.js";
 import {
   EstadoTemporalAlquilerSchema,
+  MotivoSalidaSchema,
   OperacionAutorizableSchema,
   OrigenPrecioAlquilerSchema,
   OrigenTicketSchema,
   TipoHoraAdicionalSchema,
   TipoMovimientoCajaSchema,
+  UnidadMedidaSchema,
 } from "./estados.js";
 import { HabitacionSchema } from "./habitaciones.js";
 import { sonUnicos } from "./interno.js";
@@ -313,18 +316,30 @@ export type CategoriaProductoEntrada = z.infer<typeof CategoriaProductoEntradaSc
 export const EliminarCategoriaConsultaSchema = z.object({ moverA: IdSchema.optional() }).strict();
 export type EliminarCategoriaConsulta = z.infer<typeof EliminarCategoriaConsultaSchema>;
 
-/** Alta o edición de un producto (RF-53). El stock no se edita aquí: solo cambia con movimientos de kardex. */
+/**
+ * Alta o edición de un producto (RF-53, decisión 31). El stock no se edita aquí: solo cambia con movimientos de
+ * kardex. La unidad solo se puede cambiar mientras el producto no tenga movimientos ni ventas.
+ */
 export const ProductoEntradaSchema = z
   .object({
     categoriaId: IdSchema,
     nombre: TextoRequeridoSchema,
+    sku: TextoRequeridoSchema.max(40).nullable(),
     codigoBarras: TextoRequeridoSchema.nullable(),
+    unidad: UnidadMedidaSchema,
     precioHuesped: CentimosSchema,
     precioPublico: CentimosSchema,
+    costo: CentimosSchema.nullable(),
     controlaStock: z.boolean(),
+    stockMinimo: MilesimasSchema.nonnegative().nullable(),
+    stockOptimo: MilesimasSchema.nonnegative().nullable(),
     activo: z.boolean(),
   })
-  .strict();
+  .strict()
+  .refine((p) => p.stockMinimo === null || p.stockOptimo === null || p.stockOptimo >= p.stockMinimo, {
+    path: ["stockOptimo"],
+    message: "El stock óptimo no puede ser menor que el mínimo.",
+  });
 export type ProductoEntrada = z.infer<typeof ProductoEntradaSchema>;
 
 /**
@@ -343,8 +358,8 @@ export const ProductosConsultaSchema = z
   .strict();
 export type ProductosConsulta = z.infer<typeof ProductosConsultaSchema>;
 
-/** Ingreso de mercadería (RN-25, RF-35). */
-export const ReposicionEntradaSchema = z.object({ cantidad: z.number().int().positive() }).strict();
+/** Ingreso de mercadería (RN-25, RF-35). Cantidades en milésimas de la unidad del producto (decisión 31). */
+export const ReposicionEntradaSchema = z.object({ cantidad: MilesimasSchema.positive() }).strict();
 export type ReposicionEntrada = z.infer<typeof ReposicionEntradaSchema>;
 
 export const ReposicionRespuestaSchema = z
@@ -354,15 +369,21 @@ export type ReposicionRespuesta = z.infer<typeof ReposicionRespuestaSchema>;
 
 /**
  * Salida y conteo (decisión 29). `stockVisto` es el stock que tenía la pantalla: si cambió, se rechaza, para no
- * repetir una salida con un doble clic ni pisar una venta hecha mientras se contaba. El motivo lo exige el dominio.
+ * repetir una salida con un doble clic ni pisar una venta hecha mientras se contaba. El detalle de una salida por
+ * OTRO motivo lo exige el dominio. Cantidades en milésimas (decisión 31).
  */
 export const SalidaStockEntradaSchema = z
-  .object({ cantidad: z.number().int().positive(), motivo: z.string(), stockVisto: z.number().int() })
+  .object({
+    cantidad: MilesimasSchema.positive(),
+    motivoSalida: MotivoSalidaSchema,
+    motivo: z.string().nullable(),
+    stockVisto: MilesimasSchema,
+  })
   .strict();
 export type SalidaStockEntrada = z.infer<typeof SalidaStockEntradaSchema>;
 
 export const ConteoStockEntradaSchema = z
-  .object({ contado: z.number().int().nonnegative(), nota: z.string().nullable(), stockVisto: z.number().int() })
+  .object({ contado: MilesimasSchema.nonnegative(), nota: z.string().nullable(), stockVisto: MilesimasSchema })
   .strict();
 export type ConteoStockEntrada = z.infer<typeof ConteoStockEntradaSchema>;
 
@@ -379,15 +400,20 @@ export const MovimientoHistorialSchema = z
   .object({
     movimiento: MovimientoInventarioSchema,
     productoNombre: TextoRequeridoSchema,
+    unidad: UnidadMedidaSchema,
     creadoPorNombre: TextoRequeridoSchema,
     ticketNumero: z.number().int().positive().nullable(),
-    saldo: z.number().int(),
+    saldo: MilesimasSchema,
   })
   .strict();
 export type MovimientoHistorial = z.infer<typeof MovimientoHistorialSchema>;
 
+/**
+ * `cantidadMilesimas` y no `cantidad` (decisión 31): un POS anterior, que envía unidades enteras en `cantidad`, es
+ * rechazado por el contrato en vez de vender 0,002 de cada producto.
+ */
 export const ItemVentaEntradaSchema = z
-  .object({ productoId: IdSchema, cantidad: z.number().int().positive() })
+  .object({ productoId: IdSchema, cantidadMilesimas: MilesimasSchema.positive() })
   .strict();
 
 /**
@@ -471,7 +497,8 @@ export const ReporteVentasSchema = z
         .object({
           productoId: IdSchema,
           descripcion: z.string(),
-          cantidad: z.number().int().nonnegative(),
+          /** En milésimas (decisión 31). */
+          cantidad: MilesimasSchema.nonnegative(),
           total: CentimosSchema,
         })
         .strict(),

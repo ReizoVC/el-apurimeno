@@ -36,6 +36,7 @@ import {
   TurnoSchema,
   UsuarioSchema,
   esTransicionValida,
+  importeDeLinea,
   type Alquiler,
   type ConfiguracionGlobal,
   type Ticket,
@@ -59,8 +60,8 @@ function ticketIngresoT16(): Ticket {
     ajustePuntual: null,
     anulacion: null,
     lineas: [
-      { id: "l1", tipo: "BASE_HABITACION", descripcion: "Habitación 205 — 8 horas", cantidad: 1, precioUnitario: 3000, importe: 3000, productoId: null },
-      { id: "l2", tipo: "HORA_ADICIONAL", descripcion: "Hora adicional", cantidad: 2, precioUnitario: 800, importe: 1600, productoId: null },
+      { id: "l1", tipo: "BASE_HABITACION", descripcion: "Habitación 205 — 8 horas", cantidad: 1000, precioUnitario: 3000, importe: 3000, productoId: null },
+      { id: "l2", tipo: "HORA_ADICIONAL", descripcion: "Hora adicional", cantidad: 2000, precioUnitario: 800, importe: 1600, productoId: null },
     ],
     pagos: [{ id: "p1", metodoPagoId: EFECTIVO, monto: 4600, referencia: null, montoRecibido: 5000, vuelto: 400 }],
     creadoPorId: "cajero-1",
@@ -75,8 +76,8 @@ function ticketConAjusteT10(): Ticket {
     total: 4000,
     ajustePuntual: { montoOriginal: 3000, montoAjustado: 4000, motivo: "cliente ingresó solo" },
     lineas: [
-      { id: "l1", tipo: "BASE_HABITACION", descripcion: "Habitación 205 — 8 horas", cantidad: 1, precioUnitario: 3000, importe: 3000, productoId: null },
-      { id: "l2", tipo: "AJUSTE_PUNTUAL", descripcion: "Ajuste", cantidad: 1, precioUnitario: 1000, importe: 1000, productoId: null },
+      { id: "l1", tipo: "BASE_HABITACION", descripcion: "Habitación 205 — 8 horas", cantidad: 1000, precioUnitario: 3000, importe: 3000, productoId: null },
+      { id: "l2", tipo: "AJUSTE_PUNTUAL", descripcion: "Ajuste", cantidad: 1000, precioUnitario: 1000, importe: 1000, productoId: null },
     ],
     pagos: [{ id: "p1", metodoPagoId: EFECTIVO, monto: 4000, referencia: null, montoRecibido: null, vuelto: null }],
   };
@@ -177,7 +178,7 @@ describe("Ticket", () => {
       alquilerId: null,
       habitacionReferenciaId: "hab-107",
       total: 600,
-      lineas: [{ id: "l1", tipo: "PRODUCTO", descripcion: "Gaseosa x 2", cantidad: 2, precioUnitario: 300, importe: 600, productoId: "prod-1" }],
+      lineas: [{ id: "l1", tipo: "PRODUCTO", descripcion: "Gaseosa x 2", cantidad: 2000, precioUnitario: 300, importe: 600, productoId: "prod-1" }],
       pagos: [{ id: "p1", metodoPagoId: EFECTIVO, monto: 600, referencia: null, montoRecibido: null, vuelto: null }],
     };
     expect(TicketSchema.safeParse(venta).success).toBe(true);
@@ -300,11 +301,16 @@ describe("Tienda", () => {
       id: "prod-1",
       categoriaId: "cat-bebidas",
       nombre: "Gaseosa 500 ml",
+      sku: "10001",
       codigoBarras: "7751271001234",
+      unidad: "UNIDAD",
       precioHuesped: 300,
       precioPublico: 350,
+      costo: 200,
       controlaStock: true,
-      stock: 10,
+      stock: 10_000,
+      stockMinimo: 6000,
+      stockOptimo: 24_000,
       activo: true,
     };
     expect(ProductoSchema.safeParse(p).success).toBe(true);
@@ -315,24 +321,48 @@ describe("Tienda", () => {
     expect(ProductoSchema.safeParse(sinCampo).success).toBe(false);
   });
 
-  it("una venta descuenta stock y referencia su ticket", () => {
-    const m = { id: "mi1", productoId: "prod-1", tipo: "VENTA", cantidad: -3, ticketId: "ticket-9", motivo: null, creadoPorId: "cajero-1", creadoEn: "2026-09-23T15:00:00.000Z" };
-    expect(MovimientoInventarioSchema.safeParse(m).success).toBe(true);
-    expect(MovimientoInventarioSchema.safeParse({ ...m, cantidad: 3 }).success).toBe(false);
-    expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "REPOSICION", cantidad: 10 }).success).toBe(false);
-    expect(MovimientoInventarioSchema.safeParse({ ...m, motivo: "No lleva" }).success).toBe(false);
+  it("la ficha lleva SKU, unidad, costo y mínimos; el óptimo no baja del mínimo (decisión 31)", () => {
+    const p = {
+      id: "prod-2", categoriaId: "cat-ferreteria", nombre: "Cable mellizo", sku: null, codigoBarras: null, unidad: "METRO",
+      precioHuesped: 300, precioPublico: 300, costo: null, controlaStock: true, stock: 12_500, stockMinimo: null, stockOptimo: null, activo: true,
+    };
+    expect(ProductoSchema.safeParse(p).success).toBe(true);
+    expect(ProductoSchema.safeParse({ ...p, unidad: "CAJA" }).success).toBe(false);
+    expect(ProductoSchema.safeParse({ ...p, stockMinimo: 5000, stockOptimo: 4000 }).success).toBe(false);
+    expect(ProductoSchema.safeParse({ ...p, stock: 12.5 }).success).toBe(false);
   });
 
-  it("una salida resta con motivo y sin ticket; un conteo admite 0 y una nota (decisión 29)", () => {
-    const m = { id: "mi1", productoId: "prod-1", tipo: "SALIDA", cantidad: -3, ticketId: null, motivo: "Vencido", creadoPorId: "admin-1", creadoEn: "2026-09-23T15:00:00.000Z" };
+  it("una venta descuenta stock y referencia su ticket", () => {
+    const m = { id: "mi1", productoId: "prod-1", tipo: "VENTA", cantidad: -3000, ticketId: "ticket-9", motivoSalida: null, motivo: null, creadoPorId: "cajero-1", creadoEn: "2026-09-23T15:00:00.000Z" };
     expect(MovimientoInventarioSchema.safeParse(m).success).toBe(true);
-    expect(MovimientoInventarioSchema.safeParse({ ...m, motivo: null }).success).toBe(false);
-    expect(MovimientoInventarioSchema.safeParse({ ...m, cantidad: 3 }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, cantidad: 3000 }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "REPOSICION", cantidad: 10_000 }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivo: "No lleva" }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivoSalida: "VENCIDO" }).success).toBe(false);
+  });
+
+  it("una salida resta con su motivo fijo y sin ticket; OTRO exige detalle; un conteo admite 0 y una nota (decisiones 29 y 31)", () => {
+    const m = { id: "mi1", productoId: "prod-1", tipo: "SALIDA", cantidad: -3000, ticketId: null, motivoSalida: "VENCIDO", motivo: null, creadoPorId: "admin-1", creadoEn: "2026-09-23T15:00:00.000Z" };
+    expect(MovimientoInventarioSchema.safeParse(m).success).toBe(true);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivo: "Lote de agosto" }).success).toBe(true);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivoSalida: null }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivoSalida: "OTRO" }).success).toBe(false);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, motivoSalida: "OTRO", motivo: "Muestra" }).success).toBe(true);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, cantidad: 3000 }).success).toBe(false);
     expect(MovimientoInventarioSchema.safeParse({ ...m, ticketId: "ticket-9" }).success).toBe(false);
-    for (const cantidad of [-2, 0, 2]) {
-      expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "CONTEO", cantidad, motivo: null }).success).toBe(true);
+    for (const cantidad of [-2000, 0, 2500]) {
+      expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "CONTEO", cantidad, motivoSalida: null }).success).toBe(true);
     }
-    expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "CONTEO", cantidad: 0, motivo: "Nota" }).success).toBe(true);
+    expect(MovimientoInventarioSchema.safeParse({ ...m, tipo: "CONTEO", cantidad: 0, motivoSalida: null, motivo: "Nota" }).success).toBe(true);
+  });
+
+  it("el importe de una línea redondea al céntimo, con las mitades hacia afuera (decisión 31)", () => {
+    expect(importeDeLinea(2500, 300)).toBe(750);
+    expect(importeDeLinea(333, 250)).toBe(83);
+    expect(importeDeLinea(2, 250)).toBe(1);
+    expect(importeDeLinea(1, 250)).toBe(0);
+    expect(importeDeLinea(2, -250)).toBe(-1);
+    expect(importeDeLinea(3000, 350)).toBe(1050);
   });
 });
 
@@ -397,13 +427,15 @@ describe("Auditoría y configuración", () => {
 describe("API", () => {
   it("una venta a público no se asocia a una habitación (RN-22, RN-24)", () => {
     const venta = {
-      items: [{ productoId: "prod-1", cantidad: 2 }],
+      items: [{ productoId: "prod-1", cantidadMilesimas: 2000 }],
       esHuesped: false,
       habitacionReferenciaId: null,
       ajuste: null,
       pagos: [{ metodoPagoId: "efectivo", monto: 700, montoRecibido: 1000, referencia: null }],
     };
     expect(RegistrarVentaEntradaSchema.safeParse(venta).success).toBe(true);
+    // Un POS anterior a la decisión 31 envía `cantidad` en unidades: se rechaza, no vende 0,002.
+    expect(RegistrarVentaEntradaSchema.safeParse({ ...venta, items: [{ productoId: "prod-1", cantidad: 2 }] }).success).toBe(false);
     expect(RegistrarVentaEntradaSchema.safeParse({ ...venta, habitacionReferenciaId: "hab-107" }).success).toBe(false);
     expect(RegistrarVentaEntradaSchema.safeParse({ ...venta, esHuesped: true, habitacionReferenciaId: "hab-107" }).success).toBe(true);
   });
@@ -424,7 +456,10 @@ describe("API · tienda, anulación y reportes", () => {
 
   it("una reposición exige cantidad positiva y un producto no fija su stock", () => {
     expect(ReposicionEntradaSchema.safeParse({ cantidad: 0 }).success).toBe(false);
-    const producto = { categoriaId: "c", nombre: "Agua", codigoBarras: null, precioHuesped: 150, precioPublico: 200, controlaStock: true, activo: true };
+    const producto = {
+      categoriaId: "c", nombre: "Agua", sku: null, codigoBarras: null, unidad: "UNIDAD", precioHuesped: 150, precioPublico: 200,
+      costo: null, controlaStock: true, stockMinimo: null, stockOptimo: null, activo: true,
+    };
     expect(ProductoEntradaSchema.safeParse(producto).success).toBe(true);
     expect(ProductoEntradaSchema.safeParse({ ...producto, stock: 99 }).success).toBe(false);
   });

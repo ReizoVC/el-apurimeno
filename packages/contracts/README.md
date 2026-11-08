@@ -106,16 +106,16 @@ const ticket = resultado.data;
 
 | Archivo | Contenido | SRS |
 |---|---|---|
-| `comun.ts` | `Id`, `Centimos`, `CentimosConSigno`, `FechaISO`, `TextoRequerido` | RN-37, §21 |
+| `comun.ts` | `Id`, `Centimos`, `CentimosConSigno`, `FechaISO`, `TextoRequerido`, `Milesimas` e `importeDeLinea` (decisión 31) | RN-37, §21 |
 | `estados.ts` | Todos los enums de estado y tipo, y las tablas de transición | §19.2, §20 |
 | `permisos.ts` | `Permiso` (catálogo fijo de 24) y `RANGOS_INICIALES` | RN-41, §22, §41.3 |
-| `errores.ts` | `CodigoErrorNegocio` y sus mensajes. Los 9 códigos del SRS más `SHIFT_NOT_OPEN`, `RENTAL_NOT_OPEN`, `INVALID_STATE_TRANSITION` y `SELF_LOCKOUT_FORBIDDEN`, definidos por el proyecto | §24.2, §16, RN-32, §20 |
+| `errores.ts` | `CodigoErrorNegocio` y sus mensajes. Los 9 códigos del SRS más `SHIFT_NOT_OPEN`, `RENTAL_NOT_OPEN`, `INVALID_STATE_TRANSITION`, `SELF_LOCKOUT_FORBIDDEN` e `INVALID_QUANTITY` (decisión 31), definidos por el proyecto | §24.2, §16, RN-32, §20 |
 | `habitaciones.ts` | `Habitacion` | RN-13, §20.1 |
 | `clientes.ts` | `Cliente`, `PrecioEspecialCliente` | RN-14 a RN-16 |
 | `alquileres.ts` | `Alquiler`, `HoraAdicional`, `ParametrosTiempoPrecio`, `MINUTOS_HORA_ADICIONAL` | RN-01 a RN-12, RF-64 |
 | `tickets.ts` | `Ticket`, `LineaTicket`, `Pago`, `MetodoPago`, `AjustePuntual`, `AnulacionTicket` | RN-17 a RN-19, RN-36, CU-21 |
 | `caja.ts` | `Turno`, `MovimientoCaja` | RN-32 a RN-35 |
-| `tienda.ts` | `Producto`, `CategoriaProducto`, `MovimientoInventario` | RN-20 a RN-26, RES-02 |
+| `tienda.ts` | `Producto` (con unidad, SKU, costo y mínimos), `CategoriaProducto`, `MovimientoInventario` | RN-20 a RN-26, RES-02, decisión 31 |
 | `usuarios.ts` | `Usuario`, `Rango` | RN-40, RN-41 |
 | `auditoria.ts` | `RegistroAuditoria`, `AccionAuditoria`, `CodigoAutorizacion` | RN-42, RN-46, §23 |
 | `comprobantes.ts` | `TrabajoImpresion`, `CausaFallaImpresora` y sus mensajes, `EstadoImpresora`, `LogoComprobante` | RN-38, RN-39, §20.5, RF-56, RNF-OBS-01 |
@@ -351,8 +351,8 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
       interruptor, pero en una instalación nueva viene activado. Con él, además, el cajero tiene que confirmar el aviso
       (`confirmarSinStock`); sin confirmar se rechaza con `INSUFFICIENT_STOCK`. No pide código de autorización, para
       que nadie quede trabado de noche: el control es `VENTA_SIN_STOCK` en la auditoría y el stock negativo a la vista.
-    - **Salida:** resta con motivo obligatorio y no puede sacar más de lo que hay (`INSUFFICIENT_STOCK`): si lo físico
-      no cuadra con el sistema, corresponde un conteo.
+    - **Salida:** resta con motivo obligatorio (fijo desde la decisión 31) y no puede sacar más de lo que hay
+      (`INSUFFICIENT_STOCK`): si lo físico no cuadra con el sistema, corresponde un conteo.
     - **Conteo:** deja el stock en lo contado y guarda la diferencia en el kardex, también si es 0, para que quede la
       constancia de que se contó.
     - **`stockVisto`:** si el stock cambió desde que la pantalla lo leyó, se rechaza (`INVALID_STATE_TRANSITION`).
@@ -389,6 +389,31 @@ Estos puntos requirieron interpretar el SRS. Si alguno es incorrecto, se corrige
     `VersionDisponible`, `UltimaInstalacion`) ni `SaludRespuesta`: justo después de actualizar las lee una página
     compilada con la versión anterior, que tiene que poder mostrar el resultado y "Recargar" aunque la nueva agregue
     campos. Cambio **aditivo**.
+31. **Ficha de producto y cantidades en milésimas: la base para la papelería y la ferretería.** El SRS (§9, RES-02)
+    deja fuera los otros dos negocios de la propietaria. El 08/11/2026 ella decidió prepararlos en nueve etapas, en una
+    sola base con los tres negocios: traslados de bebidas y consumibles, cada mostrador con su PC e impresora, y sin
+    ventas al por mayor ni a crédito. Esta es la etapa 1.
+    - **Cantidades en milésimas enteras** (`MilesimasSchema`, `MILESIMAS_POR_UNIDAD`): el stock, el kardex, las entradas
+      de salida, conteo y reposición, y `LineaTicket.cantidad`. 2,5 m = 2500; una habitación o una hora = 1000. Enteros
+      y no decimales, por la misma razón que el dinero va en céntimos (RN-37).
+    - **Importe de una línea** (`importeDeLinea`): cantidad × precio por unidad / 1000, al céntimo más cercano, con las
+      mitades hacia afuera del cero. Con unidades enteras no redondea nada, y el compensatorio da exactamente el
+      opuesto del original.
+    - **Unidad del producto** (`UnidadMedida`): unidad, metro, kilo o litro. Solo UNIDAD exige cantidades enteras;
+      si no, `INVALID_QUANTITY`. La línea del ticket no guarda la unidad: va en su descripción ("Cable mellizo (m)"). La
+      unidad solo cambia mientras el producto no tenga movimientos ni ventas, para no reinterpretar el pasado. Caja,
+      docena y paquete no son unidades: son presentaciones (etapa 8).
+    - **Ficha:** `sku` (código interno único, para volver a importar sin duplicar), `costo` por unidad, y `stockMinimo`
+      y `stockOptimo`. El costo solo lo ve quien tiene `inventory.manage`: para quien solo vende, llega `null`.
+    - **Salidas con motivo fijo** (`MotivoSalida`): vencido, dañado, pérdida, consumo interno, traslado a otro negocio u
+      otro, para poder sumar las mermas. `motivo` pasa a ser el detalle, obligatorio solo con OTRO. Mientras los otros
+      negocios no estén en el sistema, lo que se lleva a ellos se registra como salida por TRASLADO.
+    - **Un POS viejo no cobra mal:** la venta pasa a enviar `cantidadMilesimas` en vez de `cantidad`. Un POS anterior,
+      que envía unidades enteras, es rechazado por el contrato en vez de vender 0,002 de cada producto.
+
+    Cambio **incompatible** con los clientes anteriores, a propósito: el POS, el Dashboard y el servidor se actualizan
+    juntos. Una migración multiplica por 1000 las cantidades guardadas y deja las salidas anteriores con el motivo OTRO;
+    lo que ya quedó en la auditoría conserva sus cantidades en unidades.
 
 ## Decisiones pendientes que afectan el contrato
 

@@ -485,6 +485,8 @@ Quedan explícitamente programadas para una segunda etapa, sin quedar fuera del 
 
 El alcance de este documento se limita a la operación de un único establecimiento (El Apurimeño). Cualquier extensión hacia los otros dos negocios de la propietaria (papelería y ferretería) constituye un proyecto separado y futuro, que este documento no especifica, más allá de la decisión arquitectónica de no acoplar el módulo de tienda a conceptos propios del hospedaje.
 
+> **Cambio de alcance (08/11/2026).** La propietaria decidió preparar el sistema para la papelería y la ferretería, en nueve etapas y en una sola base con los tres negocios. El detalle y las interpretaciones están en la decisión 31 de `packages/contracts/README.md` y en `docs/ESTADO_ACTUAL.md`. Este documento no se reescribe: lo que sigue describe el hospedaje.
+
 ## 10. Stakeholders
 
 | Stakeholder | Intereses | Necesidades | Nivel de influencia | Relación con el sistema |

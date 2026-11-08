@@ -58,8 +58,8 @@ describe("Resumen de un día (RN-45, RF-60)", () => {
   const ingresoA1 = cobro("INGRESO_ALQUILER", ingreso(3000), EFECTIVO.id, en("14:00"), { alquilerId: "a1" });
   // La hora adicional se cobra al día siguiente (00:30 del 24 en Lima): cuenta en la ocupación del día del ingreso.
   const horaA1 = cobro("HORA_ADICIONAL", cotizarHoraAdicional(a1), YAPE.id, en("05:30", 24), { alquilerId: "a1" });
-  const venta = cobro("VENTA_TIENDA", cotizarVenta([{ producto: producto(), cantidad: 2 }], false), EFECTIVO.id, en("16:00"));
-  const vendidaYAnulada = cobro("VENTA_TIENDA", cotizarVenta([{ producto: producto(), cantidad: 1 }], false), EFECTIVO.id, en("17:00"));
+  const venta = cobro("VENTA_TIENDA", cotizarVenta([{ producto: producto(), cantidad: 2000 }], false), EFECTIVO.id, en("16:00"));
+  const vendidaYAnulada = cobro("VENTA_TIENDA", cotizarVenta([{ producto: producto(), cantidad: 1000 }], false), EFECTIVO.id, en("17:00"));
   // Anulada al día siguiente: el cobro original sigue siendo del 23, ahora anulado.
   const { original: anulada, compensatorio } = anular(vendidaYAnulada, en("06:00", 24));
 

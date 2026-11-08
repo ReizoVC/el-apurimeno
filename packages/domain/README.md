@@ -60,12 +60,12 @@ try {
 | Archivo | Funciones principales |
 |---|---|
 | `tiempo.ts` | `calcularSalidaInicial`, `calcularEstadoTemporal`, `calcularHoraAdicional` |
-| `precios.ts` | `resolverPrecioHabitacion`, `cotizarIngreso`, `cotizarHoraAdicional`, `aplicarAjustePuntual`, `precioProducto`, `cotizarVenta` |
+| `precios.ts` | `resolverPrecioHabitacion`, `cotizarIngreso`, `cotizarHoraAdicional`, `aplicarAjustePuntual`, `precioProducto`, `descripcionProducto`, `cotizarVenta`. Las cantidades van en milésimas y el importe se redondea al céntimo (decisión 31 de contracts) |
 | `alquileres.ts` | `iniciarAlquiler`, `registrarHoraAdicional`, `registrarSalida`, `registrarSalidaSinPago`, `aplicarAnulacionHoraAdicional`, `aplicarAnulacionIngreso` |
 | `clientes.ts` | `crearPrecioEspecial`, `editarPrecioEspecial` |
 | `habitaciones.ts` | `crearHabitacion`, `editarHabitacion`, `ocuparHabitacion`, `liberarPorSalida`, `marcarHabitacionLista`, `reportarMantenimiento`, `bloquearPorMantenimiento`, `reactivarHabitacion`, `liberarPorAnulacion` |
 | `caja.ts` | `asegurarTurnoAbierto`, `calcularEfectivoEsperado`, `cerrarTurno`, `forzarCierreTurno`, `prepararMovimientoCaja`, `editarMetodoPago` |
-| `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `registrarSalidaStock`, `aplicarConteoStock`, `revertirVentaEnInventario` |
+| `inventario.ts` | `aplicarVentaAInventario`, `reponerStock`, `registrarSalidaStock` (con motivo fijo), `aplicarConteoStock`, `revertirVentaEnInventario`. Rechaza con `INVALID_QUANTITY` una fracción de un producto por unidad |
 | `tickets.ts` | `pagoEnEfectivo`, `pagoSinVuelto`, `armarTicketCobro`, `validarInvariantesTicket` |
 | `anulacion.ts` | `crearCodigoAutorizacion`, `validarCodigoAutorizacion`, `anularTicket` |
 | `permisos.ts` | `permisosEfectivos`, `puede`, `PERMISO_POR_OPERACION`, `permisoAjustePuntual`, `validarEdicionPropia` |

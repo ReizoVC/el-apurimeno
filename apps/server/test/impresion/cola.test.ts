@@ -99,7 +99,7 @@ describe("Impresión en cada cobro (ADR-05, RF-56)", () => {
     const venta = await llamar(
       "POST",
       RUTAS.registrarVenta,
-      { items: [{ productoId: "p-1", cantidad: 1 }], esHuesped: false, habitacionReferenciaId: null, ajuste: null, pagos: [efectivo(200)] },
+      { items: [{ productoId: "p-1", cantidadMilesimas: 1000 }], esHuesped: false, habitacionReferenciaId: null, ajuste: null, pagos: [efectivo(200)] },
       "clave-imp-4",
     );
     await app.colaImpresion();

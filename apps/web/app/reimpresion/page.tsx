@@ -28,7 +28,7 @@ import {
 } from "../../src/componentes/Periodo";
 import { useCarga } from "../../src/lib/carga";
 import { periodoDeDias } from "@apurimeno/formato";
-import { fechaHora, soles } from "@apurimeno/formato";
+import { cantidad, fechaHora, soles } from "@apurimeno/formato";
 import { ORIGEN_TICKET } from "../../src/lib/rotulos";
 import { mensajeDe, servidor } from "../../src/lib/servidor";
 
@@ -259,8 +259,12 @@ function DetalleTicket({
             <div key={l.id} className="flex justify-between gap-3">
               <span>
                 {l.descripcion}
-                {l.cantidad > 1 && (
-                  <span className="text-muted-foreground"> × {l.cantidad}</span>
+                {/* En milésimas (decisión 31 de contracts): 1000 = una unidad. */}
+                {l.cantidad !== 1000 && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    × {cantidad(l.cantidad)}
+                  </span>
                 )}
               </span>
               <span>{soles(l.importe)}</span>

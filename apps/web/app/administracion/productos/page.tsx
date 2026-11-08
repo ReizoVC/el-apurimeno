@@ -2,10 +2,14 @@
 
 import { Fragment, useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
-import type {
-  CategoriaProducto,
-  Producto,
-  ProductoEntrada,
+import {
+  MotivoSalidaSchema,
+  UnidadMedidaSchema,
+  type CategoriaProducto,
+  type MotivoSalida,
+  type Producto,
+  type ProductoEntrada,
+  type UnidadMedida,
 } from "@apurimeno/contracts";
 import { Badge } from "@apurimeno/ui/components/badge";
 import { Button } from "@apurimeno/ui/components/button";
@@ -26,7 +30,15 @@ import {
   TableHeader,
   TableRow,
 } from "@apurimeno/ui/components/table";
-import { aTextoSoles, leerSoles, soles } from "@apurimeno/formato";
+import {
+  aTextoCantidad,
+  aTextoSoles,
+  abreviaturaUnidad,
+  cantidadConUnidad,
+  leerCantidad,
+  leerSoles,
+  soles,
+} from "@apurimeno/formato";
 import {
   Aviso,
   CLASE_SELECT,
@@ -34,10 +46,12 @@ import {
   Encabezado,
 } from "../../../src/componentes/comunes";
 import { useCarga } from "../../../src/lib/carga";
+import { MOTIVO_SALIDA, UNIDAD_MEDIDA } from "../../../src/lib/rotulos";
 import { mensajeDe, servidor } from "../../../src/lib/servidor";
 
 type AvisoPantalla = { tipo: "error" | "exito"; texto: string } | null;
 type TipoAccionStock = "entrada" | "salida" | "contar";
+type Filtro = "todos" | "sinStock" | "bajoMinimo";
 
 const ACCIONES_STOCK: readonly { tipo: TipoAccionStock; etiqueta: string }[] = [
   { tipo: "entrada", etiqueta: "Entrada" },
@@ -46,9 +60,10 @@ const ACCIONES_STOCK: readonly { tipo: TipoAccionStock; etiqueta: string }[] = [
 ];
 
 /**
- * Productos e inventario (RF-53, CU-12, CU-29): alta y edición de productos con sus dos precios (RN-20, RN-21), y
- * entrada, salida y conteo de stock (decisión 29); las categorías y el historial tienen su pestaña. El stock no se
- * edita a mano: un producto nuevo empieza en 0 y todo cambio queda en el kardex (RN-25). Un producto inactivo sale del
+ * Productos e inventario (RF-53, CU-12, CU-29): alta y edición de productos con sus dos precios (RN-20, RN-21), su
+ * unidad, costo y mínimos (decisión 31), y entrada, salida y conteo de stock (decisión 29); las categorías y el
+ * historial tienen su pestaña. El stock no se edita a mano: un producto nuevo empieza en 0 y todo cambio queda en el
+ * kardex (RN-25). Las cantidades viajan en milésimas y aquí se muestran en su unidad. Un producto inactivo sale del
  * catálogo del POS pero sigue aquí para reactivarlo.
  */
 export default function Productos() {
@@ -62,7 +77,7 @@ export default function Productos() {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
-  const [soloSinStock, setSoloSinStock] = useState(false);
+  const [filtro, setFiltro] = useState<Filtro>("todos");
   const [aviso, setAviso] = useState<AvisoPantalla>(null);
 
   const nombreCategoria = useMemo(
@@ -75,17 +90,19 @@ export default function Productos() {
     return (productos.datos ?? []).filter(
       (p) =>
         (verInactivos || p.activo) &&
-        (!soloSinStock || faltaStock(p)) &&
+        (filtro !== "sinStock" || faltaStock(p)) &&
+        (filtro !== "bajoMinimo" || bajoMinimo(p)) &&
         (categoriaFiltro === "" || p.categoriaId === categoriaFiltro) &&
         (q === "" ||
           p.nombre.toLocaleLowerCase("es").includes(q) ||
-          (p.codigoBarras ?? "").includes(q)),
+          (p.codigoBarras ?? "").includes(q) ||
+          (p.sku ?? "").toLocaleLowerCase("es").includes(q)),
     );
-  }, [productos.datos, busqueda, categoriaFiltro, verInactivos, soloSinStock]);
-  const inactivos = (productos.datos ?? []).filter((p) => !p.activo).length;
-  const sinStock = (productos.datos ?? []).filter(
-    (p) => p.activo && faltaStock(p),
-  ).length;
+  }, [productos.datos, busqueda, categoriaFiltro, verInactivos, filtro]);
+  const activos = (productos.datos ?? []).filter((p) => p.activo);
+  const inactivos = (productos.datos ?? []).length - activos.length;
+  const sinStock = activos.filter(faltaStock).length;
+  const enMinimo = activos.filter(bajoMinimo).length;
 
   const guardar = async (entrada: ProductoEntrada) => {
     setAviso(null);
@@ -152,7 +169,7 @@ export default function Productos() {
                 <Campo etiqueta="Buscar">
                   <Input
                     className="w-64"
-                    placeholder="Nombre o código (puede escanearlo)"
+                    placeholder="Nombre, SKU o código (puede escanearlo)"
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                     onKeyDown={(e) => {
@@ -175,6 +192,21 @@ export default function Productos() {
                     ))}
                   </select>
                 </Campo>
+                <Campo etiqueta="Stock">
+                  <select
+                    className={CLASE_SELECT}
+                    value={filtro}
+                    onChange={(e) => setFiltro(e.target.value as Filtro)}
+                  >
+                    <option value="todos">Todos</option>
+                    <option value="bajoMinimo">
+                      Bajo el mínimo ({enMinimo})
+                    </option>
+                    <option value="sinStock">
+                      Sin stock o en negativo ({sinStock})
+                    </option>
+                  </select>
+                </Campo>
                 <label className="flex h-9 items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -182,14 +214,6 @@ export default function Productos() {
                     onChange={(e) => setVerInactivos(e.target.checked)}
                   />
                   Mostrar inactivos{inactivos > 0 && ` (${inactivos})`}
-                </label>
-                <label className="flex h-9 items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={soloSinStock}
-                    onChange={(e) => setSoloSinStock(e.target.checked)}
-                  />
-                  Solo sin stock o en negativo{sinStock > 0 && ` (${sinStock})`}
                 </label>
               </div>
               <Table>
@@ -217,19 +241,23 @@ export default function Productos() {
                             )}
                           </p>
                           <p className="font-mono text-xs text-muted-foreground">
-                            {p.codigoBarras ?? "sin código"}
+                            {[p.sku, p.codigoBarras ?? "sin código"]
+                              .filter((t) => t !== null)
+                              .join(" · ")}
                           </p>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {nombreCategoria.get(p.categoriaId) ?? "—"}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="whitespace-nowrap text-right">
                           {soles(p.precioHuesped)}
+                          {porUnidad(p.unidad)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="whitespace-nowrap text-right">
                           {soles(p.precioPublico)}
+                          {porUnidad(p.unidad)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="whitespace-nowrap text-right">
                           <Stock producto={p} />
                         </TableCell>
                         <TableCell>
@@ -308,10 +336,22 @@ export default function Productos() {
 }
 
 const faltaStock = (p: Producto) => p.controlaStock && p.stock <= 0;
+const bajoMinimo = (p: Producto) =>
+  p.controlaStock && p.stockMinimo !== null && p.stock <= p.stockMinimo;
+const conUnidad = (p: Producto, milesimas: number) =>
+  cantidadConUnidad(milesimas, p.unidad);
+/** " / m" junto al precio de un producto por metro; nada si es por unidad. */
+const porUnidad = (unidad: UnidadMedida) => {
+  const abreviatura = abreviaturaUnidad(unidad);
+  return abreviatura === "" ? "" : ` / ${abreviatura}`;
+};
+const conSigno = (texto: string, milesimas: number) =>
+  milesimas > 0 ? `+${texto}` : texto;
 
-const MOTIVOS_SALIDA = ["Vencido", "Dañado", "Consumo interno", "Pérdida"];
-
-/** Formulario de Entrada, Salida o Contar de un producto. `stockVisto` es el stock que muestra la lista (decisión 29). */
+/**
+ * Formulario de Entrada, Salida o Contar de un producto. `stockVisto` es el stock que muestra la lista (decisión 29).
+ * Un producto por metro, kilo o litro acepta hasta tres decimales; uno por unidad, solo enteros (decisión 31).
+ */
 function AccionStock({
   producto,
   tipo,
@@ -324,36 +364,45 @@ function AccionStock({
   onCancelar: () => void;
 }) {
   const [cantidad, setCantidad] = useState("");
+  const [motivoSalida, setMotivoSalida] = useState<MotivoSalida | "">("");
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const contar = tipo === "contar";
-  const n = Number(cantidad);
+  const decimales = producto.unidad !== "UNIDAD";
+  const abreviatura = abreviaturaUnidad(producto.unidad);
+  const n = leerCantidad(cantidad, decimales);
   const valido =
-    (contar ? /^\d{1,6}$/ : /^[1-9]\d{0,5}$/).test(cantidad.trim()) &&
-    (tipo !== "salida" || texto.trim() !== "");
+    n !== null &&
+    (contar || n > 0) &&
+    (tipo !== "salida" ||
+      (motivoSalida !== "" &&
+        (motivoSalida !== "OTRO" || texto.trim() !== "")));
   const stockVisto = producto.stock;
 
   const operacion = async (): Promise<string> => {
+    const m = n ?? 0;
+    const antes = conUnidad(producto, stockVisto);
     if (tipo === "entrada") {
-      const r = await servidor.reponerProducto(producto.id, n);
-      return `${producto.nombre}: ingresaron ${n}; stock ${stockVisto} → ${r.producto.stock}.`;
+      const r = await servidor.reponerProducto(producto.id, m);
+      return `${producto.nombre}: ingresaron ${conUnidad(producto, m)}; stock ${antes} → ${conUnidad(producto, r.producto.stock)}.`;
     }
     if (tipo === "salida") {
       const r = await servidor.salidaStock(producto.id, {
-        cantidad: n,
-        motivo: texto,
+        cantidad: m,
+        motivoSalida: motivoSalida === "" ? "OTRO" : motivoSalida,
+        motivo: texto.trim() === "" ? null : texto,
         stockVisto,
       });
-      return `${producto.nombre}: salieron ${n}; stock ${stockVisto} → ${r.producto.stock}.`;
+      return `${producto.nombre}: salieron ${conUnidad(producto, m)}; stock ${antes} → ${conUnidad(producto, r.producto.stock)}.`;
     }
     const r = await servidor.conteoStock(producto.id, {
-      contado: n,
+      contado: m,
       nota: texto.trim() === "" ? null : texto,
       stockVisto,
     });
     return r.movimiento.cantidad === 0
-      ? `${producto.nombre}: contadas ${n}, sin diferencia.`
-      : `${producto.nombre}: contadas ${n}; stock ${stockVisto} → ${r.producto.stock}.`;
+      ? `${producto.nombre}: contado ${conUnidad(producto, m)}, sin diferencia.`
+      : `${producto.nombre}: contado ${conUnidad(producto, m)}; stock ${antes} → ${conUnidad(producto, r.producto.stock)}.`;
   };
 
   const enviar = async () => {
@@ -368,51 +417,71 @@ function AccionStock({
   const alPulsar = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") void enviar();
   };
+  const enUnidad = abreviatura === "" ? "" : ` (${abreviatura})`;
 
   return (
     <div className="flex flex-wrap items-end justify-end gap-2">
       {contar && (
         <p className="h-9 content-center text-sm text-muted-foreground">
-          En el sistema: {producto.stock}
+          En el sistema: {conUnidad(producto, producto.stock)}
           {valido &&
-            ` · diferencia ${n > producto.stock ? "+" : ""}${n - producto.stock}`}
+            n !== null &&
+            ` · diferencia ${conSigno(conUnidad(producto, n - producto.stock), n - producto.stock)}`}
         </p>
       )}
       <Campo
-        etiqueta={
+        etiqueta={`${
           tipo === "entrada"
-            ? "Unidades que ingresan"
+            ? "Cantidad que ingresa"
             : tipo === "salida"
-              ? "Unidades que salen"
-              : "Unidades contadas"
-        }
+              ? "Cantidad que sale"
+              : "Cantidad contada"
+        }${enUnidad}`}
       >
         <Input
           autoFocus
           className="w-32"
-          inputMode="numeric"
+          inputMode={decimales ? "decimal" : "numeric"}
           value={cantidad}
           onChange={(e) => setCantidad(e.target.value)}
           onKeyDown={alPulsar}
         />
       </Campo>
+      {tipo === "salida" && (
+        <Campo etiqueta="Motivo">
+          <select
+            className={CLASE_SELECT}
+            value={motivoSalida}
+            onChange={(e) =>
+              setMotivoSalida(e.target.value as MotivoSalida | "")
+            }
+          >
+            <option value="">Elegir…</option>
+            {MotivoSalidaSchema.options.map((m) => (
+              <option key={m} value={m}>
+                {MOTIVO_SALIDA[m]}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      )}
       {tipo !== "entrada" && (
-        <Campo etiqueta={contar ? "Nota (opcional)" : "Motivo"}>
+        <Campo
+          etiqueta={
+            contar
+              ? "Nota (opcional)"
+              : motivoSalida === "OTRO"
+                ? "Detalle"
+                : "Detalle (opcional)"
+          }
+        >
           <Input
             className="w-44"
-            list={contar ? undefined : "motivos-salida"}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             onKeyDown={alPulsar}
           />
         </Campo>
-      )}
-      {tipo === "salida" && (
-        <datalist id="motivos-salida">
-          {MOTIVOS_SALIDA.map((m) => (
-            <option key={m} value={m} />
-          ))}
-        </datalist>
       )}
       <Button
         size="sm"
@@ -440,10 +509,30 @@ function Stock({ producto }: { producto: Producto }) {
   if (producto.stock <= 0)
     return (
       <Badge className="bg-red-600 text-white">
-        {producto.stock === 0 ? "Sin stock" : producto.stock}
+        {producto.stock === 0
+          ? "Sin stock"
+          : conUnidad(producto, producto.stock)}
       </Badge>
     );
-  return <span className="font-medium">{producto.stock}</span>;
+  return (
+    <span className="flex flex-col items-end">
+      <span className="font-medium">{conUnidad(producto, producto.stock)}</span>
+      {bajoMinimo(producto) && producto.stockMinimo !== null && (
+        <Badge className="mt-1 whitespace-nowrap bg-amber-500 text-white">
+          Mínimo {conUnidad(producto, producto.stockMinimo)}
+        </Badge>
+      )}
+    </span>
+  );
+}
+
+/** Texto de un campo de cantidad opcional: "" = sin valor; null = texto que no es una cantidad. */
+function cantidadOpcional(
+  texto: string,
+  decimales: boolean,
+): number | null | undefined {
+  if (texto.trim() === "") return null;
+  return leerCantidad(texto, decimales) ?? undefined;
 }
 
 function FormularioProducto({
@@ -461,43 +550,78 @@ function FormularioProducto({
   const [categoriaId, setCategoriaId] = useState(
     producto?.categoriaId ?? (categorias.length === 1 ? categorias[0]!.id : ""),
   );
+  const [sku, setSku] = useState(producto?.sku ?? "");
   const [codigo, setCodigo] = useState(producto?.codigoBarras ?? "");
+  const [unidad, setUnidad] = useState<UnidadMedida>(
+    producto?.unidad ?? "UNIDAD",
+  );
   const [huesped, setHuesped] = useState(
     producto === null ? "" : aTextoSoles(producto.precioHuesped),
   );
   const [publico, setPublico] = useState(
     producto === null ? "" : aTextoSoles(producto.precioPublico),
   );
+  const [costo, setCosto] = useState(
+    producto?.costo == null ? "" : aTextoSoles(producto.costo),
+  );
   const [controlaStock, setControlaStock] = useState(
     producto?.controlaStock ?? true,
   );
+  const [minimo, setMinimo] = useState(
+    producto?.stockMinimo == null ? "" : aTextoCantidad(producto.stockMinimo),
+  );
+  const [optimo, setOptimo] = useState(
+    producto?.stockOptimo == null ? "" : aTextoCantidad(producto.stockOptimo),
+  );
   const [activo, setActivo] = useState(producto?.activo ?? true);
   const [enviando, setEnviando] = useState(false);
+  const decimales = unidad !== "UNIDAD";
+  const abreviatura = abreviaturaUnidad(unidad);
   const centimosHuesped = leerSoles(huesped);
   const centimosPublico = leerSoles(publico);
+  const centimosCosto =
+    costo.trim() === "" ? null : (leerSoles(costo) ?? undefined);
+  const milesimasMinimo = cantidadOpcional(minimo, decimales);
+  const milesimasOptimo = cantidadOpcional(optimo, decimales);
+  const optimoBajo =
+    milesimasMinimo != null &&
+    milesimasOptimo != null &&
+    milesimasOptimo < milesimasMinimo;
   const valido =
     nombre.trim() !== "" &&
     categoriaId !== "" &&
     centimosHuesped !== null &&
-    centimosPublico !== null;
+    centimosPublico !== null &&
+    centimosCosto !== undefined &&
+    milesimasMinimo !== undefined &&
+    milesimasOptimo !== undefined &&
+    !optimoBajo;
 
   const guardar = async () => {
-    if (!valido) return;
+    if (!valido || centimosCosto === undefined) return;
+    if (milesimasMinimo === undefined || milesimasOptimo === undefined) return;
     setEnviando(true);
     try {
       await onGuardar({
         categoriaId,
         nombre: nombre.trim(),
+        sku: sku.trim() === "" ? null : sku.trim(),
         codigoBarras: codigo.trim() === "" ? null : codigo.trim(),
+        unidad,
         precioHuesped: centimosHuesped,
         precioPublico: centimosPublico,
+        costo: centimosCosto,
         controlaStock,
+        stockMinimo: controlaStock ? milesimasMinimo : null,
+        stockOptimo: controlaStock ? milesimasOptimo : null,
         activo,
       });
     } finally {
       setEnviando(false);
     }
   };
+
+  const porLa = abreviatura === "" ? "" : ` por ${abreviatura}`;
 
   return (
     <Card className="w-80 shrink-0">
@@ -534,6 +658,17 @@ function FormularioProducto({
           </select>
         </Campo>
         <Campo
+          etiqueta="SKU (código interno, opcional)"
+          ayuda="Único. Sirve para volver a importar el catálogo sin duplicarlo."
+        >
+          <Input
+            className="font-mono"
+            value={sku}
+            maxLength={40}
+            onChange={(e) => setSku(e.target.value)}
+          />
+        </Campo>
+        <Campo
           etiqueta="Código de barras (opcional)"
           ayuda="Con el cursor aquí, escanee el producto con el lector."
         >
@@ -547,7 +682,27 @@ function FormularioProducto({
           />
         </Campo>
         <Campo
-          etiqueta="Precio huésped (S/)"
+          etiqueta="Se vende por"
+          ayuda={
+            producto === null
+              ? "Metro, kilo o litro admiten cantidades con decimales, p. ej. 2.5 m."
+              : "Solo se puede cambiar mientras el producto no tenga movimientos ni ventas."
+          }
+        >
+          <select
+            className={CLASE_SELECT}
+            value={unidad}
+            onChange={(e) => setUnidad(e.target.value as UnidadMedida)}
+          >
+            {UnidadMedidaSchema.options.map((u) => (
+              <option key={u} value={u}>
+                {UNIDAD_MEDIDA[u]}
+              </option>
+            ))}
+          </select>
+        </Campo>
+        <Campo
+          etiqueta={`Precio huésped (S/${porLa})`}
           ayuda="El que paga quien está alojado."
         >
           <Input
@@ -556,11 +711,25 @@ function FormularioProducto({
             onChange={(e) => setHuesped(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Precio público (S/)">
+        <Campo etiqueta={`Precio público (S/${porLa})`}>
           <Input
             inputMode="decimal"
             value={publico}
             onChange={(e) => setPublico(e.target.value)}
+          />
+        </Campo>
+        <Campo
+          etiqueta={`Costo (S/${porLa}, opcional)`}
+          ayuda={
+            centimosCosto === undefined
+              ? "Escriba un monto, p. ej. 2.20."
+              : "Lo que paga el negocio. El cajero no lo ve."
+          }
+        >
+          <Input
+            inputMode="decimal"
+            value={costo}
+            onChange={(e) => setCosto(e.target.value)}
           />
         </Campo>
         <label className="flex items-start gap-2 text-sm">
@@ -577,6 +746,40 @@ function FormularioProducto({
             </span>
           </span>
         </label>
+        {controlaStock && (
+          <div className="grid grid-cols-2 gap-2">
+            <Campo
+              etiqueta={`Mínimo${abreviatura === "" ? "" : ` (${abreviatura})`}`}
+              ayuda={
+                milesimasMinimo === undefined
+                  ? decimales
+                    ? "Hasta tres decimales."
+                    : "Un número entero."
+                  : "Con esto o menos, avisa."
+              }
+            >
+              <Input
+                inputMode={decimales ? "decimal" : "numeric"}
+                value={minimo}
+                onChange={(e) => setMinimo(e.target.value)}
+              />
+            </Campo>
+            <Campo
+              etiqueta={`Óptimo${abreviatura === "" ? "" : ` (${abreviatura})`}`}
+              ayuda={
+                optimoBajo
+                  ? "No puede ser menor que el mínimo."
+                  : "Hasta dónde reponer."
+              }
+            >
+              <Input
+                inputMode={decimales ? "decimal" : "numeric"}
+                value={optimo}
+                onChange={(e) => setOptimo(e.target.value)}
+              />
+            </Campo>
+          </div>
+        )}
         <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"

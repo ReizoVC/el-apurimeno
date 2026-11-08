@@ -41,7 +41,7 @@ function venta() {
       turno: turnoAbierto(),
       alquilerId: null,
       habitacionReferenciaId: null,
-      cotizacion: cotizarVenta([{ producto: producto(), cantidad: 2 }], false),
+      cotizacion: cotizarVenta([{ producto: producto(), cantidad: 2000 }], false),
       pagos: [pagoEnEfectivo(EFECTIVO.id, 700, 1000)],
       creadoPorId: "cajero-1",
     },
@@ -71,6 +71,28 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
         "    Documento interno sin valor tributario.",
       ]
     `);
+  });
+
+  it("un producto por metro lleva la unidad en la línea y la cantidad con decimales (decisión 31 de contracts)", () => {
+    const cable = producto({ id: "prod-cable", nombre: "Cable mellizo", unidad: "METRO", precioPublico: 300 });
+    const ticket = armarTicketCobro(
+      {
+        numero: 124,
+        origen: "VENTA_TIENDA",
+        turno: turnoAbierto(),
+        alquilerId: null,
+        habitacionReferenciaId: null,
+        cotizacion: cotizarVenta([{ producto: cable, cantidad: 2500 }, { producto: producto(), cantidad: 1000 }], false),
+        pagos: [pagoSinVuelto(YAPE.id, 1100, null)],
+        creadoPorId: "cajero-1",
+      },
+      contexto(en("14:05")),
+    );
+    const texto = componerComprobante(ticket, opciones);
+    expect(texto).toContain("Cable mellizo (m)                        S/ 7.50");
+    expect(texto).toContain("  2.5 x S/ 3.00");
+    // Una sola unidad no lleva el detalle de cantidad.
+    expect(texto.join("\n")).not.toContain("1 x S/ 3.50");
   });
 
   it("la reimpresión dice COPIA de forma visible (RF-44)", () => {
@@ -123,7 +145,7 @@ describe("Comprobante impreso (RN-38, RN-39, RF-44, RF-55)", () => {
         alquilerId: null,
         habitacionReferenciaId: null,
         cotizacion: cotizarVenta(
-          [{ producto: producto(), cantidad: 1 }],
+          [{ producto: producto(), cantidad: 1000 }],
           false,
         ),
         pagos: [pagoSinVuelto(YAPE.id, 350, "0001")],

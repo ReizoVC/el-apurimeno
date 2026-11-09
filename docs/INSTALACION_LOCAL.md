@@ -294,6 +294,10 @@ El MSI generado comprueba WebView2 y descarga su instalador si falta, por lo que
 
 El MSI no viene en un clon limpio: `target` es un artefacto de compilación. Instalar el POS no instala la API ni los servicios web.
 
+Si cambió el ícono del POS (`apps/native/src-tauri/icons/`) y en esa carpeta ya había una compilación anterior, correr
+antes `cargo clean -p native --release` (con `node scripts/con-msvc.mjs`, en `apps/native`): cargo no vuelve a
+incrustar el ícono en el ejecutable y el instalador sale con el viejo.
+
 ## 8. Firewall privado
 
 Como administrador, comprobar que la red del local tenga el perfil **Privado**. Las reglas siguientes solo permiten entrada TCP desde la subred local, en red privada:

@@ -12,18 +12,16 @@ Antes del piloto faltan la **impresora**, **importar los productos** y los **dat
 
 ## Integrado
 
-Todo está en `main`, hasta el PR #34 inclusive. Los últimos: la actualización remota del PC del local, ensayada con
-servicios reales (#31); salida, conteo e historial de stock y venta sin stock confirmada por el cajero (#32); el aviso
-de versiones nuevas firmadas en el Dashboard (#33); y la republicación completa del espejo cuando cambia el formato
-del resumen (#34). Los anteriores están en el historial de git.
+Todo está en `main`, hasta el PR #37 inclusive. Los últimos: salida, conteo e historial de stock y venta sin stock
+confirmada por el cajero (#32); el aviso de versiones nuevas firmadas en el Dashboard (#33); la republicación completa
+del espejo cuando cambia el formato del resumen (#34); la ficha de producto con cantidades en milésimas, etapa 1 del
+plan de abajo (#36); y el botón "Actualizar" del Dashboard, con la comprobación de la firma en el actualizador y los
+avisos de recarga en el POS, en Limpieza y en el Dashboard (#37). Al #37 le falta probarse con una versión publicada en
+GitHub y en el PC del local. Los anteriores están en el historial de git.
 
-**En revisión:** el PR #37 trae el botón "Actualizar" del Dashboard, la comprobación de la firma en el
-actualizador y los avisos de recarga en el POS, en Limpieza y en el Dashboard. Está revisado y probado como conjunto
-(pruebas, ensayo del actualizador y pantallas contra un servidor real con la tarea simulada), y sus cambios en
-`contracts` y `domain` están aprobados. Falta probarlo con una versión publicada en GitHub y en el PC del local.
-
-**Instalado en el equipo de desarrollo** (los servicios corren desde `D:\dev\el-apurimeno`): hasta el #32, con su
-migración aplicada. El #33 y el #34 traen migración, así que instalarlos es una actualización completa.
+**Instalado en el equipo de desarrollo** (los servicios corren desde `D:\dev\el-apurimeno`): hasta el #37, el 08/11,
+con una actualización completa: copia previa de la base, las tres migraciones nuevas en la base del local y en la de
+capacitación, y el Dashboard y Limpieza recompilados. Los cuatro servicios responden.
 
 ## Completo y probado
 
@@ -90,7 +88,7 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
      El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). El botón "Actualizar" y la comprobación de
-     la firma en el actualizador están en el PR #37; falta el panel para publicar.
+     la firma en el actualizador están en `main` (#37); falta el panel para publicar.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
    Loyverse, cuyo stock está desfasado. Falta la importación (etapa 3 del plan de abajo), que trae nombres, precios,
@@ -105,7 +103,7 @@ El 08/11/2026 la propietaria decidió preparar el sistema para sus otros dos neg
 
 | # | Etapa | Estado |
 |---|---|---|
-| 1 | Ficha de producto (SKU, unidad, costo, mínimos), cantidades en milésimas y motivos fijos de salida | En PR |
+| 1 | Ficha de producto (SKU, unidad, costo, mínimos), cantidades en milésimas y motivos fijos de salida | Hecha (#36) |
 | 2 | Negocios: stock, precios, turnos, tickets, comprobante y reportes por negocio | Pendiente |
 | 3 | Importación (plantilla y formato de Loyverse) y alta rápida al escanear | Pendiente |
 | 4 | Conteo por sesión, con lector | Pendiente |
@@ -216,3 +214,13 @@ Tomadas sin revisión porque no bloqueaban nada; cada una está explicada en el 
   del espejo. Advertido en `supabase/README.md` y `CLAUDE.md`.
 - Las cuentas de prueba no están en el repositorio. La prueba de la vista remota da de alta un autenticador y lo
   quita al terminar: la cuenta lectora de prueba quedó sin autenticadores.
+- **Lecciones de la instalación del 08/11 en el equipo de desarrollo:**
+  - El checkout de producción quedó con el código del #36 sin migrar ni regenerar el cliente: alguien hizo `git pull`
+    sin la actualización completa. El servidor siguió bien solo porque no se había reiniciado. Nunca se trae código a
+    ese checkout sin instalarlo en la misma pasada.
+  - El Dashboard y Limpieza no arrancaron tras el reinicio del PC del 08/11: el 06/11 una sesión había lanzado
+    `pnpm run dev` desde el checkout de producción (con un `.claude/launch.json`, ya borrado), y `next dev` reemplazó el
+    build de producción. Se recuperaron con `recompilar-produccion.ps1`.
+  - `pnpm preparar-capacitacion` pide una contraseña aunque las cuentas ya existan. En un script sin nadie delante,
+    migrar la base de capacitación con `prisma migrate deploy` y su `DATABASE_URL`, como hace
+    `actualizar-produccion.ps1`.

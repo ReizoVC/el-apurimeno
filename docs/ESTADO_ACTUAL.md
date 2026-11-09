@@ -68,7 +68,10 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
 ### Puesta en marcha
 
 2. **Terminar el proyecto de Supabase de producción**, siguiendo `supabase/README.md`: falta asignar el rol
-   `sincronizador` a la cuenta del servidor y crear las cuentas de la propietaria y su hija.
+   `sincronizador` a la cuenta del servidor y crear las cuentas de la propietaria y su hija. Antes, cerrar la última
+   prueba en `apurimeno-prueba`: la cuenta lectora de prueba se volvió a crear tras el 26/09 y no figura como lectora
+   activa (`espejo_mi_rol()` devuelve `null`), así que con el código TOTP tampoco lee. Falta darle el rol `lector` en
+   `privado.acceso_espejo` y repetir los seis casos de lectura y bloqueo. Los cinco bloqueos sí se comprobaron.
 3. **Publicar `apps/owner` en Cloudflare Pages** con las credenciales de producción (pasos exactos en
    `apps/owner/README.md`).
 4. **Instalación con `-Produccion` en el equipo del local**, siguiendo `docs/INSTALACION_LOCAL.md` (los servicios y
@@ -88,7 +91,9 @@ corridas aparte, pasan. Todas las apps compilan (27/09: web, cleaning y native c
      (`docs/ACTUALIZACION_REMOTA.md`). Ensayada el 05/11/2026 en el equipo de desarrollo con servicios reales y el reemplazo
      silencioso del POS; falta probar SSH desde otra red y una versión publicada en GitHub, con el PC del local.
      El Dashboard ya anuncia las versiones nuevas firmadas (decisión 30). El botón "Actualizar" y la comprobación de
-     la firma en el actualizador están en `main` (#37); falta el panel para publicar.
+     la firma en el actualizador están en `main` (#37); falta el panel para publicar. En el PC del local, Windows ya
+     está actualizado (06/11); la preparación sigue con la activación de Windows 11 Pro, el nombre de la cuenta
+     (`whoami`), Tailscale con el nombre `apurimeno` y sin vencimiento de clave, y después SSH con clave.
 5. **Datos reales:** habitaciones y precios (la semilla trae 17 de ejemplo), métodos de pago, las cuentas del personal
    con sus rangos, y el nombre, la dirección y la leyenda del comprobante. **Productos:** son más de 50 y están en
    Loyverse, cuyo stock está desfasado. Falta la importación (etapa 3 del plan de abajo), que trae nombres, precios,
@@ -122,6 +127,7 @@ segundo negocio. Fuera del plan: crédito a clientes, precios mayoristas y SUNAT
 |---|---|---|
 | Transferencia bancaria (P-04) | Creada pero desactivada | ¿Se activa desde el inicio? Se cambia en el Dashboard, sin código |
 | Vigencia del código de anulación (RF-65) | 5 minutos | ¿Está bien? Configurable en el Dashboard |
+| Código de anulación sin la propietaria ni su hija en el local | Si ninguna está, el cajero de noche no puede anular | Cómo se genera el código en ese caso. Es la más urgente |
 | Exportar reportes a hoja de cálculo (PEND-06) | No existe (recomendación del SRS para el MVP) | ¿Hace falta para el piloto o queda para la Fase 2? |
 | Encendido del equipo | El servidor, el Dashboard y Limpieza arrancan solos como servicios de Windows (NSSM) | ¿Quién enciende el equipo cada día, o queda siempre encendido? |
 | Piloto | Sin fecha | Fechas, quién lleva el cuaderno en paralelo y quién compara los cierres |
@@ -206,6 +212,16 @@ Tomadas sin revisión porque no bloqueaban nada; cada una está explicada en el 
 - **Productos inactivos:** `GET /productos?incluirInactivos=true` (solo `inventory.manage`), para poder reactivarlos
   desde el Dashboard (decisión 24).
 - **`apps/store-catalog` sin tocar**: sigue siendo maqueta, como se indicó.
+
+## Trabajo fuera de `main`
+
+- **Documentos del 06/11:** el SRS con la sección 4.8 corregida, el documento técnico (16 diagramas) y el análisis del
+  negocio (con las preguntas para la propietaria en su sección 6) están solo en la carpeta temporal de la sesión que
+  los hizo, fuera del repositorio. Hay que guardarlos (en `docs/` o en Drive) antes de que se limpie esa carpeta.
+- **Documentos de inventario de Codex** (especificación FIFO, plan de implementación, revisión de costo promedio):
+  solo en las ramas locales `respaldo/codex-inventario-2026-09-28` y `-09-30`. Son antecedentes, no el alcance
+  acordado.
+- **Grafo de Graphify:** en el worktree `graphify-grafo`, construido en el #34; no incluye del #36 en adelante.
 
 ## Observaciones de las pruebas
 
